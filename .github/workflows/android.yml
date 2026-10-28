@@ -20,7 +20,6 @@ jobs:
         with:
           targets: aarch64-linux-android
       - uses: Swatinem/rust-cache@v2
-      - uses: android-actions/setup-android@v3
       - name: Install Android NDK
         run: |
           yes | sdkmanager --licenses > /dev/null || true
