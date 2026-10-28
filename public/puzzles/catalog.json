@@ -1,0 +1,375 @@
+{
+  "version": 1,
+  "source": "FanFront/sodokupadAndroid/app/src/main/assets/offline",
+  "count": 46,
+  "items": [
+    {
+      "id": "digits-of-despair",
+      "title": "恶魔城数独 1 — Digits of Despair",
+      "group": "digits-of-despair",
+      "kind": "main",
+      "url": "https://sudokupad.app/sudokuvania/digits-of-despair",
+      "file": "puzzles/digits-of-despair.scl"
+    },
+    {
+      "id": "lineage-of-logic",
+      "title": "恶魔城数独 2 — Lineage of Logic",
+      "group": "lineage-of-logic",
+      "kind": "main",
+      "url": "https://sudokupad.app/sudokuvania/lineage-of-logic",
+      "file": "puzzles/lineage-of-logic.scl"
+    },
+    {
+      "id": "super-sudokoid-1",
+      "title": "超级数独机器人 1 — 最终传输（Final Transmission）",
+      "group": "super-sudokoid-1",
+      "kind": "main",
+      "url": "https://sudokupad.app/3g0qh2la4v",
+      "file": "puzzles/super-sudokoid-1.scl"
+    },
+    {
+      "id": "super-sudokoid-2",
+      "title": "超级数独机器人 2 — 暗影反转（Dark Inversion）",
+      "group": "super-sudokoid-2",
+      "kind": "main",
+      "url": "https://sudokupad.app/xfq6z64i66",
+      "file": "puzzles/super-sudokoid-2.scl"
+    },
+    {
+      "id": "boss-6cn54q09sv",
+      "title": "首领 · 6cn54q09sv",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/6cn54q09sv",
+      "file": "puzzles/boss-6cn54q09sv.scl"
+    },
+    {
+      "id": "boss-84lyno986x",
+      "title": "首领 · 84lyno986x",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/84lyno986x",
+      "file": "puzzles/boss-84lyno986x.scl"
+    },
+    {
+      "id": "boss-frudzw3n73",
+      "title": "首领 · frudzw3n73",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/frudzw3n73",
+      "file": "puzzles/boss-frudzw3n73.scl"
+    },
+    {
+      "id": "boss-mtrhhm8g95",
+      "title": "首领 · mtrhhm8g95",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/mtrhhm8g95",
+      "file": "puzzles/boss-mtrhhm8g95.scl"
+    },
+    {
+      "id": "boss-ny34cxleh8",
+      "title": "首领 · ny34cxleh8",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/ny34cxleh8",
+      "file": "puzzles/boss-ny34cxleh8.scl"
+    },
+    {
+      "id": "boss-ofvhfxebg3",
+      "title": "首领 · ofvhfxebg3",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/ofvhfxebg3",
+      "file": "puzzles/boss-ofvhfxebg3.scl"
+    },
+    {
+      "id": "boss-qs2zx7uynr",
+      "title": "首领 · qs2zx7uynr",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/qs2zx7uynr",
+      "file": "puzzles/boss-qs2zx7uynr.scl"
+    },
+    {
+      "id": "boss-boss-a-nights-tale",
+      "title": "首领 · boss-a-nights-tale",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-a-nights-tale",
+      "file": "puzzles/boss-boss-a-nights-tale.scl"
+    },
+    {
+      "id": "boss-boss-big-little-lines",
+      "title": "首领 · boss-big-little-lines",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-big-little-lines",
+      "file": "puzzles/boss-boss-big-little-lines.scl"
+    },
+    {
+      "id": "boss-boss-bone-constrictor",
+      "title": "首领 · boss-bone-constrictor",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-bone-constrictor",
+      "file": "puzzles/boss-boss-bone-constrictor.scl"
+    },
+    {
+      "id": "boss-boss-clones-quad",
+      "title": "首领 · boss-clones-quad",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-clones-quad",
+      "file": "puzzles/boss-boss-clones-quad.scl"
+    },
+    {
+      "id": "boss-boss-fantasy-footwork",
+      "title": "首领 · boss-fantasy-footwork",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-fantasy-footwork",
+      "file": "puzzles/boss-boss-fantasy-footwork.scl"
+    },
+    {
+      "id": "boss-boss-hot-cuisine",
+      "title": "首领 · boss-hot-cuisine",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-hot-cuisine",
+      "file": "puzzles/boss-boss-hot-cuisine.scl"
+    },
+    {
+      "id": "boss-boss-in10sity",
+      "title": "首领 · boss-in10sity",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-in10sity",
+      "file": "puzzles/boss-boss-in10sity.scl"
+    },
+    {
+      "id": "boss-boss-saving-grace",
+      "title": "首领 · boss-saving-grace",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-saving-grace",
+      "file": "puzzles/boss-boss-saving-grace.scl"
+    },
+    {
+      "id": "boss-boss-stalking-the-freezer",
+      "title": "首领 · boss-stalking-the-freezer",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-stalking-the-freezer",
+      "file": "puzzles/boss-boss-stalking-the-freezer.scl"
+    },
+    {
+      "id": "boss-boss-the-witching-hour",
+      "title": "首领 · boss-the-witching-hour",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-the-witching-hour",
+      "file": "puzzles/boss-boss-the-witching-hour.scl"
+    },
+    {
+      "id": "boss-boss-through-the-ringer",
+      "title": "首领 · boss-through-the-ringer",
+      "group": "lineage-of-logic",
+      "kind": "boss",
+      "url": "https://sudokupad.app/sudokuvania/boss-through-the-ringer",
+      "file": "puzzles/boss-boss-through-the-ringer.scl"
+    },
+    {
+      "id": "boss-vmp8mhugbr",
+      "title": "首领 · vmp8mhugbr",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/vmp8mhugbr",
+      "file": "puzzles/boss-vmp8mhugbr.scl"
+    },
+    {
+      "id": "boss-xu2ai5oymi",
+      "title": "首领 · xu2ai5oymi",
+      "group": "digits-of-despair",
+      "kind": "boss",
+      "url": "https://sudokupad.app/xu2ai5oymi",
+      "file": "puzzles/boss-xu2ai5oymi.scl"
+    },
+    {
+      "id": "super-linked-70qpd43i45",
+      "title": "地下九尺",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/70qpd43i45",
+      "file": "puzzles/super-linked-70qpd43i45.scl"
+    },
+    {
+      "id": "super-linked-f4c9vuptqj",
+      "title": "神殿暴脾气",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/f4c9vuptqj",
+      "file": "puzzles/super-linked-f4c9vuptqj.scl"
+    },
+    {
+      "id": "super-linked-gnp7aga2sx",
+      "title": "反应堆危机",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/gnp7aga2sx",
+      "file": "puzzles/super-linked-gnp7aga2sx.scl"
+    },
+    {
+      "id": "super-linked-hf8r43jwsj",
+      "title": "基石",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/hf8r43jwsj",
+      "file": "puzzles/super-linked-hf8r43jwsj.scl"
+    },
+    {
+      "id": "super-linked-jo12qmyc5v",
+      "title": "快闪开！",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/jo12qmyc5v",
+      "file": "puzzles/super-linked-jo12qmyc5v.scl"
+    },
+    {
+      "id": "super-linked-kt6bb0wm0k",
+      "title": "重压之下",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/kt6bb0wm0k",
+      "file": "puzzles/super-linked-kt6bb0wm0k.scl"
+    },
+    {
+      "id": "super-linked-lzer9x4edb",
+      "title": "登峰",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/lzer9x4edb",
+      "file": "puzzles/super-linked-lzer9x4edb.scl"
+    },
+    {
+      "id": "super-linked-n4c0dem40c",
+      "title": "母脑终极谜题",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/n4c0dem40c",
+      "file": "puzzles/super-linked-n4c0dem40c.scl"
+    },
+    {
+      "id": "super-linked-qfnpbofkiq",
+      "title": "能源转移",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/qfnpbofkiq",
+      "file": "puzzles/super-linked-qfnpbofkiq.scl"
+    },
+    {
+      "id": "super-linked-swxudk82v1",
+      "title": "机器人巡逻队",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/swxudk82v1",
+      "file": "puzzles/super-linked-swxudk82v1.scl"
+    },
+    {
+      "id": "super-linked-u6cj0y3fzy",
+      "title": "蠕虫口粮",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/u6cj0y3fzy",
+      "file": "puzzles/super-linked-u6cj0y3fzy.scl"
+    },
+    {
+      "id": "super-linked-y4o6cjk9ao",
+      "title": "皇后与主教",
+      "group": "super-sudokoid-1",
+      "kind": "boss",
+      "url": "https://sudokupad.app/y4o6cjk9ao",
+      "file": "puzzles/super-linked-y4o6cjk9ao.scl"
+    },
+    {
+      "id": "super-linked-1hh6q5xl6l",
+      "title": "不讲武德",
+      "group": "super-sudokoid-2",
+      "kind": "boss",
+      "url": "https://sudokupad.app/1hh6q5xl6l",
+      "file": "puzzles/super-linked-1hh6q5xl6l.scl"
+    },
+    {
+      "id": "super-linked-64c4lkb5ss",
+      "title": "海蛇群落",
+      "group": "super-sudokoid-2",
+      "kind": "boss",
+      "url": "https://sudokupad.app/64c4lkb5ss",
+      "file": "puzzles/super-linked-64c4lkb5ss.scl"
+    },
+    {
+      "id": "super-linked-7asln8p2u1",
+      "title": "超级导弹示例",
+      "group": "super-sudokoid-2",
+      "kind": "linked",
+      "url": "https://sudokupad.app/7asln8p2u1",
+      "file": "puzzles/super-linked-7asln8p2u1.scl"
+    },
+    {
+      "id": "super-linked-80kqa7jo0h",
+      "title": "营救难民",
+      "group": "super-sudokoid-2",
+      "kind": "boss",
+      "url": "https://sudokupad.app/80kqa7jo0h",
+      "file": "puzzles/super-linked-80kqa7jo0h.scl"
+    },
+    {
+      "id": "super-linked-bpij5pdi3x",
+      "title": "不受欢迎的欢迎",
+      "group": "super-sudokoid-2",
+      "kind": "boss",
+      "url": "https://sudokupad.app/bpij5pdi3x",
+      "file": "puzzles/super-linked-bpij5pdi3x.scl"
+    },
+    {
+      "id": "super-linked-dxr2zdfldv",
+      "title": "机械龙之谜",
+      "group": "super-sudokoid-2",
+      "kind": "boss",
+      "url": "https://sudokupad.app/dxr2zdfldv",
+      "file": "puzzles/super-linked-dxr2zdfldv.scl"
+    },
+    {
+      "id": "super-linked-dz1iu0r3tl",
+      "title": "智慧决斗",
+      "group": "super-sudokoid-2",
+      "kind": "boss",
+      "url": "https://sudokupad.app/dz1iu0r3tl",
+      "file": "puzzles/super-linked-dz1iu0r3tl.scl"
+    },
+    {
+      "id": "super-linked-gidcd5jrz7",
+      "title": "不受欢迎的欢迎？",
+      "group": "super-sudokoid-2",
+      "kind": "boss",
+      "url": "https://sudokupad.app/gidcd5jrz7",
+      "file": "puzzles/super-linked-gidcd5jrz7.scl"
+    },
+    {
+      "id": "super-linked-hfyjv8jqr5",
+      "title": "火山口混战",
+      "group": "super-sudokoid-2",
+      "kind": "boss",
+      "url": "https://sudokupad.app/hfyjv8jqr5",
+      "file": "puzzles/super-linked-hfyjv8jqr5.scl"
+    },
+    {
+      "id": "super-linked-vaz2rx345r",
+      "title": "拯救世界！",
+      "group": "super-sudokoid-2",
+      "kind": "linked",
+      "url": "https://sudokupad.app/vaz2rx345r",
+      "file": "puzzles/super-linked-vaz2rx345r.scl"
+    }
+  ]
+}
