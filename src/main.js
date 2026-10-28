@@ -502,6 +502,15 @@ function draw() {
   ctx.strokeStyle='#263c51';ctx.lineWidth=3;ctx.strokeRect(0,0,puzzle.cols*CELL,puzzle.rows*CELL);
 }
 
+function showCompletionIfNew(){
+  const solved=Boolean(progress?.solved);
+  if(solved&&!lastCompletion){
+    $('completionText').textContent=progress.completion||'已完成当前谜题。';
+    $('completionBack').hidden=navigationStack.length===0;
+    if(!$('completionDialog').open)$('completionDialog').showModal();
+  }
+  lastCompletion=solved;
+}
 async function edit(action,symbol='') {
   if(pending||!puzzle)return;
   if(selected<0){toast('请先选择格子');return;}
@@ -512,7 +521,11 @@ async function edit(action,symbol='') {
     const change=await call('update_cell',{index:selected,mode:action,symbol});
     progress.cells[change.index]=change.cell;
     progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
+    if(Array.isArray(change.visible))progress.visible=change.visible;
+    progress.solved=Boolean(change.solved);
+    progress.completion=change.completion??null;
     updateControls();scheduleSave();requestDraw();
+    showCompletionIfNew();
   } catch(error){notify(error);}
   finally{pending=false;}
 }
@@ -523,8 +536,12 @@ async function history(direction) {
     const change=await call(direction);
     progress.cells[change.index]=change.cell;
     progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
+    if(Array.isArray(change.visible))progress.visible=change.visible;
+    progress.solved=Boolean(change.solved);
+    progress.completion=change.completion??null;
     selected=change.index;
     updateControls();scheduleSave();requestDraw();
+    showCompletionIfNew();
   } catch(error){notify(error);}
   finally{pending=false;}
 }
@@ -605,6 +622,21 @@ $('undoButton').addEventListener('click',()=>history('undo'));
 $('redoButton').addEventListener('click',()=>history('redo'));
 function showRules(){if(!$('rulesDialog').open)$('rulesDialog').showModal();}
 $('rulesButton').addEventListener('click',showRules);
+$('nextSector').addEventListener('click',()=>{
+  if(!matchingSectors.length)return;
+  sectorCursor=(sectorCursor+1)%matchingSectors.length;updateSector();
+});
+$('libraryButton').addEventListener('click',()=>{
+  renderLibrary();$('libraryDialog').showModal();
+});
+$('closeLibrary').addEventListener('click',()=>$('libraryDialog').close());
+$('showAllPuzzles').addEventListener('change',renderLibrary);
+$('backButton').addEventListener('click',()=>goBack().catch(notify));
+$('closeCompletion').addEventListener('click',()=>$('completionDialog').close());
+$('completionBack').addEventListener('click',()=>{
+  $('completionDialog').close();
+  if(navigationStack.length)goBack().catch(notify);
+});
 $('moreRules').addEventListener('click',showRules);
 $('closeRules').addEventListener('click',()=>$('rulesDialog').close());
 $('dismissRules').addEventListener('click',()=>$('rulesDialog').close());
@@ -622,11 +654,19 @@ $('confirmImport').addEventListener('click',async()=>{
 });
 $('demoButton').addEventListener('click',async()=>{
   if(pending)return;
-  try{await openResult(await call('load_demo'));toast('示例已打开');}catch(error){notify(error);}
+  try{
+    if(puzzle)save();
+    currentEntry=null;navigationStack=[];mainDictionary={};
+    await openResult(await call('load_demo'));updateBack();toast('示例已打开');
+  }catch(error){notify(error);}
 });
 document.addEventListener('keydown',event=>{
   const active=document.activeElement;
-  if(active?.matches('input,textarea')||$('importDialog').open||$('rulesDialog').open)return;
+  if(active?.matches('input,textarea')||$('importDialog').open||$('rulesDialog').open||
+      $('libraryDialog').open||$('completionDialog').open)return;
+  if(event.key==='Escape'&&navigationStack.length){
+    event.preventDefault();goBack().catch(notify);return;
+  }
   if((event.ctrlKey||event.metaKey)&&(event.key.toLowerCase()==='z'||event.key.toLowerCase()==='y')){
     event.preventDefault();history(event.shiftKey||event.key.toLowerCase()==='y'?'redo':'undo');return;
   }
@@ -648,6 +688,12 @@ new ResizeObserver(resizeCanvas).observe(frame);
 resizeCanvas();
 $('runtimeBadge').textContent=native?'Rust / Tauri':'网页预览';
 (async()=>{
-  try{await openResult(await call('load_demo'));}
-  catch(error){notify('启动失败: '+String(error));}
+  try{
+    await loadCatalog();
+    if(native) await openBundled('digits-of-despair');
+    else await openResult(await call('load_demo'));
+  }catch(error){
+    notify('内置谜题加载失败: '+String(error));
+    try{await openResult(await call('load_demo'));}catch(e){notify(e);}
+  }
 })();
