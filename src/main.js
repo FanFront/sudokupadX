@@ -247,7 +247,10 @@ async function openBundled(id,push=false,backState=null){
       if(isVisible(progress,backState.selected))selected=backState.selected;
       updateSelection();requestDraw();
     }
-    updateBack();$('libraryDialog').close();toast('已载入离线谜题');
+    updateBack();
+    if($('rulesDialog').open)$('rulesDialog').close();
+    if($('libraryDialog').open)$('libraryDialog').close();
+    toast('已载入离线谜题');
   }catch(error){
     if(push)navigationStack.pop();
     throw error;
