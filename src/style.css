@@ -17,3 +17,35 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 @media(max-width:850px){.topbar{height:58px;padding:0 11px}.brand strong{font-size:15px}.brand small{display:none}.brand-mark{width:32px;height:32px;font-size:21px;border-radius:9px}.top-actions{gap:5px}.runtime-badge{display:none}.top-actions button{min-height:35px;font-size:12px;padding:0 9px}.workspace{padding:8px;gap:8px;display:flex;flex-direction:column}.board-panel{flex:1;min-height:160px;border-radius:12px}.board-heading{height:47px;padding:5px 10px}.puzzle-heading h1{font-size:14px}.puzzle-heading p{display:none}.board-tools button{min-height:31px}.board-footer{height:23px;font-size:10px}.board-hud{top:7px;left:7px;right:7px}.board-hud span{font-size:10px;padding:5px 7px}.controls{overflow:visible;flex-shrink:0;border-radius:12px;padding:8px;gap:7px}.control-heading strong{font-size:12px}.control-heading small,.help-text,.detail-panel{display:none}.switch-button{min-height:33px;font-size:11px;min-width:90px}.mode-bar button{min-height:40px;font-size:10px}.keypad{gap:5px}.keypad button{min-height:43px;font-size:19px}.pad-title{min-height:20px;font-size:11px}.palette button{min-height:35px}.action-bar button{min-height:37px;font-size:11px}.zoom-tools{bottom:8px;right:8px}.zoom-tools button{width:36px;height:36px;min-height:36px;font-size:18px}}
 @media(max-width:410px){.keypad button{min-height:39px}.mode-bar button{min-height:35px}.board-tools{gap:3px}.board-tools button{padding:0 7px}.top-actions .subtle-btn{display:none}}
 @media(max-height:650px) and (max-width:850px){.topbar{height:49px}.workspace{padding:5px;gap:5px}.board-heading{height:38px}.board-footer{height:19px}.controls{gap:4px;padding:6px}.mode-bar button{min-height:31px}.keypad button{min-height:32px;font-size:17px}.action-bar button{min-height:31px}.pad-title{min-height:17px}.switch-button{min-height:30px}}
+
+/* Adventure library, linked puzzles and sector-aware rules */
+.sector-links{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.sector-link-button{min-height:39px;text-align:left;padding:7px 11px;background:#254d63;color:#bdebdc;border:1px solid #457b88;font-size:12px;white-space:normal;line-height:1.4}
+.sector-switch{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:#c4e7ee}
+.sector-switch button{font-size:11px;min-height:34px;padding:0 9px}
+.library-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;max-height:54dvh;overflow-y:auto;scrollbar-color:#4d6d82 transparent}
+.library-entry{display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;padding:12px;background:#1c334b;border:1px solid #3c5f76;min-height:73px}
+.library-entry strong{font-size:13px;line-height:1.45}
+.library-entry small{font-size:11px;color:#8fb3c8}
+.library-spoiler{display:flex;align-items:center;gap:9px;font-size:12px;color:#b9ccd8;padding-top:5px}
+.library-spoiler input{accent-color:#a9d8c9;width:16px;height:16px}
+#libraryDialog{width:min(95vw,750px)}
+#libraryDialog .modal-content{max-height:85dvh;overflow-y:auto}
+#rulesDialog .sector-links{max-height:180px;overflow-y:auto}
+#completionDialog .full-rules{white-space:pre-wrap}
+#rulesDialog .full-rules{white-space:pre-wrap;overflow-y:auto;max-height:45dvh}
+.board-panel .board-hud{z-index:1}
+@media(max-width:850px){
+  #backButton{display:block;white-space:nowrap}
+  #backButton[hidden]{display:none}
+  .top-actions{gap:4px}
+  .top-actions .subtle-btn{padding:0 7px;min-height:34px}
+  .detail-panel{display:none}
+  .modal-content{padding:17px}
+  .library-list{grid-template-columns:1fr 1fr}
+}
+@media(max-width:410px){
+  .library-list{grid-template-columns:1fr}
+  .brand strong{font-size:13px}
+  .top-actions button{font-size:11px}
+}
