@@ -20,6 +20,7 @@ let pending = false;
 let undoStack = [];
 let redoStack = [];
 let toastTimer = 0;
+let saveTimer = 0;
 const board = $('boardCanvas');
 const frame = $('boardFrame');
 const ctx = board.getContext('2d', {alpha:false});
@@ -34,9 +35,18 @@ function validSymbol(s) {return /^[0-9A-Z]$/.test(s);}
 function saveKey() {return puzzle ? 'sudokupadx:v1:'+puzzle.key : '';}
 function save() {
   if (!puzzle || !progress) return;
+  clearTimeout(saveTimer);
   try {localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells}));} catch {}
   $('saveLabel').textContent = '已保存到本机';
 }
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  $('saveLabel').textContent = '待保存';
+  saveTimer=setTimeout(save,350);
+}
+document.addEventListener('visibilitychange',()=>{
+  if (document.visibilityState==='hidden') save();
+});
 async function restoreSaved() {
   let stored;
   try {stored=JSON.parse(localStorage.getItem(saveKey()) || 'null');} catch {return;}
@@ -166,6 +176,9 @@ async function openResult(result) {
   buildRegions();
   updateInfo();
   await restoreSaved();
+  if (puzzle.warnings?.some(message=>message.includes('Fog-of-war'))) {
+    toast('⚠ 迷雾尚未实现，地图可能包含未解锁内容');
+  }
   updateControls();
   fit();
   requestDraw();
@@ -376,7 +389,7 @@ async function edit(action,symbol='') {
     const change=await call('update_cell',{index:selected,mode:action,symbol});
     progress.cells[change.index]=change.cell;
     progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
-    updateControls();save();requestDraw();
+    updateControls();scheduleSave();requestDraw();
   } catch(error){notify(error);}
   finally{pending=false;}
 }
@@ -388,7 +401,7 @@ async function history(direction) {
     progress.cells[change.index]=change.cell;
     progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
     selected=change.index;
-    updateControls();save();requestDraw();
+    updateControls();scheduleSave();requestDraw();
   } catch(error){notify(error);}
   finally{pending=false;}
 }
