@@ -11,16 +11,27 @@
   },
   "app": {
     "windows": [
-      {"label": "main", "title": "SudokuPad X", "width": 1150, "height": 800, "minWidth": 340, "minHeight": 500}
+      {
+        "label": "main",
+        "title": "SudokuPad X",
+        "width": 1150,
+        "height": 800,
+        "minWidth": 340,
+        "minHeight": 500
+      }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost"
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost"
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.png"],
-    "android": {"minSdkVersion": 24}
+    "icon": [
+      "icons/icon.png"
+    ],
+    "android": {
+      "minSdkVersion": 24
+    }
   }
 }
