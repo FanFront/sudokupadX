@@ -12,6 +12,8 @@
       <div class="brand"><span class="brand-mark">X</span><div><strong>SudokuPad X</strong><small>原生谜题实验室</small></div></div>
       <div class="top-actions">
         <span class="runtime-badge" id="runtimeBadge">预览</span>
+        <button class="subtle-btn" id="backButton" type="button" hidden>返回地图</button>
+        <button class="subtle-btn" id="libraryButton" type="button">游戏库</button>
         <button class="subtle-btn" id="demoButton" type="button">示例</button>
         <button class="primary-btn" id="importButton" type="button">导入 SCL / JSON</button>
       </div>
@@ -59,8 +61,9 @@
           <button id="redoButton" type="button">↷ 重做</button>
         </div>
         <div class="detail-panel">
-          <div class="detail-heading"><span>谜题规则</span><button id="moreRules" type="button">展开</button></div>
+          <div class="detail-heading"><span id="sectorHeading">谜题规则</span><button id="moreRules" type="button">展开</button></div>
           <p id="rulesPreview">导入 SudokuPad 谜题后查看规则。</p>
+          <div id="sectorLinks" class="sector-links"></div>
           <div id="warningList" class="warnings" hidden></div>
         </div>
         <p class="help-text">点格输入 · 拖动平移 · 双指缩放 · 字母模式可翻页选择 A–Z</p>
@@ -81,8 +84,25 @@
   <dialog id="rulesDialog" class="modal">
     <div class="modal-content">
       <div class="modal-top"><h2>谜题规则</h2><button id="closeRules" class="modal-close" type="button" aria-label="Close">✕</button></div>
+      <div class="sector-switch"><strong id="modalSectorTitle">规则</strong><button id="nextSector" type="button" hidden>切换区域</button></div>
       <div id="fullRules" class="full-rules"></div>
+      <div id="modalLinks" class="sector-links"></div>
       <button id="dismissRules" class="primary-btn" type="button">返回棋盘</button>
+    </div>
+  </dialog>
+<dialog id="libraryDialog" class="modal">
+    <div class="modal-content">
+      <div class="modal-top"><h2>离线谜题库</h2><button id="closeLibrary" class="modal-close" type="button">✕</button></div>
+      <p>内置四张冒险主地图和配套首领 / 支线谜题。未探索区域的首领链接只在解锁后显示。</p>
+      <div id="libraryList" class="library-list"></div>
+      <label class="library-spoiler"><input id="showAllPuzzles" type="checkbox"> 显示全部首领与支线（可能剧透）</label>
+    </div>
+  </dialog>
+  <dialog id="completionDialog" class="modal">
+    <div class="modal-content">
+      <div class="modal-top"><h2>谜题已完成</h2><button id="closeCompletion" class="modal-close" type="button">✕</button></div>
+      <div id="completionText" class="full-rules"></div>
+      <button id="completionBack" class="primary-btn" type="button">返回地图</button>
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
