@@ -19,7 +19,8 @@ export function getLinkedPuzzles(rules, catalog, group) {
   for (const url of links) {
     const slug = url.split('/').pop().toLowerCase();
     const entry = catalog.find(e => e.url?.split('/').pop()?.toLowerCase() === slug);
-    if (!entry || (entry.group !== group && entry.kind !== 'main') || seen.has(entry.id)) continue;
+    // A visible sector rule is the source of truth, even for cross-game links.
+    if (!entry || seen.has(entry.id)) continue;
     seen.add(entry.id);
     results.push(entry);
   }
