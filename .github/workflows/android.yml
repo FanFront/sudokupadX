@@ -7,6 +7,10 @@ jobs:
   debug-apk:
     runs-on: ubuntu-24.04
     timeout-minutes: 75
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,17 +26,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install Android NDK
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install "ndk;27.2.12479018"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "ndk;27.2.12479018"
       - name: Install frontend packages
         run: npm install
       - name: Generate Android project
-        env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
         run: npx tauri android init --ci
       - name: Build ARM64 debug APK
-        env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
         run: npx tauri android build --apk --debug --target aarch64 --ci
       - uses: actions/upload-artifact@v4
         with:
