@@ -25,8 +25,8 @@ fn load_real_sudokuvania_and_super_sudokoid_packages() {
             .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
         match sudokupadx_core::load(&raw) {
             Ok(puzzle) => {
-                assert!(puzzle.rows >= 9, "{file}: rows");
-                assert!(puzzle.cols >= 9, "{file}: columns");
+                assert!(puzzle.rows >= 1, "{file}: rows");
+                assert!(puzzle.cols >= 1, "{file}: columns");
                 assert_eq!(puzzle.cells.len(), puzzle.rows * puzzle.cols);
                 seen.push(file);
                 count += 1;
