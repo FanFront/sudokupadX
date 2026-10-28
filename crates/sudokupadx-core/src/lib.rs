@@ -1,6 +1,9 @@
 //! Safe SudokuPad package loading and input state. No original SudokuPad runtime.
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+mod adventure;
+pub use adventure::{FogTrigger, Sector};
+use adventure::{read_foglight,read_sectors,read_solution,read_triggers};
 
 const MAX_INPUT_BYTES: usize = 8 * 1024 * 1024;
 const MAX_SIDE: usize = 160;
@@ -27,6 +30,16 @@ pub struct Puzzle {
     pub underlays: Vec<Value>,
     pub overlays: Vec<Value>,
     pub cages: Vec<Value>,
+    pub arrows: Vec<Value>,
+    pub sectors: Vec<Sector>,
+    #[serde(skip_serializing)]
+    pub foglight: Option<Vec<usize>>,
+    #[serde(skip_serializing)]
+    pub triggers: Vec<FogTrigger>,
+    #[serde(skip_serializing)]
+    pub solution: Option<Vec<Option<String>>>,
+    #[serde(skip_serializing)]
+    pub completion_text: Option<String>,
     pub warnings: Vec<String>,
 }
 
@@ -249,15 +262,19 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
     let author = meta.get("author").and_then(Value::as_str).unwrap_or("").to_owned();
     let rules = meta.get("rules").and_then(Value::as_str).unwrap_or("").to_owned();
     let mut warnings = Vec::new();
-    if root.get("foglight").is_some() || root.get("fogofwar").is_some() {
-        warnings.push("Fog-of-war is not implemented: hidden information may be exposed.".into());
+    let foglight = read_foglight(&root, rows, cols);
+    let triggers = read_triggers(&root, rows, cols);
+    let sectors = read_sectors(meta, rows, cols);
+    let solution = read_solution(meta, rows, cols);
+    if foglight.is_some() && solution.is_none() && !triggers.is_empty() {
+        warnings.push("Fog starts correctly, but trigger validation needs a full solution.".into());
     }
-    if root.get("triggereffect").is_some() || root.get("triggers").is_some() {
-        warnings.push("Scripted adventure triggers are not implemented.".into());
+    if root.get("triggereffect").and_then(Value::as_array)
+        .is_some_and(|items| items.len() != triggers.len()) {
+        warnings.push("Some unsupported scripted trigger types were ignored.".into());
     }
-    if meta.get("grids").and_then(Value::as_array)
-        .is_some_and(|v| !v.is_empty()) {
-        warnings.push("Multi-grid adventure rules and progression are not implemented.".into());
+    if root.get("fogofwar").is_some() && foglight.is_none() {
+        warnings.push("Unsupported fog-of-war variant (not foglight).".into());
     }
     if root.get("arrows").is_some() || root.get("thermos").is_some() {
         warnings.push("Some variant constraints are not yet drawn or validated.".into());
@@ -270,6 +287,9 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         underlays: marks(&root, "underlays", "u", &mut warnings),
         overlays: marks(&root, "overlays", "o", &mut warnings),
         cages: marks(&root, "cages", "ca", &mut warnings),
+        arrows: marks(&root, "arrows", "a", &mut warnings),
+        sectors, foglight, triggers, solution,
+        completion_text: meta.get("msgcorrect").and_then(Value::as_str).map(str::to_owned),
         warnings,
     })
 }
@@ -291,6 +311,9 @@ pub struct Snapshot {
     pub cells: Vec<InputCell>,
     pub can_undo: bool,
     pub can_redo: bool,
+    pub visible: Vec<bool>,
+    pub solved: bool,
+    pub completion: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -300,6 +323,9 @@ pub struct EditResult {
     pub cell: InputCell,
     pub can_undo: bool,
     pub can_redo: bool,
+    pub visible: Vec<bool>,
+    pub solved: bool,
+    pub completion: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -314,6 +340,7 @@ pub struct Session {
     cells: Vec<InputCell>,
     undo: Vec<Edit>,
     redo: Vec<Edit>,
+    visible: Vec<bool>,
 }
 
 fn valid_symbol(s: &str) -> bool {
@@ -335,13 +362,50 @@ fn toggle(list: &mut Vec<String>, value: &str) {
 impl Session {
     pub fn new(puzzle: Puzzle) -> Self {
         let cells = vec![InputCell::default(); puzzle.cells.len()];
-        Self { puzzle, cells, undo: Vec::new(), redo: Vec::new() }
+        let mut session = Self { puzzle, cells, undo: Vec::new(), redo: Vec::new(), visible: Vec::new() };
+        session.refresh_fog();
+        session
+    }
+    fn correct(&self, index: usize) -> bool {
+        let Some(solution) = &self.puzzle.solution else { return false };
+        let Some(Some(expected)) = solution.get(index) else { return false };
+        self.puzzle.cells[index].given.as_ref()
+            .or(self.cells[index].value.as_ref()) == Some(expected)
+    }
+    fn solved(&self) -> bool {
+        self.puzzle.solution.as_ref().is_some_and(|solution|
+            solution.iter().enumerate().all(|(index,s)| s.is_none() || self.correct(index))
+        )
+    }
+    fn completion(&self) -> Option<String> {
+        if self.solved() { self.puzzle.completion_text.clone() } else { None }
+    }
+    fn refresh_fog(&mut self) {
+        if let Some(initial) = &self.puzzle.foglight {
+            let mut visible = vec![false; self.cells.len()];
+            for &index in initial { if index < visible.len() { visible[index] = true; } }
+            for trigger in &self.puzzle.triggers {
+                // SudokuPad cellvalue sets are conjunctions: all referenced
+                // cells must hold their correct solution values.
+                if trigger.all_correct.iter().all(|&index| self.correct(index)) {
+                    for &index in &trigger.reveals {
+                        if index < visible.len() { visible[index] = true; }
+                    }
+                }
+            }
+            self.visible = visible;
+        } else {
+            self.visible = vec![true; self.cells.len()];
+        }
     }
     pub fn snapshot(&self) -> Snapshot {
         Snapshot {
             cells: self.cells.clone(),
             can_undo: !self.undo.is_empty(),
             can_redo: !self.redo.is_empty(),
+            visible: self.visible.clone(),
+            solved: self.solved(),
+            completion: self.completion(),
         }
     }
     fn result(&self, index: usize) -> EditResult {
@@ -350,6 +414,9 @@ impl Session {
             cell: self.cells[index].clone(),
             can_undo: !self.undo.is_empty(),
             can_redo: !self.redo.is_empty(),
+            visible: self.visible.clone(),
+            solved: self.solved(),
+            completion: self.completion(),
         }
     }
     /// Saved input is validated; given cells remain immutable on restoration.
@@ -373,6 +440,7 @@ impl Session {
         self.cells = cells;
         self.undo.clear();
         self.redo.clear();
+        self.refresh_fog();
         Ok(self.snapshot())
     }
     pub fn apply(&mut self, index: usize, mode: &str, symbol: &str) -> Result<EditResult, String> {
@@ -408,6 +476,7 @@ impl Session {
             if self.undo.len() > 300 { self.undo.remove(0); }
             self.redo.clear();
         }
+        self.refresh_fog();
         Ok(self.result(index))
     }
     pub fn undo(&mut self) -> Result<EditResult, String> {
@@ -415,6 +484,7 @@ impl Session {
         self.cells[edit.index] = edit.before.clone();
         let index = edit.index;
         self.redo.push(edit);
+        self.refresh_fog();
         Ok(self.result(index))
     }
     pub fn redo(&mut self) -> Result<EditResult, String> {
@@ -422,6 +492,7 @@ impl Session {
         self.cells[edit.index] = edit.after.clone();
         let index = edit.index;
         self.undo.push(edit);
+        self.refresh_fog();
         Ok(self.result(index))
     }
 }
@@ -502,6 +573,26 @@ mod tests {
         assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("9"));
         session.redo().unwrap();
         assert_eq!(session.snapshot().cells[2].corner, vec!["2"]);
+    }
+
+    #[test]
+    fn dynamic_fog_reveals_only_when_all_trigger_cells_correct() {
+        let raw = r#"{"metadata":{"solution":"1234"},"cells":[[{},{}],[{},{}]],
+          "foglight":[[0,0],[0,1]],
+          "triggereffect":[{"trigger":{"type":"cellvalue","cell":"r1c1r1c2"},
+           "effect":{"type":"foglight","cells":"r2c2"}}]}"#;
+        let mut session=Session::new(load(raw).unwrap());
+        assert_eq!(session.snapshot().visible,vec![true,true,false,false]);
+        session.apply(0,"value","1").unwrap();
+        assert!(!session.snapshot().visible[3]);
+        session.apply(1,"value","3").unwrap();
+        assert!(!session.snapshot().visible[3]);
+        session.apply(1,"value","2").unwrap();
+        assert!(session.snapshot().visible[3]);
+        session.undo().unwrap();
+        assert!(!session.snapshot().visible[3]);
+        session.redo().unwrap();
+        assert!(session.snapshot().visible[3]);
     }
     #[test]
     fn reject_bad_payload_and_save() {
