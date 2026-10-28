@@ -46,14 +46,79 @@ fn stable_key(data: &str) -> String {
     format!("fnv1a-{hash:016x}")
 }
 
-fn marks(v: &Value, field: &str, warnings: &mut Vec<String>) -> Vec<Value> {
-    let Some(array) = v.get(field).and_then(Value::as_array) else {
+/// Convert only SudokuMaker's data-only compact syntax into JSON5. The
+/// scanner respects quote/escape boundaries: neither puzzle text nor code is
+/// evaluated. JavaScript array elisions become JSON nulls; t/f/n atoms become
+/// true/false/null. Unknown token syntax is still rejected by JSON5.
+fn normalize_compact(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let mut output = String::with_capacity(text.len() + text.len() / 10);
+    let mut quote: Option<char> = None;
+    let mut escaped = false;
+    let mut nesting = Vec::new();
+    for (idx, &ch) in chars.iter().enumerate() {
+        if let Some(current) = quote {
+            output.push(ch);
+            if escaped { escaped = false; }
+            else if ch == '\\' { escaped = true; }
+            else if ch == current { quote = None; }
+            continue;
+        }
+        if ch == '\'' || ch == '"' {
+            quote = Some(ch);
+            output.push(ch);
+            continue;
+        }
+        if ch == '[' || ch == '{' { nesting.push(ch); }
+        if ch == ']' || ch == '}' { nesting.pop(); }
+        if ch == ',' && nesting.last() == Some(&'[') {
+            let previous = output.chars().rev().find(|c| !c.is_whitespace());
+            if matches!(previous, Some('[' | ',')) {
+                output.push_str("null");
+            }
+        }
+        if matches!(ch, 't' | 'f' | 'n') {
+            let before = output.chars().rev().find(|c| !c.is_whitespace());
+            let after = chars[idx + 1..].iter().find(|c| !c.is_whitespace()).copied();
+            if matches!(before, Some(':' | '[' | ','))
+                && matches!(after, Some(',' | '}' | ']'))
+            {
+                output.push_str(match ch { 't' => "true", 'f' => "false", _ => "null" });
+                continue;
+            }
+        }
+        output.push(ch);
+    }
+    output
+}
+
+fn marks(v: &Value, field: &str, alias: &str, warnings: &mut Vec<String>) -> Vec<Value> {
+    let Some(array) = v.get(field).or_else(|| v.get(alias)).and_then(Value::as_array) else {
         return Vec::new();
     };
     if array.len() > MAX_MARKS {
         warnings.push(format!("{field}: only the first {MAX_MARKS} marks are displayed"));
     }
-    array.iter().take(MAX_MARKS).cloned().collect()
+    array.iter().take(MAX_MARKS).map(|item| {
+        let mut item = item.clone();
+        if let Some(map) = item.as_object_mut() {
+            let field_aliases = if field == "lines" {
+                &[("wp", "wayPoints"), ("c", "color"), ("th", "thickness")][..]
+            } else {
+                &[("ct", "center"), ("w", "width"), ("h", "height"),
+                  ("te", "text"), ("fs", "fontSize"), ("c", "backgroundColor"),
+                  ("bc", "borderColor"), ("bs", "borderSize")][..]
+            };
+            for &(short, long) in field_aliases {
+                if !map.contains_key(long) {
+                    if let Some(value) = map.get(short).cloned() {
+                        map.insert(long.to_owned(), value);
+                    }
+                }
+            }
+        }
+        item
+    }).collect()
 }
 
 /// Accept raw JSON, JSON5-compatible SudokuMaker compact literals, or
@@ -87,13 +152,13 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         Err(_) => {
             // JSON5 accepts unquoted keys and single-quoted strings without
             // evaluating arbitrary third-party JavaScript expressions.
-            json5::from_str(&decoded).map_err(
+            json5::from_str(&normalize_compact(&decoded)).map_err(
                 |err| format!("Unsupported puzzle JSON or compact literal: {err}")
             )?
         }
     };
 
-    let matrix = root.get("cells").and_then(Value::as_array)
+    let matrix = root.get("cells").or_else(|| root.get("ce")).and_then(Value::as_array)
         .ok_or_else(|| "Missing cells[][] array.".to_string())?;
     let rows = matrix.len();
     let cols = matrix.iter()
@@ -138,11 +203,11 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
     let key = root.get("id").and_then(as_text).unwrap_or_else(|| stable_key(&decoded));
     Ok(Puzzle {
         key, title, author, rules, rows, cols, cells,
-        regions: marks(&root, "regions", &mut warnings),
-        lines: marks(&root, "lines", &mut warnings),
-        underlays: marks(&root, "underlays", &mut warnings),
-        overlays: marks(&root, "overlays", &mut warnings),
-        cages: marks(&root, "cages", &mut warnings),
+        regions: marks(&root, "regions", "re", &mut warnings),
+        lines: marks(&root, "lines", "l", &mut warnings),
+        underlays: marks(&root, "underlays", "u", &mut warnings),
+        overlays: marks(&root, "overlays", "o", &mut warnings),
+        cages: marks(&root, "cages", "ca", &mut warnings),
         warnings,
     })
 }
@@ -346,6 +411,15 @@ mod tests {
         let board = load(doc).unwrap();
         assert_eq!(board.key, "compact");
         assert_eq!(board.cells[0].given.as_deref(), Some("1"));
+    }
+    #[test]
+    fn compact_sparse_cells_and_atom_tokens() {
+        let raw = "{id:'compact-sparse',metadata:{title:'Sparse'},ce:[[,,{v:1}],[{value:2},,]],re:[],l:[{wp:[[0,0],[1,1]],c:'#fff',th:2,r:t}],u:[{ct:[1,1],w:1,h:1,te:'t,f,n'}]}";
+        let doc = load(raw).unwrap();
+        assert_eq!(doc.rows, 2);
+        assert_eq!(doc.cols, 3);
+        assert_eq!(doc.lines[0]["wayPoints"], serde_json::json!([[0,0],[1,1]]));
+        assert_eq!(doc.underlays[0]["text"], "t,f,n");
     }
     #[test]
     fn notes_and_undo_redo() {
