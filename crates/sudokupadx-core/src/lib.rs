@@ -92,6 +92,68 @@ fn normalize_compact(text: &str) -> String {
     output
 }
 
+/// SudokuMaker also uses non-JSON unquoted color atoms like `c:#0` and
+/// `stroke:ffffff`. Treat only the hexadecimal color forms as strings.
+fn quote_compact_colors(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let mut result = String::with_capacity(text.len() + text.len() / 20);
+    let mut i = 0;
+    let mut quote = None;
+    let mut escaped = false;
+    while i < chars.len() {
+        let c = chars[i];
+        if let Some(q) = quote {
+            result.push(c);
+            if escaped { escaped = false; }
+            else if c == '\\' { escaped = true; }
+            else if c == q { quote = None; }
+            i += 1;
+            continue;
+        }
+        if c == '\'' || c == '"' {
+            quote = Some(c);
+            result.push(c);
+            i += 1;
+            continue;
+        }
+        if c == ':' {
+            let mut begin = i + 1;
+            while begin < chars.len() && chars[begin].is_whitespace() { begin += 1; }
+            let mut end = begin;
+            if begin < chars.len() && chars[begin] == '#' {
+                end += 1;
+                while end < chars.len() && chars[end].is_ascii_hexdigit() { end += 1; }
+                if end > begin + 1 {
+                    result.push(':');
+                    for ch in &chars[i + 1..begin] { result.push(*ch); }
+                    result.push('\'');
+                    for ch in &chars[begin..end] { result.push(*ch); }
+                    result.push('\'');
+                    i = end;
+                    continue;
+                }
+            } else {
+                while end < chars.len() && chars[end].is_ascii_hexdigit() { end += 1; }
+                let word: String = chars[begin..end].iter().collect();
+                if matches!(word.len(), 6 | 8) &&
+                    word.chars().any(|ch| ch.is_ascii_alphabetic()) &&
+                    (end == chars.len() || matches!(chars[end], ',' | '}' | ']' | ' ')) {
+                    result.push(':');
+                    for ch in &chars[i + 1..begin] { result.push(*ch); }
+                    result.push('\'');
+                    result.push_str(&word);
+                    result.push('\'');
+                    i = end;
+                    continue;
+                }
+            }
+        }
+        result.push(c);
+        i += 1;
+    }
+    result
+}
+
 fn marks(v: &Value, field: &str, alias: &str, warnings: &mut Vec<String>) -> Vec<Value> {
     let Some(array) = v.get(field).or_else(|| v.get(alias)).and_then(Value::as_array) else {
         return Vec::new();
@@ -152,7 +214,7 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         Err(_) => {
             // JSON5 accepts unquoted keys and single-quoted strings without
             // evaluating arbitrary third-party JavaScript expressions.
-            json5::from_str(&normalize_compact(&decoded)).map_err(
+            json5::from_str(&quote_compact_colors(&normalize_compact(&decoded))).map_err(
                 |err| format!("Unsupported puzzle JSON or compact literal: {err}")
             )?
         }
@@ -420,6 +482,13 @@ mod tests {
         assert_eq!(doc.cols, 3);
         assert_eq!(doc.lines[0]["wayPoints"], serde_json::json!([[0,0],[1,1]]));
         assert_eq!(doc.underlays[0]["text"], "t,f,n");
+    }
+    #[test]
+    fn compact_color_atoms() {
+        let src = "{id:'color',metadata:{title:'Color'},ce:[[{v:1},{}]],l:[{c:#0,wp:[[0,0],[0,1]]}],u:[{stroke:ffffff,fill:ffffff20,ct:[0,0]}]}";
+        let board = load(src).unwrap();
+        assert_eq!(board.lines[0]["color"], "#0");
+        assert_eq!(board.underlays[0]["stroke"], "ffffff");
     }
     #[test]
     fn notes_and_undo_redo() {
