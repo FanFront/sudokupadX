@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0c1626">
+  <title>SudokuPad X</title>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">X</span><div><strong>SudokuPad X</strong><small>原生谜题实验室</small></div></div>
+      <div class="top-actions">
+        <span class="runtime-badge" id="runtimeBadge">预览</span>
+        <button class="subtle-btn" id="demoButton" type="button">示例</button>
+        <button class="primary-btn" id="importButton" type="button">导入 SCL / JSON</button>
+      </div>
+    </header>
+    <main class="workspace">
+      <section class="board-panel" aria-label="Puzzle board">
+        <div class="board-heading">
+          <div class="puzzle-heading"><h1 id="puzzleTitle">Loading…</h1><p id="puzzleAuthor">SudokuPad X</p></div>
+          <div class="board-tools">
+            <button id="rulesButton" type="button" title="查看谜题规则">规则</button>
+            <button id="fitButton" type="button" title="适配棋盘">适配</button>
+          </div>
+        </div>
+        <div id="boardFrame" class="board-frame">
+          <canvas id="boardCanvas" tabindex="0" aria-label="Sudoku puzzle; tap a cell to select"></canvas>
+          <div class="board-hud"><span id="selectionLabel">选择一个格子</span><span id="zoomLabel">100%</span></div>
+          <div class="zoom-tools">
+            <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
+            <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
+          </div>
+        </div>
+        <div class="board-footer"><span id="boardMeta">9 × 9</span><span id="saveLabel">本地自动保存</span></div>
+      </section>
+      <aside class="controls" aria-label="Puzzle controls">
+        <div class="control-heading"><div><strong>输入控制台</strong><small>支持触屏 / 键盘</small></div><button id="alphabetButton" class="switch-button" type="button" aria-pressed="false">ABC 字母</button></div>
+        <div id="modeBar" class="mode-bar" role="group" aria-label="Input mode">
+          <button data-mode="value" class="active" type="button">大数字</button>
+          <button data-mode="corner" type="button">角标</button>
+          <button data-mode="center" type="button">中心</button>
+          <button data-mode="color" type="button">颜色</button>
+          <button data-mode="pan" type="button">移动</button>
+        </div>
+        <div class="pad-title"><span id="padTitle">数字输入</span><button id="letterPage" type="button" hidden>下一组</button></div>
+        <div class="keypad" id="keypad" role="group" aria-label="Number and letter pad"></div>
+        <div class="palette" id="palette" aria-label="Color palette" hidden>
+          <button data-color="#f8cd75" style="--swatch:#f8cd75" type="button" aria-label="Yellow"></button>
+          <button data-color="#a9d9a1" style="--swatch:#a9d9a1" type="button" aria-label="Green"></button>
+          <button data-color="#9fcbff" style="--swatch:#9fcbff" type="button" aria-label="Blue"></button>
+          <button data-color="#e9b0d6" style="--swatch:#e9b0d6" type="button" aria-label="Pink"></button>
+          <button data-color="#bfb5fa" style="--swatch:#bfb5fa" type="button" aria-label="Purple"></button>
+        </div>
+        <div class="action-bar">
+          <button id="eraseButton" type="button">⌫ 清除</button>
+          <button id="undoButton" type="button">↶ 撤销</button>
+          <button id="redoButton" type="button">↷ 重做</button>
+        </div>
+        <div class="detail-panel">
+          <div class="detail-heading"><span>谜题规则</span><button id="moreRules" type="button">展开</button></div>
+          <p id="rulesPreview">导入 SudokuPad 谜题后查看规则。</p>
+          <div id="warningList" class="warnings" hidden></div>
+        </div>
+        <p class="help-text">点格输入 · 拖动平移 · 双指缩放 · 字母模式可翻页选择 A–Z</p>
+      </aside>
+    </main>
+  </div>
+  <dialog id="importDialog" class="modal">
+    <form method="dialog" class="modal-content">
+      <div class="modal-top"><h2>导入 SudokuPad 谜题</h2><button value="cancel" class="modal-close" aria-label="Close">✕</button></div>
+      <p>选择本地 <code>.scl</code> 或 <code>.json</code> 文件，也可以粘贴完整压缩文本。不会上传到服务器。</p>
+      <label class="file-drop">从设备选择文件<input id="filePicker" type="file" accept=".scl,.json,.txt,application/json,text/plain"></label>
+      <label class="paste-label" for="pasteInput">或者粘贴 SCL / JSON</label>
+      <textarea id="pasteInput" rows="5" spellcheck="false" placeholder="scl... 或 {&quot;cells&quot;:[...]}"></textarea>
+      <p id="importError" role="alert"></p>
+      <div class="modal-actions"><button value="cancel" type="button" id="cancelImport">取消</button><button type="button" id="confirmImport" class="primary-btn">打开谜题</button></div>
+    </form>
+  </dialog>
+  <dialog id="rulesDialog" class="modal">
+    <div class="modal-content">
+      <div class="modal-top"><h2>谜题规则</h2><button id="closeRules" class="modal-close" type="button" aria-label="Close">✕</button></div>
+      <div id="fullRules" class="full-rules"></div>
+      <button id="dismissRules" class="primary-btn" type="button">返回棋盘</button>
+    </div>
+  </dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
