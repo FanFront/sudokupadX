@@ -49,3 +49,15 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   .brand strong{font-size:13px}
   .top-actions button{font-size:11px}
 }
+
+@media(max-width:410px){
+  #libraryButton{display:block}
+  #demoButton{display:none}
+  .board-tools button{min-height:30px;padding:0 5px}
+}
+@media(max-width:370px){
+  .brand strong{display:none}
+  .brand{gap:0}
+  #backButton{max-width:63px;padding:0 4px}
+  .top-actions button{padding:0 5px}
+}
