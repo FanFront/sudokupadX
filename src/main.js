@@ -382,8 +382,8 @@ function gridIndex(x,y) {
 }
 function point(pair) {
   if (!Array.isArray(pair)||pair.length<2) return null;
-  const r=Number(pair[0]),c=Number(pair[1]);
-  return Number.isFinite(r)&&Number.isFinite(c)?[c*CELL,r*CELL]:null;
+  const x=Number(pair[0]),y=Number(pair[1]);
+  return Number.isFinite(x)&&Number.isFinite(y)?[x*CELL,y*CELL]:null;
 }
 function drawMarks(items,clip,foreground) {
   if (!Array.isArray(items)) return;
@@ -392,9 +392,12 @@ function drawMarks(items,clip,foreground) {
     const p=point(item.center);
     if(!p) continue;
     const w=(Number(item.width)||0)*CELL,h=(Number(item.height)||0)*CELL;
-    if(w<=0||h<=0||w>10000||h>10000) continue;
+    if((w<=0||h<=0)&&!item.text)continue;
+    if(w>10000||h>10000)continue;
     const x=p[0]-w/2,y=p[1]-h/2;
-    if (x>clip.right||x+w<clip.left||y>clip.bottom||y+h<clip.top) continue;
+    const textRadius=Math.max(15,Number(item.fontSize||0)*CELL/64);
+    if (x-textRadius>clip.right||x+w+textRadius<clip.left||
+        y-textRadius>clip.bottom||y+h+textRadius<clip.top) continue;
     ctx.save();
     const angle=Number(item.angle)||0;
     if(angle){ctx.translate(p[0],p[1]);ctx.rotate(angle*Math.PI/180);ctx.translate(-p[0],-p[1]);}
@@ -406,11 +409,13 @@ function drawMarks(items,clip,foreground) {
       ctx.strokeStyle=item.borderColor;ctx.strokeRect(x,y,w,h);
     }
     if(typeof item.text==='string'&&item.text&&foreground){
-      const size=Math.min(Math.min(w,h)*.7,Math.max(10,(Number(item.fontSize)||.3)*CELL));
+      const size=Math.max(9,Math.min(420,(Number(item.fontSize)||19)*CELL/64));
       ctx.fillStyle=item.textColor||'#172534';
       ctx.font='600 '+size+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
       const lines=item.text.split('\n').slice(0,3);
-      for(let i=0;i<lines.length;i++)ctx.fillText(lines[i].slice(0,90),p[0],p[1]+(i-(lines.length-1)/2)*size*1.1,w);
+      for(let i=0;i<lines.length;i++)
+        ctx.fillText(lines[i].slice(0,90),p[0],p[1]+(i-(lines.length-1)/2)*size*1.1,
+          Math.max(CELL*.7,w||CELL*8));
     }
     ctx.restore();
   }
@@ -441,7 +446,8 @@ function draw() {
   const c0=Math.max(0,Math.floor(clip.left/CELL)-1),c1=Math.min(puzzle.cols,Math.ceil(clip.right/CELL)+1);
   const r0=Math.max(0,Math.floor(clip.top/CELL)-1),r1=Math.min(puzzle.rows,Math.ceil(clip.bottom/CELL)+1);
   ctx.fillStyle='#fbfdfb';ctx.fillRect(0,0,puzzle.cols*CELL,puzzle.rows*CELL);
-  drawMarks(puzzle.underlays,clip,false);
+  drawPathMarks(ctx,puzzle.underlays);
+  drawMarks(puzzle.underlays,clip,true);
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c,entry=progress.cells[idx]||clearCell();
     const x=c*CELL,y=r*CELL;
@@ -465,6 +471,8 @@ function draw() {
     ctx.stroke();
   }
   drawLines(clip);
+  drawArrows(ctx,puzzle,clip);
+  drawCages(ctx,puzzle,clip);
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c;
     const given=puzzle.cells[idx].given,entry=progress.cells[idx]||clearCell();
@@ -484,8 +492,10 @@ function draw() {
       ctx.fillText(entry.center.join(' ').slice(0,17),x+CELL/2,y+CELL*.76,CELL-6);
     }
   }
+  drawPathMarks(ctx,puzzle.overlays);
   drawMarks(puzzle.overlays,clip,true);
-  if(selected>=0){
+  drawFog(ctx,puzzle,progress,clip);
+  if(selected>=0 && isVisible(progress,selected)){
     const x=(selected%puzzle.cols)*CELL,y=Math.floor(selected/puzzle.cols)*CELL;
     ctx.strokeStyle='#137fbc';ctx.lineWidth=3.5;ctx.strokeRect(x+1,y+1,CELL-2,CELL-2);
   }
@@ -518,7 +528,11 @@ async function history(direction) {
   } catch(error){notify(error);}
   finally{pending=false;}
 }
-function select(index) {selected=index;updateSelection();requestDraw();board.focus({preventScroll:true});}
+function select(index) {
+  if(index>=0&&!isVisible(progress,index)){toast('此格仍被迷雾覆盖');return;}
+  if(index!==selected)sectorCursor=0;
+  selected=index;updateSelection();requestDraw();board.focus({preventScroll:true});
+}
 function locationInFrame(event) {
   const b=frame.getBoundingClientRect();
   return {x:event.clientX-b.left,y:event.clientY-b.top};
