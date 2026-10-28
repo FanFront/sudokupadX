@@ -1,0 +1,40 @@
+name: Build Android debug APK
+on:
+  workflow_dispatch:
+jobs:
+  debug-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-ndk@v3
+        id: ndk
+        with:
+          ndk-version: 27.2.12479018
+      - name: Install frontend packages
+        run: npm install
+      - name: Generate Android project
+        env:
+          NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: npx tauri android init --ci
+      - name: Build ARM64 debug APK
+        env:
+          NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: npx tauri android build --apk --debug --target aarch64 --ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SudokuPadX-Android-arm64-debug
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
