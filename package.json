@@ -1,6 +1,6 @@
 {
   "name": "sudokupadx",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "tauri": "tauri",
     "android:init": "tauri android init",
     "android:dev": "tauri android dev",
-    "android:build": "tauri android build --apk",
+    "android:build": "node scripts/android-release.mjs version && node scripts/android-release.mjs sign && tauri android build --apk --target aarch64",
     "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {

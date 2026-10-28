@@ -1,4 +1,4 @@
-name: Build Android debug APK
+name: Build compact signed Android APK
 on:
   push:
     branches: [main]
@@ -7,7 +7,7 @@ concurrency:
   group: sudokupadx-android-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  debug-apk:
+  release-apk:
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
@@ -35,12 +35,39 @@ jobs:
           "$SDKMANAGER" --install "ndk;27.2.12479018"
       - name: Install frontend packages
         run: npm install
+      - name: Assign unique increasing Android version code
+        run: node scripts/android-release.mjs version
       - name: Generate Android project
         run: npx tauri android init --ci
-      - name: Build ARM64 debug APK
-        run: npx tauri android build --apk --debug --target aarch64 --ci
+      - name: Configure permanent test signing and Android shrinker
+        run: node scripts/android-release.mjs sign
+      - name: Build optimized signed ARM64 release APK
+        run: npx tauri android build --apk --target aarch64 --ci
+      - name: Verify signing certificate, APK size and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_DIR="src-tauri/gen/android/app/build/outputs/apk"
+          mapfile -t APKS < <(find "$APK_DIR" -type f -name '*.apk' ! -name '*unsigned*' | sort)
+          test "${#APKS[@]}" -eq 1
+          APK="${APKS[0]}"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner | sort -V | tail -n1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          ACTUAL="$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n1 | tr '[:upper:]' '[:lower:]')"
+          EXPECTED='8c7c54f2b981c9f3b8ee56cc061afe8e5ac2022fa38e24ae21cf367213665f7f'
+          test "$ACTUAL" = "$EXPECTED"
+          APK_BYTES="$(stat -c%s "$APK")"
+          echo "Release APK: $APK ($(numfmt --to=iec "$APK_BYTES"))"
+          {
+            echo "### Signed release APK"
+            echo "File: `$(basename "$APK")`"
+            echo "Size: **$(numfmt --to=iec "$APK_BYTES")**"
+            echo "Version code: **$((2000000 + GITHUB_RUN_NUMBER))**"
+            echo "Certificate: `$ACTUAL`"
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: SudokuPadX-Android-arm64-debug
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          name: SudokuPadX-Android-arm64-release-test-signed
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*release*.apk
           if-no-files-found: error

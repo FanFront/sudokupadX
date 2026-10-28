@@ -1,3 +1,11 @@
 [workspace]
 resolver = "2"
 members = ["crates/sudokupadx-core", "src-tauri"]
+
+# Compact Android/desktop native binaries. ARM64 release builds avoid debug symbols.
+[profile.release]
+opt-level = "z"
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
