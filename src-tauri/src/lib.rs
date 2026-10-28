@@ -38,9 +38,35 @@ fn with_session<T>(
 fn load_demo(state: State<'_, AppState>) -> Result<OpenResponse, String> {
     open(DEMO, &state)
 }
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalizedMetadata {
+    title: Option<String>,
+    rules: Option<String>,
+    msgcorrect: Option<String>,
+}
+
 #[tauri::command]
-fn open_puzzle(input: String, state: State<'_, AppState>) -> Result<OpenResponse, String> {
-    open(&input, &state)
+fn open_puzzle(
+    input: String,
+    localization: Option<LocalizedMetadata>,
+    state: State<'_, AppState>
+) -> Result<OpenResponse, String> {
+    let mut puzzle = sudokupadx_core::load(&input)?;
+    if let Some(locale) = localization {
+        if let Some(title) = locale.title.filter(|s| !s.trim().is_empty()) {
+            puzzle.title = title;
+        }
+        if let Some(rules) = locale.rules.filter(|s| !s.trim().is_empty()) {
+            puzzle.rules = rules;
+        }
+        if let Some(message) = locale.msgcorrect.filter(|s| !s.trim().is_empty()) {
+            puzzle.completion_text = Some(message);
+        }
+    }
+    let result = OpenResponse { puzzle: puzzle.clone(), progress: Session::new(puzzle.clone()).snapshot() };
+    *lock(&state)? = Some(Session::new(puzzle));
+    Ok(result)
 }
 #[tauri::command]
 fn update_cell(
