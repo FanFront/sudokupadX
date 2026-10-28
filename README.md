@@ -42,18 +42,34 @@ The app opens the first bundled Sudokuvania map by default. Select **游戏库**
 
 Pure browser preview (`npm run dev`) still loads the demo and can import regular JSON only. Compressed SCL and the authoritative fog/trigger engine require Tauri/Rust.
 
-### Android APK
+### Android: compact, stable-signed test APKs
 
-The GitHub Actions **Build Android debug APK** workflow builds the ARM64 Tauri app. Download the `SudokuPadX-Android-arm64-debug` artifact from a **successful** run. Alternatively install Android SDK/NDK and follow the Tauri 2 prerequisites, then:
+The [**Build compact signed Android APK**](https://github.com/FanFront/sudokupadX/actions/workflows/android.yml) workflow produces an **ARM64-only release APK** optimized for size, rather than the older large debug APK:
+
+- Native Rust library is built in release mode with `opt-level = "z"`, thin LTO, one codegen unit, panic abort, and symbol stripping.
+- Android release enables R8 minification and resource shrinking.
+- The 46 bundled offline games stay installed in the APK (no extra download).
+- The package ID stays `com.fanfront.sudokupadx`.
+- **Every CI build is signed with the exact same public testing certificate** in `android-signing/test-signing.p12`.
+- CI assigns monotonically increasing Android `versionCode = 2,000,000 + GITHUB_RUN_NUMBER`; installed saves and app data persist across later updates from this signing key.
+
+Download **`SudokuPadX-Android-arm64-release-test-signed`** from the artifacts on a *successful* workflow run. The workflow validates the APK signature and reports the actual APK size. Older workflow artifacts are debug builds and cannot be used as updates for this release-signing series.
+
+**First upgrade from the old APK:** Previous CI debug APKs were signed with a different, ephemeral Android debug certificate. The new stable certificate **cannot** upgrade an old debug install with the same package ID. You must **uninstall the previously signed debug APK once** before installing your first stable-signed release. Android removes the app's on-device data on uninstall, so back up any progress you need to keep. After this one transition, new stable-signed APKs can be installed over older ones without uninstalling.
+
+**This signing key and its passphrase are deliberately public, for personal testing only**: alias `sudokupadx-test`, store type PKCS12, password `SudokuPadX-Test-2026`. Anyone can sign an APK using this key, so never use it for app-store distribution or sensitive production data. Preserve the same file for all future test releases; replacing the key would require another uninstall.
+
+To make the same signed release APK locally after setting up the [Tauri Android prerequisites](https://v2.tauri.app/start/prerequisites/):
 
 ```sh
 npm install
 rustup target add aarch64-linux-android
 npx tauri android init --ci
-npx tauri android build --apk --debug --target aarch64 --ci
+npm run android:build
 ```
 
-The package ID is `com.fanfront.sudokupadx`, separate from the old Android wrapper. CI debug APKs may be signed with different keys across runners; do not assume in-place upgrades between runs until stable signing is configured.
+`npm run android:build` sets the versionCode and reapplies the signing configuration to the generated Gradle project before building a signed release. For local in-place upgrades, pass a `SUDOKUPADX_VERSION_CODE` greater than the version code already installed (e.g. `SUDOKUPADX_VERSION_CODE=2001000 npm run android:build`). CI handles this automatically. Tauri's generated `src-tauri/gen/` is ignored by Git, so the shared setup script is intentionally reapplied after each `tauri android init`.
+
 
 ## Validation
 
