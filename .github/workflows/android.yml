@@ -55,9 +55,7 @@ jobs:
           test -x "$APKSIGNER"
           SIGNATURE_REPORT="$("$APKSIGNER" verify --verbose --print-certs "$APK")"
           printf '%s\n' "$SIGNATURE_REPORT"
-          # apksigner uses "V2 Signer: certificate ..." on some build-tools
-          # versions and "Signer #1 certificate ..." on others. The original
-          # exact-prefix match incorrectly rejected correctly signed APKs.
+          # Both "V2 Signer: certificate" and "Signer #1 certificate" are valid.
           ACTUAL="$(printf '%s\n' "$SIGNATURE_REPORT" | awk '/certificate SHA-256 digest:/ { print tolower($NF); exit }')"
           EXPECTED='8c7c54f2b981c9f3b8ee56cc061afe8e5ac2022fa38e24ae21cf367213665f7f'
           test "${#ACTUAL}" -eq 64
@@ -65,24 +63,8 @@ jobs:
             echo "::error::APK signing certificate mismatch (got $ACTUAL, expected $EXPECTED)"
             exit 1
           fi
-          # Android 7.0+ (minSdk 24) supports v2 signatures. v1/v3/v4 can
-          # legitimately be absent on a correctly signed release APK.
-          printf '%s\n' "$SIGNATURE_REPORT" | grep -Eq '^Verified using v2 scheme .*: true
-          APK_BYTES="$(stat -c%s "$APK")"
-          echo "Release APK: $APK ($(numfmt --to=iec "$APK_BYTES"))"
-          {
-            echo "### Signed release APK"
-            echo "File: `$(basename "$APK")`"
-            echo "Size: **$(numfmt --to=iec "$APK_BYTES")**"
-            echo "Version code: **$((2000000 + GITHUB_RUN_NUMBER))**"
-            echo "Certificate: `$ACTUAL`"
-          } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: SudokuPadX-Android-arm64-release-test-signed
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*release*.apk
-          if-no-files-found: error
-
+          # Android minSdk=24 needs v2; v1, v3 and v4 can be absent.
+          printf '%s\n' "$SIGNATURE_REPORT" | grep -Eq '^Verified using v2 scheme .*: true$'
           echo "APK signing certificate and v2 scheme verified"
           APK_BYTES="$(stat -c%s "$APK")"
           echo "Release APK: $APK ($(numfmt --to=iec "$APK_BYTES"))"
