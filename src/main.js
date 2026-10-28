@@ -160,6 +160,106 @@ function buildRegions() {
     }
   });
 }
+function translateDisplay(text) {
+  return typeof text === 'string' ? (mainDictionary[text] || text) : text;
+}
+function updateBack(){ $('backButton').hidden=navigationStack.length===0; }
+function renderSectorLinks(container,items) {
+  container.replaceChildren();
+  for(const entry of items){
+    const btn=document.createElement('button');btn.type='button';
+    btn.className='sector-link-button';btn.textContent='进入 · '+entry.title;
+    btn.addEventListener('click',()=>openBundled(entry.id,true).catch(notify));
+    container.appendChild(btn);
+  }
+}
+function updateSector() {
+  if(!puzzle)return;
+  const eligible=selected>=0&&isVisible(progress,selected);
+  matchingSectors=eligible?getSectors(puzzle,selected):[];
+  if(sectorCursor>=matchingSectors.length)sectorCursor=0;
+  const sector=matchingSectors[sectorCursor];
+  const rules=translateDisplay(sector?.rules||puzzle.rules||'暂无规则');
+  const title=sector?[sector.author,sector.title].filter(Boolean).join(' · '):'全局谜题规则';
+  $('sectorHeading').textContent=title;
+  $('modalSectorTitle').textContent=title;
+  $('nextSector').hidden=matchingSectors.length<2;
+  $('rulesPreview').textContent=rules;
+  $('fullRules').textContent=rules;
+  const links=eligible?getLinkedPuzzles(rules,catalog,currentEntry?.group):[];
+  renderSectorLinks($('sectorLinks'),links);
+  renderSectorLinks($('modalLinks'),links);
+}
+function renderLibrary(){
+  const list=$('libraryList');list.replaceChildren();
+  for(const entry of catalog.filter(x=>x.kind==='main'||$('showAllPuzzles').checked)){
+    const btn=document.createElement('button');btn.type='button';btn.className='library-entry';
+    const title=document.createElement('strong');title.textContent=entry.title;
+    const sub=document.createElement('small');sub.textContent=entry.kind==='main'?'冒险地图':entry.group+' · '+(entry.kind==='boss'?'首领谜题':'支线谜题');
+    btn.append(title,sub);
+    btn.addEventListener('click',()=>openBundled(entry.id,false).catch(notify));
+    list.appendChild(btn);
+  }
+}
+async function loadCatalog(){
+  const [items,translations]=await Promise.all([
+    fetch('puzzles/catalog.json').then(r=>{if(!r.ok)throw Error('Missing catalog');return r.json();}),
+    fetch('puzzles/locale-zh.json').then(r=>{if(!r.ok)throw Error('Missing translation metadata');return r.json();})
+  ]);
+  catalog=items.items||[];localeZh=translations;renderLibrary();
+}
+async function openBundled(id,push=false,backState=null){
+  if(pending)return;
+  const entry=catalog.find(e=>e.id===id);
+  if(!entry)throw Error('未找到已打包谜题: '+id);
+  if(currentEntry && push){
+    save();navigationStack.push({id:currentEntry.id,camera:{...camera},selected});
+  }else if(!backState && !push) {
+    if(puzzle)save();navigationStack=[];
+  }
+  pending=true;
+  try{
+    const response=await fetch(entry.file);
+    if(!response.ok)throw Error('缺少离线文件: '+entry.file);
+    const input=await response.text();
+    const result=await call('open_puzzle',{input,localization:localeZh[id]||null});
+    currentEntry=entry;
+    mainDictionary={};
+    if(entry.kind==='main') {
+      try {
+        const dict=await fetch('puzzles/i18n/'+entry.id+'.json');
+        if(dict.ok) mainDictionary=await dict.json();
+      } catch{}
+    }
+    // Display-only translations preserve Rust's puzzle constraints/solutions.
+    result.puzzle.rules=translateDisplay(result.puzzle.rules);
+    for(const sector of result.puzzle.sectors||[]){
+      sector.rules=translateDisplay(sector.rules);
+      sector.author=translateDisplay(sector.author);
+      sector.title=translateDisplay(sector.title);
+    }
+    for(const kind of ['overlays','underlays'])
+      for(const mark of result.puzzle[kind]||[])
+        if(mark&&typeof mark.text==='string')mark.text=translateDisplay(mark.text);
+    await openResult(result);
+    if(backState){
+      camera={...backState.camera};
+      if(isVisible(progress,backState.selected))selected=backState.selected;
+      updateSelection();requestDraw();
+    }
+    updateBack();$('libraryDialog').close();toast('已载入离线谜题');
+  }catch(error){
+    if(push)navigationStack.pop();
+    throw error;
+  }finally{pending=false;}
+}
+async function goBack(){
+  const state=navigationStack.pop();
+  if(!state)return;
+  save();
+  await openBundled(state.id,false,state);
+}
+
 function updateInfo() {
   $('puzzleTitle').textContent = puzzle.title;
   $('puzzleAuthor').textContent = puzzle.author || 'SudokuPad / SudokuMaker';
