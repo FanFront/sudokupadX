@@ -1,0 +1,12 @@
+node_modules/
+dist/
+target/
+.DS_Store
+.vite/
+src-tauri/gen/
+src-tauri/target/
+*.apk
+*.aab
+*.scl
+*.puz
+!tests/fixtures/*.scl
