@@ -287,7 +287,9 @@ async function openResult(result) {
   updateInfo();
   await restoreSaved();
   lastCompletion=Boolean(progress.solved);
-  showGridLines=!(puzzle.rows>25 && (puzzle.sectors||[]).length>10);
+  // Sudokuvania source URLs explicitly used setting-nogrid=1.
+  // Super Sudokoid source URLs did not: retain their fine grid by default.
+  showGridLines=!['digits-of-despair','lineage-of-logic'].includes(currentEntry?.id);
   $('gridButton').textContent=showGridLines?'隐藏格线':'显示格线';
   updateControls();
   fit();
@@ -464,7 +466,7 @@ function draw() {
     }
   }
   // Region boundaries follow the imported region membership, not a guessed 3×3 layout.
-  if(regionMap.some(v=>v>=0)){
+  if(showGridLines && regionMap.some(v=>v>=0)){
     ctx.strokeStyle='#3d566b';ctx.lineWidth=2.6;
     ctx.beginPath();
     for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
