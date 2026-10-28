@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { makeDemo } from './demo.js';
+import {drawArrows,drawCages,drawPathMarks,drawFog,getSectors,getLinkedPuzzles,isVisible,focusInitialFog} from './adventure-ui.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -21,6 +22,9 @@ let undoStack = [];
 let redoStack = [];
 let toastTimer = 0;
 let saveTimer = 0;
+let catalog = [], localeZh = {}, mainDictionary = {};
+let currentEntry = null, navigationStack = [], matchingSectors = [], sectorCursor = 0;
+let lastCompletion = false;
 const board = $('boardCanvas');
 const frame = $('boardFrame');
 const ctx = board.getContext('2d', {alpha:false});
@@ -133,6 +137,9 @@ async function call(command,args={}) {
       warnings:['Browser preview: use the Tauri app for Rust parsing and authoritative game state.']
     };
     result.progress.cells=Array.from({length:rows*cols},clearCell);
+    result.progress.visible=Array(rows*cols).fill(true);
+    result.progress.solved=false;
+    result.progress.completion=null;
     return result;
   }
   if (command==='update_cell') return fallbackAction(args.index,args.mode,args.symbol);
@@ -157,8 +164,7 @@ function updateInfo() {
   $('puzzleTitle').textContent = puzzle.title;
   $('puzzleAuthor').textContent = puzzle.author || 'SudokuPad / SudokuMaker';
   $('boardMeta').textContent = puzzle.rows+' × '+puzzle.cols+' · '+(puzzle.lines||[]).length+' lines';
-  $('rulesPreview').textContent = puzzle.rules || '暂无规则说明';
-  $('fullRules').textContent = puzzle.rules || '暂无规则说明';
+  updateSector();
   const warning=$('warningList');
   warning.replaceChildren();
   warning.hidden=!puzzle.warnings?.length;
@@ -176,11 +182,14 @@ async function openResult(result) {
   buildRegions();
   updateInfo();
   await restoreSaved();
-  if (puzzle.warnings?.some(message=>message.includes('Fog-of-war'))) {
-    toast('⚠ 迷雾尚未实现，地图可能包含未解锁内容');
-  }
+  lastCompletion=Boolean(progress.solved);
   updateControls();
   fit();
+  if(progress.visible?.some(lit=>!lit)){
+    const focus=focusInitialFog(puzzle,progress,{width:frame.clientWidth,height:frame.clientHeight});
+    if(focus)camera=focus;
+  }
+  updateSector();
   requestDraw();
 }
 async function openInput(input) {
@@ -188,8 +197,10 @@ async function openInput(input) {
   if (!input || input.length>MAX_IMPORT) throw new Error('请选择小于 8 MiB 的谜题文件');
   pending=true;
   try {
-    const result=await call('open_puzzle',{input});
+    const result=await call('open_puzzle',{input,localization:null});
+    currentEntry=null;navigationStack=[];mainDictionary={};
     await openResult(result);
+    updateBack();
     $('importDialog').close();
     $('pasteInput').value='';
     $('filePicker').value='';
@@ -225,10 +236,12 @@ function updateControls() {
 function updateSelection() {
   if (!puzzle||selected<0) {
     $('selectionLabel').textContent='选择一个格子';
+    if(puzzle)updateSector();
     return;
   }
   const row=Math.floor(selected/puzzle.cols)+1,col=selected%puzzle.cols+1;
   $('selectionLabel').textContent='R'+row+'C'+col+(puzzle.cells[selected].given!==null?' · 提示':'');
+  updateSector();
 }
 
 function requestDraw() {
