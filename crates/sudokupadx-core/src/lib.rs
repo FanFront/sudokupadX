@@ -32,13 +32,13 @@ pub struct Puzzle {
     pub cages: Vec<Value>,
     pub arrows: Vec<Value>,
     pub sectors: Vec<Sector>,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     pub foglight: Option<Vec<usize>>,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     pub triggers: Vec<FogTrigger>,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     pub solution: Option<Vec<Option<String>>>,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     pub completion_text: Option<String>,
     pub warnings: Vec<String>,
 }
