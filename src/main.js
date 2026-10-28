@@ -1,0 +1,513 @@
+import { invoke } from '@tauri-apps/api/core';
+import { makeDemo } from './demo.js';
+import './style.css';
+
+const $ = id => document.getElementById(id);
+const native = !!window.__TAURI_INTERNALS__;
+const CELL = 52;
+const MAX_IMPORT = 8 * 1024 * 1024;
+const colors = ['#f8cd75','#a9d9a1','#9fcbff','#e9b0d6','#bfb5fa'];
+let puzzle = null;
+let progress = null;
+let selected = -1;
+let mode = 'value';
+let alphabet = false;
+let letterPage = 0;
+let camera = {x:0,y:0,scale:1};
+let regionMap = [];
+let drawQueued = false;
+let pending = false;
+let undoStack = [];
+let redoStack = [];
+let toastTimer = 0;
+const board = $('boardCanvas');
+const frame = $('boardFrame');
+const ctx = board.getContext('2d', {alpha:false});
+const pointers = new Map();
+let gesture = null;
+
+function cloneCell(v) {
+  return {value:v.value ?? null,corner:[...(v.corner || [])],center:[...(v.center || [])],color:v.color ?? null};
+}
+function clearCell() { return {value:null,corner:[],center:[],color:null}; }
+function validSymbol(s) {return /^[0-9A-Z]$/.test(s);}
+function saveKey() {return puzzle ? 'sudokupadx:v1:'+puzzle.key : '';}
+function save() {
+  if (!puzzle || !progress) return;
+  try {localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells}));} catch {}
+  $('saveLabel').textContent = '已保存到本机';
+}
+async function restoreSaved() {
+  let stored;
+  try {stored=JSON.parse(localStorage.getItem(saveKey()) || 'null');} catch {return;}
+  if (!stored || stored.version!==1 || !Array.isArray(stored.cells) || stored.cells.length!==puzzle.cells.length) return;
+  if (native) {
+    try {progress = await invoke('restore_progress',{cells:stored.cells});}
+    catch (error) {notify('存档未载入: '+String(error));}
+  } else {
+    if (stored.cells.every((cell,i)=>puzzle.cells[i].given===null || JSON.stringify(cell)===JSON.stringify(clearCell())))
+      progress.cells=stored.cells.map(cloneCell);
+  }
+}
+function toast(message) {
+  const el = $('toast');
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2500);
+}
+function notify(error) {toast(String(error));}
+
+function fallbackAction(index, action, symbol) {
+  if (index<0 || index>=puzzle.cells.length) throw new Error('格子超出棋盘');
+  if (puzzle.cells[index].given!==null) throw new Error('提示数字不可修改');
+  const before=cloneCell(progress.cells[index]);
+  const after=cloneCell(before);
+  if (action==='erase') {
+    Object.assign(after,clearCell());
+  } else if (action==='color') {
+    if (!colors.includes(symbol)) throw new Error('未知颜色');
+    after.color=after.color===symbol?null:symbol;
+  } else {
+    if (!validSymbol(symbol)) throw new Error('请输入数字或大写字母');
+    if (action==='value') after.value=after.value===symbol?null:symbol;
+    else if (action==='corner'||action==='center') {
+      const arr=after[action];
+      if (arr.includes(symbol)) arr.splice(arr.indexOf(symbol),1);
+      else if (arr.length<26) arr.push(symbol);
+      arr.sort();
+    } else throw new Error('未知模式');
+  }
+  if (JSON.stringify(before)!==JSON.stringify(after)) {
+    undoStack.push({index,before,after});
+    if (undoStack.length>300) undoStack.shift();
+    redoStack=[];
+  }
+  return {index,cell:after,canUndo:undoStack.length>0,canRedo:redoStack.length>0};
+}
+function fallbackHistory(redo) {
+  const from=redo?redoStack:undoStack;
+  const to=redo?undoStack:redoStack;
+  const edit=from.pop();
+  if (!edit) throw new Error('没有可用的操作');
+  to.push(edit);
+  return {index:edit.index,cell:cloneCell(redo?edit.after:edit.before),canUndo:undoStack.length>0,canRedo:redoStack.length>0};
+}
+async function call(command,args={}) {
+  if (native) return invoke(command,args);
+  if (command==='load_demo') return makeDemo();
+  if (command==='open_puzzle') {
+    if (args.input.trim().startsWith('scl')) throw new Error('SCL 解码需要运行 Tauri/Rust 版本；网页预览仅支持 JSON。');
+    const data=JSON.parse(args.input);
+    if (!Array.isArray(data.cells) || data.cells.length===0) throw new Error('需要 cells[][] 数组');
+    const rows=data.cells.length;
+    const cols=Math.max(...data.cells.map(row=>Array.isArray(row)?row.length:0));
+    if (!cols || rows>160 || cols>160) throw new Error('不支持的棋盘尺寸');
+    const result=makeDemo();
+    result.puzzle={
+      ...result.puzzle,
+      key:String(data.id||'browser-import-'+args.input.length),
+      title:String(data.metadata?.title||data.title||'Imported puzzle'),
+      author:String(data.metadata?.author||''),
+      rules:String(data.metadata?.rules||''),
+      rows,cols,
+      cells:data.cells.flatMap(row=>Array.from({length:cols},(_,c)=> {
+        const item=row[c],value=item&&typeof item==='object'?item.value:item;
+        return {given:value===undefined||value===null||value===0||value==='0'?null:String(value)};
+      })),
+      regions:Array.isArray(data.regions)?data.regions:[],
+      lines:Array.isArray(data.lines)?data.lines:[],
+      overlays:Array.isArray(data.overlays)?data.overlays:[],
+      underlays:Array.isArray(data.underlays)?data.underlays:[],
+      cages:Array.isArray(data.cages)?data.cages:[],
+      warnings:['Browser preview: use the Tauri app for Rust parsing and authoritative game state.']
+    };
+    result.progress.cells=Array.from({length:rows*cols},clearCell);
+    return result;
+  }
+  if (command==='update_cell') return fallbackAction(args.index,args.mode,args.symbol);
+  if (command==='undo') return fallbackHistory(false);
+  if (command==='redo') return fallbackHistory(true);
+  throw new Error('Unknown preview command');
+}
+
+function buildRegions() {
+  regionMap=Array(puzzle.rows*puzzle.cols).fill(-1);
+  (puzzle.regions||[]).forEach((list,id)=>{
+    if (!Array.isArray(list)) return;
+    for (const pair of list) {
+      if (!Array.isArray(pair)||pair.length<2) continue;
+      const r=Number(pair[0]),c=Number(pair[1]);
+      if (Number.isInteger(r)&&Number.isInteger(c)&&r>=0&&r<puzzle.rows&&c>=0&&c<puzzle.cols)
+        regionMap[r*puzzle.cols+c]=id;
+    }
+  });
+}
+function updateInfo() {
+  $('puzzleTitle').textContent = puzzle.title;
+  $('puzzleAuthor').textContent = puzzle.author || 'SudokuPad / SudokuMaker';
+  $('boardMeta').textContent = puzzle.rows+' × '+puzzle.cols+' · '+(puzzle.lines||[]).length+' lines';
+  $('rulesPreview').textContent = puzzle.rules || '暂无规则说明';
+  $('fullRules').textContent = puzzle.rules || '暂无规则说明';
+  const warning=$('warningList');
+  warning.replaceChildren();
+  warning.hidden=!puzzle.warnings?.length;
+  for (const message of puzzle.warnings||[]) {
+    const p=document.createElement('p');
+    p.textContent='⚠ '+message;
+    warning.appendChild(p);
+  }
+}
+async function openResult(result) {
+  puzzle=result.puzzle;
+  progress=result.progress;
+  undoStack=[];redoStack=[];
+  selected=-1;
+  buildRegions();
+  updateInfo();
+  await restoreSaved();
+  updateControls();
+  fit();
+  requestDraw();
+}
+async function openInput(input) {
+  if (pending) return;
+  if (!input || input.length>MAX_IMPORT) throw new Error('请选择小于 8 MiB 的谜题文件');
+  pending=true;
+  try {
+    const result=await call('open_puzzle',{input});
+    await openResult(result);
+    $('importDialog').close();
+    $('pasteInput').value='';
+    $('filePicker').value='';
+    toast('谜题已导入');
+  } finally {pending=false;}
+}
+
+function updateControls() {
+  $('alphabetButton').setAttribute('aria-pressed',String(alphabet));
+  $('alphabetButton').textContent=alphabet?'123 数字':'ABC 字母';
+  $('letterPage').hidden=!alphabet;
+  $('letterPage').textContent='字母 '+(letterPage+1)+'/3';
+  $('padTitle').textContent=alphabet?'字母输入 · '+(['A–I','J–R','S–Z'][letterPage]):'数字输入';
+  $('palette').hidden=mode!=='color';
+  document.querySelectorAll('[data-mode]').forEach(el=>{
+    el.classList.toggle('active',el.dataset.mode===mode);
+    el.setAttribute('aria-pressed',String(el.dataset.mode===mode));
+  });
+  const keys=alphabet?'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.slice(letterPage*9,(letterPage+1)*9).split(''):['1','2','3','4','5','6','7','8','9','0'];
+  const pad=$('keypad');
+  pad.replaceChildren();
+  for (const symbol of keys) {
+    const btn=document.createElement('button');
+    btn.type='button';btn.textContent=symbol;btn.dataset.symbol=symbol;
+    btn.disabled=mode==='pan'||mode==='color';
+    pad.appendChild(btn);
+  }
+  $('undoButton').disabled=!progress?.canUndo;
+  $('redoButton').disabled=!progress?.canRedo;
+  $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
+  updateSelection();
+}
+function updateSelection() {
+  if (!puzzle||selected<0) {
+    $('selectionLabel').textContent='选择一个格子';
+    return;
+  }
+  const row=Math.floor(selected/puzzle.cols)+1,col=selected%puzzle.cols+1;
+  $('selectionLabel').textContent='R'+row+'C'+col+(puzzle.cells[selected].given!==null?' · 提示':'');
+}
+
+function requestDraw() {
+  if(drawQueued) return;
+  drawQueued=true;
+  requestAnimationFrame(()=>{drawQueued=false;draw();});
+}
+function resizeCanvas() {
+  const bounds=frame.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=Math.max(1,Math.round(bounds.width*dpr)),h=Math.max(1,Math.round(bounds.height*dpr));
+  if(board.width!==w||board.height!==h){board.width=w;board.height=h;}
+  requestDraw();
+}
+function fit() {
+  if(!puzzle) return;
+  const w=frame.clientWidth,h=frame.clientHeight;
+  camera.scale=Math.max(.08,Math.min(2.2,(w-48)/(puzzle.cols*CELL),(h-48)/(puzzle.rows*CELL)));
+  camera.x=(w-puzzle.cols*CELL*camera.scale)/2;
+  camera.y=(h-puzzle.rows*CELL*camera.scale)/2;
+  updateControls();
+  requestDraw();
+}
+function setZoom(newScale,anchorX=frame.clientWidth/2,anchorY=frame.clientHeight/2) {
+  const next=Math.max(.065,Math.min(5,newScale));
+  const ratio=next/camera.scale;
+  camera.x=anchorX-(anchorX-camera.x)*ratio;
+  camera.y=anchorY-(anchorY-camera.y)*ratio;
+  camera.scale=next;
+  $('zoomLabel').textContent=Math.round(next*100)+'%';
+  requestDraw();
+}
+function gridIndex(x,y) {
+  if(!puzzle) return -1;
+  const c=Math.floor(((x-camera.x)/camera.scale)/CELL);
+  const r=Math.floor(((y-camera.y)/camera.scale)/CELL);
+  return r>=0&&c>=0&&r<puzzle.rows&&c<puzzle.cols?r*puzzle.cols+c:-1;
+}
+function point(pair) {
+  if (!Array.isArray(pair)||pair.length<2) return null;
+  const r=Number(pair[0]),c=Number(pair[1]);
+  return Number.isFinite(r)&&Number.isFinite(c)?[c*CELL,r*CELL]:null;
+}
+function drawMarks(items,clip,foreground) {
+  if (!Array.isArray(items)) return;
+  for (const item of items) {
+    if(!item||typeof item!=='object') continue;
+    const p=point(item.center);
+    if(!p) continue;
+    const w=(Number(item.width)||0)*CELL,h=(Number(item.height)||0)*CELL;
+    if(w<=0||h<=0||w>10000||h>10000) continue;
+    const x=p[0]-w/2,y=p[1]-h/2;
+    if (x>clip.right||x+w<clip.left||y>clip.bottom||y+h<clip.top) continue;
+    ctx.save();
+    const angle=Number(item.angle)||0;
+    if(angle){ctx.translate(p[0],p[1]);ctx.rotate(angle*Math.PI/180);ctx.translate(-p[0],-p[1]);}
+    if(typeof item.backgroundColor==='string'&&item.backgroundColor!=='transparent'){
+      ctx.fillStyle=item.backgroundColor;ctx.fillRect(x,y,w,h);
+    }
+    if(typeof item.borderColor==='string'){
+      ctx.lineWidth=Math.max(0.5,Number(item.borderSize)||1);
+      ctx.strokeStyle=item.borderColor;ctx.strokeRect(x,y,w,h);
+    }
+    if(typeof item.text==='string'&&item.text&&foreground){
+      const size=Math.min(Math.min(w,h)*.7,Math.max(10,(Number(item.fontSize)||.3)*CELL));
+      ctx.fillStyle=item.textColor||'#172534';
+      ctx.font='600 '+size+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      const lines=item.text.split('\n').slice(0,3);
+      for(let i=0;i<lines.length;i++)ctx.fillText(lines[i].slice(0,90),p[0],p[1]+(i-(lines.length-1)/2)*size*1.1,w);
+    }
+    ctx.restore();
+  }
+}
+function drawLines(clip) {
+  for(const line of puzzle.lines||[]) {
+    const points=(line.wayPoints||line.points||[]).map(point).filter(Boolean);
+    if(points.length<2)continue;
+    const minX=Math.min(...points.map(p=>p[0])),maxX=Math.max(...points.map(p=>p[0]));
+    const minY=Math.min(...points.map(p=>p[1])),maxY=Math.max(...points.map(p=>p[1]));
+    if(maxX<clip.left||minX>clip.right||maxY<clip.top||minY>clip.bottom)continue;
+    ctx.beginPath();ctx.moveTo(...points[0]);
+    for(let n=1;n<points.length;n++)ctx.lineTo(...points[n]);
+    ctx.strokeStyle=line.color||'#657a8d';ctx.lineWidth=Math.max(1,Math.min(18,Number(line.thickness)||3));
+    ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+  }
+}
+function draw() {
+  if(!puzzle||!progress||!ctx)return;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=board.width/dpr,h=board.height/dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#dfe9e6';ctx.fillRect(0,0,w,h);
+  ctx.setTransform(dpr*camera.scale,0,0,dpr*camera.scale,dpr*camera.x,dpr*camera.y);
+  const clip={
+    left:Math.max(0,-camera.x/camera.scale),top:Math.max(0,-camera.y/camera.scale),
+    right:(w-camera.x)/camera.scale,bottom:(h-camera.y)/camera.scale
+  };
+  const c0=Math.max(0,Math.floor(clip.left/CELL)-1),c1=Math.min(puzzle.cols,Math.ceil(clip.right/CELL)+1);
+  const r0=Math.max(0,Math.floor(clip.top/CELL)-1),r1=Math.min(puzzle.rows,Math.ceil(clip.bottom/CELL)+1);
+  ctx.fillStyle='#fbfdfb';ctx.fillRect(0,0,puzzle.cols*CELL,puzzle.rows*CELL);
+  drawMarks(puzzle.underlays,clip,false);
+  for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
+    const idx=r*puzzle.cols+c,entry=progress.cells[idx]||clearCell();
+    const x=c*CELL,y=r*CELL;
+    if(entry.color){ctx.fillStyle=entry.color;ctx.fillRect(x+1,y+1,CELL-2,CELL-2);}
+    if(idx===selected){ctx.fillStyle='#a0d5eb6d';ctx.fillRect(x,y,CELL,CELL);}
+    ctx.strokeStyle='#bec7c9';ctx.lineWidth=.65;ctx.strokeRect(x,y,CELL,CELL);
+  }
+  // Region boundaries follow the imported region membership, not a guessed 3×3 layout.
+  if(regionMap.some(v=>v>=0)){
+    ctx.strokeStyle='#3d566b';ctx.lineWidth=2.6;
+    ctx.beginPath();
+    for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
+      const idx=r*puzzle.cols+c,id=regionMap[idx];
+      if(id<0)continue;
+      const x=c*CELL,y=r*CELL;
+      if(r===0||regionMap[idx-puzzle.cols]!==id){ctx.moveTo(x,y);ctx.lineTo(x+CELL,y);}
+      if(c===0||regionMap[idx-1]!==id){ctx.moveTo(x,y);ctx.lineTo(x,y+CELL);}
+      if(r===puzzle.rows-1||regionMap[idx+puzzle.cols]!==id){ctx.moveTo(x,y+CELL);ctx.lineTo(x+CELL,y+CELL);}
+      if(c===puzzle.cols-1||regionMap[idx+1]!==id){ctx.moveTo(x+CELL,y);ctx.lineTo(x+CELL,y+CELL);}
+    }
+    ctx.stroke();
+  }
+  drawLines(clip);
+  for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
+    const idx=r*puzzle.cols+c;
+    const given=puzzle.cells[idx].given,entry=progress.cells[idx]||clearCell();
+    const x=c*CELL,y=r*CELL;
+    const value=given??entry.value;
+    if(value){
+      ctx.font=(given?'700 ':'600 ')+CELL*.61+'px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=given?'#263345':'#2560a1';
+      ctx.fillText(String(value),x+CELL/2,y+CELL/2+1,CELL*.9);
+    }
+    if(entry.corner?.length){
+      ctx.fillStyle='#325b89';ctx.font='600 10px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText(entry.corner.join(' ').slice(0,16),x+4,y+3,CELL-6);
+    }
+    if(entry.center?.length){
+      ctx.fillStyle='#48617e';ctx.font='600 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(entry.center.join(' ').slice(0,17),x+CELL/2,y+CELL*.76,CELL-6);
+    }
+  }
+  drawMarks(puzzle.overlays,clip,true);
+  if(selected>=0){
+    const x=(selected%puzzle.cols)*CELL,y=Math.floor(selected/puzzle.cols)*CELL;
+    ctx.strokeStyle='#137fbc';ctx.lineWidth=3.5;ctx.strokeRect(x+1,y+1,CELL-2,CELL-2);
+  }
+  ctx.strokeStyle='#263c51';ctx.lineWidth=3;ctx.strokeRect(0,0,puzzle.cols*CELL,puzzle.rows*CELL);
+}
+
+async function edit(action,symbol='') {
+  if(pending||!puzzle)return;
+  if(selected<0){toast('请先选择格子');return;}
+  if(puzzle.cells[selected].given!==null){toast('提示数字不可修改');return;}
+  if(action==='pan')return;
+  pending=true;
+  try {
+    const change=await call('update_cell',{index:selected,mode:action,symbol});
+    progress.cells[change.index]=change.cell;
+    progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
+    updateControls();save();requestDraw();
+  } catch(error){notify(error);}
+  finally{pending=false;}
+}
+async function history(direction) {
+  if(pending||!puzzle)return;
+  pending=true;
+  try {
+    const change=await call(direction);
+    progress.cells[change.index]=change.cell;
+    progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
+    selected=change.index;
+    updateControls();save();requestDraw();
+  } catch(error){notify(error);}
+  finally{pending=false;}
+}
+function select(index) {selected=index;updateSelection();requestDraw();board.focus({preventScroll:true});}
+function locationInFrame(event) {
+  const b=frame.getBoundingClientRect();
+  return {x:event.clientX-b.left,y:event.clientY-b.top};
+}
+function pointerDistance(a,b) {return Math.hypot(a.x-b.x,a.y-b.y);}
+board.addEventListener('pointerdown',event=>{
+  event.preventDefault();board.setPointerCapture(event.pointerId);
+  const p=locationInFrame(event);
+  pointers.set(event.pointerId,p);
+  if(pointers.size===1) gesture={start:p,last:p,moved:false,pinch:false};
+  if(pointers.size===2){
+    const [a,b]=[...pointers.values()];
+    gesture={lastDistance:pointerDistance(a,b),pinch:true,moved:true};
+  }
+});
+board.addEventListener('pointermove',event=>{
+  if(!pointers.has(event.pointerId)||!gesture)return;
+  const p=locationInFrame(event),previous=pointers.get(event.pointerId);
+  pointers.set(event.pointerId,p);
+  if(pointers.size===2){
+    const [a,b]=[...pointers.values()],distance=pointerDistance(a,b);
+    const center={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    if(gesture.lastDistance&&distance>0)setZoom(camera.scale*distance/gesture.lastDistance,center.x,center.y);
+    gesture.lastDistance=distance;gesture.moved=true;gesture.pinch=true;
+  }else if(pointers.size===1){
+    if(Math.hypot(p.x-gesture.start.x,p.y-gesture.start.y)>6)gesture.moved=true;
+    if(gesture.moved){
+      camera.x+=p.x-previous.x;camera.y+=p.y-previous.y;requestDraw();
+    }
+    gesture.last=p;
+  }
+});
+function endPointer(event){
+  if(!pointers.has(event.pointerId))return;
+  const position=locationInFrame(event);
+  const tap=pointers.size===1&&gesture&&!gesture.moved&&!gesture.pinch;
+  pointers.delete(event.pointerId);
+  if(tap&&mode!=='pan')select(gridIndex(position.x,position.y));
+  if(pointers.size===1){
+    const last=[...pointers.values()][0];
+    gesture={start:last,last,moved:true,pinch:true};
+  }else if(pointers.size===0)gesture=null;
+}
+board.addEventListener('pointerup',endPointer);
+board.addEventListener('pointercancel',endPointer);
+board.addEventListener('wheel',event=>{
+  event.preventDefault();
+  const p=locationInFrame(event);setZoom(camera.scale*Math.exp(-event.deltaY*.0015),p.x,p.y);
+},{passive:false});
+
+$('fitButton').addEventListener('click',fit);
+$('zoomIn').addEventListener('click',()=>setZoom(camera.scale*1.25));
+$('zoomOut').addEventListener('click',()=>setZoom(camera.scale/1.25));
+$('alphabetButton').addEventListener('click',()=>{alphabet=!alphabet;letterPage=0;updateControls();});
+$('letterPage').addEventListener('click',()=>{letterPage=(letterPage+1)%3;updateControls();});
+$('modeBar').addEventListener('click',event=>{
+  const button=event.target.closest('button[data-mode]');
+  if(button){mode=button.dataset.mode;updateControls();}
+});
+$('keypad').addEventListener('click',event=>{
+  const button=event.target.closest('button[data-symbol]');
+  if(button&&!button.disabled)edit(mode,button.dataset.symbol);
+});
+$('palette').addEventListener('click',event=>{
+  const button=event.target.closest('button[data-color]');
+  if(button)edit('color',button.dataset.color);
+});
+$('eraseButton').addEventListener('click',()=>edit('erase'));
+$('undoButton').addEventListener('click',()=>history('undo'));
+$('redoButton').addEventListener('click',()=>history('redo'));
+function showRules(){if(!$('rulesDialog').open)$('rulesDialog').showModal();}
+$('rulesButton').addEventListener('click',showRules);
+$('moreRules').addEventListener('click',showRules);
+$('closeRules').addEventListener('click',()=>$('rulesDialog').close());
+$('dismissRules').addEventListener('click',()=>$('rulesDialog').close());
+$('importButton').addEventListener('click',()=>{
+  $('importError').textContent='';
+  $('importDialog').showModal();
+});
+$('cancelImport').addEventListener('click',()=>$('importDialog').close());
+$('confirmImport').addEventListener('click',async()=>{
+  try{
+    const file=$('filePicker').files?.[0];
+    const input=file?await file.text():$('pasteInput').value.trim();
+    await openInput(input);
+  }catch(error){$('importError').textContent=String(error);}
+});
+$('demoButton').addEventListener('click',async()=>{
+  if(pending)return;
+  try{await openResult(await call('load_demo'));toast('示例已打开');}catch(error){notify(error);}
+});
+document.addEventListener('keydown',event=>{
+  const active=document.activeElement;
+  if(active?.matches('input,textarea')||$('importDialog').open||$('rulesDialog').open)return;
+  if((event.ctrlKey||event.metaKey)&&(event.key.toLowerCase()==='z'||event.key.toLowerCase()==='y')){
+    event.preventDefault();history(event.shiftKey||event.key.toLowerCase()==='y'?'redo':'undo');return;
+  }
+  if(event.key==='Backspace'||event.key==='Delete'){event.preventDefault();edit('erase');return;}
+  const k=event.key.toUpperCase();
+  if(k.length===1&&validSymbol(k)){
+    event.preventDefault();
+    if(mode!=='color'&&mode!=='pan')edit(mode,k);
+    return;
+  }
+  const delta={ArrowUp:-puzzle?.cols,ArrowDown:puzzle?.cols,ArrowLeft:-1,ArrowRight:1}[event.key];
+  if(delta&&puzzle){
+    event.preventDefault();
+    const next=Math.max(0,Math.min(puzzle.cells.length-1,(selected<0?0:selected)+delta));
+    select(next);
+  }
+});
+new ResizeObserver(resizeCanvas).observe(frame);
+resizeCanvas();
+$('runtimeBadge').textContent=native?'Rust / Tauri':'网页预览';
+(async()=>{
+  try{await openResult(await call('load_demo'));}
+  catch(error){notify('启动失败: '+String(error));}
+})();
