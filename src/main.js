@@ -25,6 +25,7 @@ let saveTimer = 0;
 let catalog = [], localeZh = {}, mainDictionary = {};
 let currentEntry = null, navigationStack = [], matchingSectors = [], sectorCursor = 0;
 let lastCompletion = false;
+let showGridLines = true;
 const board = $('boardCanvas');
 const frame = $('boardFrame');
 const ctx = board.getContext('2d', {alpha:false});
@@ -286,6 +287,8 @@ async function openResult(result) {
   updateInfo();
   await restoreSaved();
   lastCompletion=Boolean(progress.solved);
+  showGridLines=!(puzzle.rows>25 && (puzzle.sectors||[]).length>10);
+  $('gridButton').textContent=showGridLines?'隐藏格线':'显示格线';
   updateControls();
   fit();
   if(progress.visible?.some(lit=>!lit)){
@@ -456,7 +459,9 @@ function draw() {
     const x=c*CELL,y=r*CELL;
     if(entry.color){ctx.fillStyle=entry.color;ctx.fillRect(x+1,y+1,CELL-2,CELL-2);}
     if(idx===selected){ctx.fillStyle='#a0d5eb6d';ctx.fillRect(x,y,CELL,CELL);}
-    ctx.strokeStyle='#bec7c9';ctx.lineWidth=.65;ctx.strokeRect(x,y,CELL,CELL);
+    if(showGridLines) {
+      ctx.strokeStyle='#bec7c9';ctx.lineWidth=.65;ctx.strokeRect(x,y,CELL,CELL);
+    }
   }
   // Region boundaries follow the imported region membership, not a guessed 3×3 layout.
   if(regionMap.some(v=>v>=0)){
@@ -502,7 +507,10 @@ function draw() {
     const x=(selected%puzzle.cols)*CELL,y=Math.floor(selected/puzzle.cols)*CELL;
     ctx.strokeStyle='#137fbc';ctx.lineWidth=3.5;ctx.strokeRect(x+1,y+1,CELL-2,CELL-2);
   }
-  ctx.strokeStyle='#263c51';ctx.lineWidth=3;ctx.strokeRect(0,0,puzzle.cols*CELL,puzzle.rows*CELL);
+  if(showGridLines){
+    ctx.strokeStyle='#263c51';ctx.lineWidth=3;
+    ctx.strokeRect(0,0,puzzle.cols*CELL,puzzle.rows*CELL);
+  }
 }
 
 function showCompletionIfNew(){
@@ -604,6 +612,11 @@ board.addEventListener('wheel',event=>{
 },{passive:false});
 
 $('fitButton').addEventListener('click',fit);
+$('gridButton').addEventListener('click',()=>{
+  showGridLines=!showGridLines;
+  $('gridButton').textContent=showGridLines?'隐藏格线':'显示格线';
+  requestDraw();
+});
 $('zoomIn').addEventListener('click',()=>setZoom(camera.scale*1.25));
 $('zoomOut').addEventListener('click',()=>setZoom(camera.scale/1.25));
 $('alphabetButton').addEventListener('click',()=>{alphabet=!alphabet;letterPage=0;updateControls();});
