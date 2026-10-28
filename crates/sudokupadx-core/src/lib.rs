@@ -174,7 +174,7 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
             .ok_or_else(|| "Each cells row must be an array.".to_string())?;
         for col in 0..cols {
             let value = entries.get(col).and_then(|cell| {
-                if cell.is_object() { cell.get("value").and_then(as_text) }
+                if cell.is_object() { cell.get("value").or_else(|| cell.get("v")).and_then(as_text) }
                 else { as_text(cell) }
             }).filter(|v| v != "0" && v != ".");
             cells.push(Cell { given: value });
