@@ -82,11 +82,16 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
     if decoded.len() > MAX_INPUT_BYTES * 4 {
         return Err("Decompressed puzzle exceeds size limit.".into());
     }
-    let root: Value = serde_json::from_str(&decoded).or_else(|_| {
-        // JSON5 accepts quoted/unquoted keys and single-quoted strings.
-        // It does not execute arbitrary JavaScript expressions.
-        json5::from_str(&decoded)
-    }).map_err(|err| format!("Unsupported puzzle JSON or compact literal: {err}"))?;
+    let root: Value = match serde_json::from_str(&decoded) {
+        Ok(puzzle) => puzzle,
+        Err(_) => {
+            // JSON5 accepts unquoted keys and single-quoted strings without
+            // evaluating arbitrary third-party JavaScript expressions.
+            json5::from_str(&decoded).map_err(
+                |err| format!("Unsupported puzzle JSON or compact literal: {err}")
+            )?
+        }
+    };
 
     let matrix = root.get("cells").and_then(Value::as_array)
         .ok_or_else(|| "Missing cells[][] array.".to_string())?;
