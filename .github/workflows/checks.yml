@@ -11,6 +11,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p sudokupadx-core --all-targets
+      - uses: actions/checkout@v4
+        with:
+          repository: FanFront/sodokupadAndroid
+          path: reference-assets
+          persist-credentials: false
+      - name: Test against offline SudokuPad SCL packages
+        env:
+          SUDOKUPAD_REFERENCE_ASSETS: reference-assets/app/src/main/assets/offline/translated
+        run: cargo test -p sudokupadx-core --test reference_assets -- --nocapture
   frontend:
     runs-on: ubuntu-latest
     steps:
