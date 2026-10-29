@@ -814,6 +814,15 @@ document.addEventListener('keydown',event=>{
 new ResizeObserver(resizeCanvas).observe(frame);
 resizeCanvas();
 $('runtimeBadge').textContent=native?'Rust / Tauri':'Rust / WASM';
+// Only the HTTPS web build uses a service worker. Android already bundles
+// these assets through Tauri, so no service worker is needed there.
+if(!native && import.meta.env.PROD && location.protocol==='https:' &&
+   'serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register(import.meta.env.BASE_URL+'offline-sw.js')
+      .catch(error=>console.warn('Offline web cache unavailable:',error));
+  });
+}
 (async()=>{
   try{
     await loadCatalog();
