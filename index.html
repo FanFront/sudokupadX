@@ -15,6 +15,7 @@
         <button class="subtle-btn" id="backButton" type="button" hidden>返回地图</button>
         <button class="subtle-btn" id="libraryButton" type="button">游戏库</button>
         <button class="subtle-btn" id="demoButton" type="button">示例</button>
+        <button class="primary-btn" id="checkpointButton" type="button">存档互通</button>
         <button class="primary-btn" id="importButton" type="button">导入 SCL / JSON</button>
       </div>
     </header>
@@ -80,6 +81,22 @@
       <p id="importError" role="alert"></p>
       <div class="modal-actions"><button value="cancel" type="button" id="cancelImport">取消</button><button type="button" id="confirmImport" class="primary-btn">打开谜题</button></div>
     </form>
+  </dialog>
+  <dialog id="checkpointDialog" class="modal">
+    <div class="modal-content">
+      <div class="modal-top"><h2>存档导入 / 导出</h2><button id="closeCheckpoint" type="button" class="modal-close" aria-label="关闭">✕</button></div>
+      <p>与 SudokuPad X 网页版、安卓版以及更新后的 sodokupadAndroid 互通当前谜题进度。仅传输数字、角标、中心笔记和单色标记；不包含原版画线、计时和操作历史。</p>
+      <div class="modal-actions checkpoint-actions">
+        <button type="button" id="exportCheckpoint">导出当前存档</button>
+        <button type="button" id="copyCheckpoint">复制 JSON</button>
+      </div>
+      <label class="paste-label" for="checkpointFile">从设备选择存档 JSON</label>
+      <input id="checkpointFile" type="file" accept=".json,.checkpoint,application/json,text/plain">
+      <label class="paste-label" for="checkpointText">或粘贴存档 JSON（导出后也会显示于此）</label>
+      <textarea id="checkpointText" rows="5" spellcheck="false" placeholder="粘贴从另一应用导出的存档 JSON"></textarea>
+      <p id="checkpointError" role="alert"></p>
+      <div class="modal-actions"><button id="importCheckpoint" type="button" class="primary-btn">确认并导入存档</button></div>
+    </div>
   </dialog>
   <dialog id="rulesDialog" class="modal">
     <div class="modal-content">
