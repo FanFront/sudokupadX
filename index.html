@@ -29,7 +29,7 @@
           </div>
         </div>
         <div id="boardFrame" class="board-frame">
-          <canvas id="boardCanvas" tabindex="0" aria-label="Sudoku puzzle; tap a cell to select"></canvas>
+          <canvas id="boardCanvas" tabindex="0" aria-label="Sudoku board: drag one finger to select multiple cells; use two fingers to pan or zoom"></canvas>
           <div class="board-hud"><span id="selectionLabel">选择一个格子</span><span id="zoomLabel">100%</span></div>
           <div class="zoom-tools">
             <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
@@ -39,13 +39,12 @@
         <div class="board-footer"><span id="boardMeta">9 × 9</span><span id="saveLabel">本地自动保存</span></div>
       </section>
       <aside class="controls" aria-label="Puzzle controls">
-        <div class="control-heading"><div><strong>输入控制台</strong><small>支持触屏 / 键盘</small></div><button id="alphabetButton" class="switch-button" type="button" aria-pressed="false">ABC 字母</button></div>
+        <div class="control-heading"><div><strong>输入控制台</strong><small>单指滑选多格 · 双指移动缩放</small></div><button id="alphabetButton" class="switch-button" type="button" aria-pressed="false">ABC 字母</button></div>
         <div id="modeBar" class="mode-bar" role="group" aria-label="Input mode">
           <button data-mode="value" class="active" type="button">大数字</button>
           <button data-mode="corner" type="button">角标</button>
           <button data-mode="center" type="button">中心</button>
           <button data-mode="color" type="button">颜色</button>
-          <button data-mode="pan" type="button">移动</button>
         </div>
         <div class="pad-title"><span id="padTitle">数字输入</span><button id="letterPage" type="button" hidden>下一组</button></div>
         <div class="keypad" id="keypad" role="group" aria-label="Number and letter pad"></div>
