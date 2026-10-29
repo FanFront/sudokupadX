@@ -61,6 +61,7 @@
           <button id="eraseButton" type="button">⌫ 清除</button>
           <button id="undoButton" type="button">↶ 撤销</button>
           <button id="redoButton" type="button">↷ 重做</button>
+          <button id="checkButton" type="button">✓ 检查</button>
         </div>
         <div class="detail-panel">
           <div class="detail-heading"><span id="sectorHeading">谜题规则</span><button id="moreRules" type="button">展开</button></div>
@@ -115,6 +116,13 @@
       <p>内置四张冒险主地图和配套首领 / 支线谜题。未探索区域的首领链接只在解锁后显示。</p>
       <div id="libraryList" class="library-list"></div>
       <label class="library-spoiler"><input id="showAllPuzzles" type="checkbox"> 显示全部首领与支线（可能剧透）</label>
+    </div>
+  </dialog>
+  <dialog id="checkDialog" class="modal" aria-labelledby="checkTitle">
+    <div class="modal-content">
+      <div class="modal-top"><h2 id="checkTitle">检查当前进度</h2><button id="closeCheck" class="modal-close" type="button" aria-label="关闭">✕</button></div>
+      <p id="checkResult" role="status">检查当前已填写的大数字是否正确。</p>
+      <div class="modal-actions"><button id="dismissCheck" type="button" class="primary-btn">返回棋盘</button></div>
     </div>
   </dialog>
   <dialog id="completionDialog" class="modal">
