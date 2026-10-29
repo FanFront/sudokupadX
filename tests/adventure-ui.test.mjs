@@ -86,7 +86,8 @@ test('source line layers preserve coordinates, widths and overlay ordering',()=>
   const clip={left:0,top:0,right:800,bottom:800};
   const lines=[
     {wayPoints:[[1,2],[3,4]],thickness:6.4,color:'#123456'},
-    {target:'overlay',wayPoints:[[2,1],[2,3]],thickness:3.2}
+    {target:'overlay',wayPoints:[[2,1],[2,3]],thickness:3.2},
+    {target:'cell-grids',wayPoints:[[0,0],[0,3]],thickness:7.68,color:'#000000'}
   ];
   drawPuzzleLines(ctx,lines,clip);
   assert.deepEqual(paths.slice(0,3),[
@@ -95,6 +96,13 @@ test('source line layers preserve coordinates, widths and overlay ordering',()=>
   assert.equal(paths.length,3);
   drawPuzzleLines(ctx,lines,clip,'overlay');
   assert.deepEqual(paths.slice(3,5),[['move',52,104],['line',156,104]]);
+  // Original scene walls have their own layer, not the normal clue layer:
+  // they are rendered once, above the fog and independent of fine grid.
+  drawPuzzleLines(ctx,lines,clip,'grid');
+  assert.deepEqual(paths.slice(6,9),[
+    ['move',0,0],['line',156,0],['stroke',6.24,'#000000']
+  ]);
+  assert.equal(paths.length,9);
 });
 
 test('arrow geometry follows SudokuPad row/column placement',()=>{

@@ -382,8 +382,14 @@ function draw() {
   drawPathMarks(ctx,puzzle.overlays);
   drawDecorations(ctx,puzzle.overlays,clip);
   drawPuzzleLines(ctx,puzzle.lines,clip,'overlay');
-  drawSectorBorders(ctx,puzzle.sectors,clip);
+  // Source-authored cell-grids paths are the canonical adventure walls.
+  // Do not add speculative rectangles around story metadata when they exist.
+  const authoredBorders=(puzzle.lines||[]).some(line=>line?.target==='cell-grids');
+  if(!authoredBorders)drawSectorBorders(ctx,puzzle.sectors,clip);
   drawFog(ctx,puzzle,progress,clip);
+  // Keep deliberate scene outlines visible through the fog without exposing
+  // hidden clues. They are independent of the optional fine grid lines.
+  if(authoredBorders)drawPuzzleLines(ctx,puzzle.lines,clip,'grid');
   if(selected>=0){
     const x=(selected%puzzle.cols)*CELL,y=Math.floor(selected/puzzle.cols)*CELL;
     // Highlight a selected fogged cell without exposing the hidden content.
