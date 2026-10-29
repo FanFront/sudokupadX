@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { makeDemo } from './demo.js';
+import {invokeBrowser} from './web-runtime.js';
 import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,getSectors,getLinkedPuzzles,isVisible,focusInitialFog} from './adventure-ui.js';
 import './style.css';
 
@@ -56,13 +56,8 @@ async function restoreSaved() {
   let stored;
   try {stored=JSON.parse(localStorage.getItem(saveKey()) || 'null');} catch {return;}
   if (!stored || stored.version!==1 || !Array.isArray(stored.cells) || stored.cells.length!==puzzle.cells.length) return;
-  if (native) {
-    try {progress = await invoke('restore_progress',{cells:stored.cells});}
-    catch (error) {notify('存档未载入: '+String(error));}
-  } else {
-    if (stored.cells.every((cell,i)=>puzzle.cells[i].given===null || JSON.stringify(cell)===JSON.stringify(clearCell())))
-      progress.cells=stored.cells.map(cloneCell);
-  }
+  try {progress = await call('restore_progress',{cells:stored.cells});}
+  catch (error) {notify('存档未载入: '+String(error));}
 }
 function toast(message) {
   const el = $('toast');
@@ -73,80 +68,8 @@ function toast(message) {
 }
 function notify(error) {toast(String(error));}
 
-function fallbackAction(index, action, symbol) {
-  if (index<0 || index>=puzzle.cells.length) throw new Error('格子超出棋盘');
-  if (puzzle.cells[index].given!==null) throw new Error('提示数字不可修改');
-  const before=cloneCell(progress.cells[index]);
-  const after=cloneCell(before);
-  if (action==='erase') {
-    Object.assign(after,clearCell());
-  } else if (action==='color') {
-    if (!colors.includes(symbol)) throw new Error('未知颜色');
-    after.color=after.color===symbol?null:symbol;
-  } else {
-    if (!validSymbol(symbol)) throw new Error('请输入数字或大写字母');
-    if (action==='value') after.value=after.value===symbol?null:symbol;
-    else if (action==='corner'||action==='center') {
-      const arr=after[action];
-      if (arr.includes(symbol)) arr.splice(arr.indexOf(symbol),1);
-      else if (arr.length<26) arr.push(symbol);
-      arr.sort();
-    } else throw new Error('未知模式');
-  }
-  if (JSON.stringify(before)!==JSON.stringify(after)) {
-    undoStack.push({index,before,after});
-    if (undoStack.length>300) undoStack.shift();
-    redoStack=[];
-  }
-  return {index,cell:after,canUndo:undoStack.length>0,canRedo:redoStack.length>0};
-}
-function fallbackHistory(redo) {
-  const from=redo?redoStack:undoStack;
-  const to=redo?undoStack:redoStack;
-  const edit=from.pop();
-  if (!edit) throw new Error('没有可用的操作');
-  to.push(edit);
-  return {index:edit.index,cell:cloneCell(redo?edit.after:edit.before),canUndo:undoStack.length>0,canRedo:redoStack.length>0};
-}
 async function call(command,args={}) {
-  if (native) return invoke(command,args);
-  if (command==='load_demo') return makeDemo();
-  if (command==='open_puzzle') {
-    if (args.input.trim().startsWith('scl')) throw new Error('SCL 解码需要运行 Tauri/Rust 版本；网页预览仅支持 JSON。');
-    const data=JSON.parse(args.input);
-    if (!Array.isArray(data.cells) || data.cells.length===0) throw new Error('需要 cells[][] 数组');
-    const rows=data.cells.length;
-    const cols=Math.max(...data.cells.map(row=>Array.isArray(row)?row.length:0));
-    if (!cols || rows>160 || cols>160) throw new Error('不支持的棋盘尺寸');
-    const result=makeDemo();
-    result.puzzle={
-      ...result.puzzle,
-      key:String(data.id||'browser-import-'+args.input.length),
-      title:String(data.metadata?.title||data.title||'Imported puzzle'),
-      author:String(data.metadata?.author||''),
-      rules:String(data.metadata?.rules||''),
-      rows,cols,
-      cells:data.cells.flatMap(row=>Array.from({length:cols},(_,c)=> {
-        const item=row[c],value=item&&typeof item==='object'?item.value:item;
-        return {given:value===undefined||value===null||value===0||value==='0'?null:String(value)};
-      })),
-      regions:Array.isArray(data.regions)?data.regions:[],
-      lines:Array.isArray(data.lines)?data.lines:[],
-      overlays:Array.isArray(data.overlays)?data.overlays:[],
-      underlays:Array.isArray(data.underlays)?data.underlays:[],
-      cages:Array.isArray(data.cages)?data.cages:[],
-      warnings:['Browser preview: use the Tauri app for Rust parsing and authoritative game state.']
-    };
-    result.progress.cells=Array.from({length:rows*cols},clearCell);
-    result.progress.visible=Array(rows*cols).fill(true);
-    result.progress.solved=false;
-    result.progress.completion=null;
-    return result;
-  }
-  if (command==='update_cell') return fallbackAction(args.index,args.mode,args.symbol);
-  if (command==='undo') return fallbackHistory(false);
-  if (command==='redo') return fallbackHistory(true);
-  throw new Error('Unknown preview command');
+  return native ? invoke(command,args) : invokeBrowser(command,args);
 }
 
 function buildRegions() {
@@ -653,12 +576,15 @@ document.addEventListener('keydown',event=>{
 });
 new ResizeObserver(resizeCanvas).observe(frame);
 resizeCanvas();
-$('runtimeBadge').textContent=native?'Rust / Tauri':'网页预览';
+$('runtimeBadge').textContent=native?'Rust / Tauri':'Rust / WASM';
 (async()=>{
   try{
     await loadCatalog();
-    if(native) await openBundled('digits-of-despair');
-    else await openResult(await call('load_demo'));
+    // A shareable URL selects any bundled puzzle, e.g. ?puzzle=super-sudokoid-2.
+    // Unrecognized puzzle IDs safely fall back to the first adventure map.
+    const requested=new URLSearchParams(location.search).get('puzzle');
+    const entry=catalog.find(item=>item.id===requested);
+    await openBundled(entry?.id || 'digits-of-despair');
   }catch(error){
     notify('内置谜题加载失败: '+String(error));
     try{await openResult(await call('load_demo'));}catch(e){notify(e);}
