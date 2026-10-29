@@ -64,6 +64,22 @@ try{
   assert.equal(await back.isHidden(),true);
   console.log('Direct linked-puzzle -> main-map return passed.');
 
+  // The bundled index is usable without reaching the online JSON provider.
+  await page.locator('#libraryButton').click();
+  await page.locator('#onlineLibraryTab').click();
+  await page.locator('#onlineIndexList .online-entry').first().waitFor({timeout:15000});
+  const indexed=await page.locator('#onlineIndexList .online-entry').count();
+  assert.ok(indexed>40,'Bundled Sudoku index should be browsable in the game library');
+  await page.locator('#onlineSearch').fill('Daily Sudoku');
+  assert.ok((await page.locator('#onlineIndexList .online-entry').count())>0,
+    'Online-index title search must work');
+  await page.locator('#onlineOfflineOnly').check();
+  assert.equal(await page.locator('#onlineIndexList .online-entry').count(),0,
+    'Fresh installs should not claim online puzzle definitions are saved offline');
+  await page.locator('#onlineOfflineOnly').uncheck();
+  await page.locator('#closeLibrary').click();
+  console.log('Bundled online index browser and offline-only filter passed.');
+
   // End-to-end editing and Rust-native undo/redo on a deterministic demo board.
   // The demo is intentionally hidden in compact phone layouts; the smoke
   // test uses it only as a deterministic fixture, not as a UI affordance.
