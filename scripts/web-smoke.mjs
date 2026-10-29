@@ -46,7 +46,9 @@ try{
   }
 
   // End-to-end editing and Rust-native undo/redo on a deterministic demo board.
-  await page.locator('#demoButton').click();
+  // The demo is intentionally hidden in compact phone layouts; the smoke
+  // test uses it only as a deterministic fixture, not as a UI affordance.
+  await page.locator('#demoButton').evaluate(button=>button.click());
   await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('9 × 9'));
   const canvas=page.locator('#boardCanvas');
   const bounds=await canvas.boundingBox();
