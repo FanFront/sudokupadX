@@ -10,6 +10,26 @@ export function canSelectCell(puzzle, index) {
   return Number.isInteger(index) && index >= 0 && index < (puzzle?.cells?.length ?? 0);
 }
 
+/** List every cell crossed between two screen points, even during a fast drag.
+ * Camera coordinates are in CSS pixels, not canvas backing-store pixels.
+ */
+export function dragCellIndices(from, to, camera, puzzle) {
+  if(!puzzle || !camera || !Number.isFinite(camera.scale) || camera.scale<=0) return [];
+  const distance=Math.hypot(to.x-from.x,to.y-from.y);
+  const steps=Math.max(1,Math.ceil(distance/Math.max(1,CELL_SIZE*camera.scale/3)));
+  const result=[];
+  for(let i=0;i<=steps;i++) {
+    const x=from.x+(to.x-from.x)*i/steps;
+    const y=from.y+(to.y-from.y)*i/steps;
+    const c=Math.floor((x-camera.x)/camera.scale/CELL_SIZE);
+    const r=Math.floor((y-camera.y)/camera.scale/CELL_SIZE);
+    const index=r*puzzle.cols+c;
+    if(r>=0&&c>=0&&r<puzzle.rows&&c<puzzle.cols &&
+       result[result.length-1]!==index)result.push(index);
+  }
+  return result;
+}
+
 export function getSectors(puzzle, index) {
   if (!puzzle || index < 0) return [];
   return (puzzle.sectors || []).filter(sector =>
