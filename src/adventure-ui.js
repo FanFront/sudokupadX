@@ -5,6 +5,11 @@ export function isVisible(progress, index) {
   return index >= 0 && (progress?.visible?.[index] !== false);
 }
 
+// A fogged cell may still receive values and notes.
+export function canSelectCell(puzzle, index) {
+  return Number.isInteger(index) && index >= 0 && index < (puzzle?.cells?.length ?? 0);
+}
+
 export function getSectors(puzzle, index) {
   if (!puzzle || index < 0) return [];
   return (puzzle.sectors || []).filter(sector =>
@@ -216,6 +221,30 @@ export function drawPuzzleLines(ctx, lines, clip, layer='normal') {
       if(values.length)ctx.setLineDash(values.map(n=>n*CELL_SIZE/64));
     }
     ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/** Frame scene/sector rectangles independently of the fine cell-grid toggle.
+ * Draw beneath the fog to avoid exposing the layout of unexplored areas.
+ */
+export function drawSectorBorders(ctx, sectors, clip) {
+  const drawn=new Set();
+  for(const sector of sectors||[]) {
+    if(!sector)continue;
+    const {left,top,width,height}=sector;
+    if(![left,top,width,height].every(Number.isInteger) ||
+       left<0||top<0||width<1||height<1||(width<3&&height<3))continue;
+    const x=left*CELL_SIZE,y=top*CELL_SIZE,w=width*CELL_SIZE,h=height*CELL_SIZE;
+    if(x>clip.right||y>clip.bottom||x+w<clip.left||y+h<clip.top)continue;
+    const key=[left,top,width,height].join(',');
+    if(drawn.has(key))continue;
+    drawn.add(key);
+    ctx.save();
+    ctx.lineWidth=width>=3&&height>=3?3.2:2.2;
+    ctx.strokeStyle='#354e62';
+    ctx.strokeRect(x+ctx.lineWidth/2,y+ctx.lineWidth/2,
+                   w-ctx.lineWidth,h-ctx.lineWidth);
     ctx.restore();
   }
 }
