@@ -45,6 +45,25 @@ try{
     console.log('Rendered '+id+' ('+dimensions+')');
   }
 
+  // A linked boss opened by a direct URL must still provide a route to its
+  // correct parent adventure map (there is no in-memory navigation stack).
+  const back=page.locator('#backButton');
+  await back.waitFor({state:'visible',timeout:10000});
+  await back.click();
+  await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('40 × 50'),null,{timeout:60000});
+  assert.equal(await back.isHidden(),true,'Main map must not offer a stale back target');
+
+  // The spoiler-enabled library is another supported direct entry path.
+  await page.locator('#libraryButton').click();
+  await page.locator('#showAllPuzzles').check();
+  await page.locator('#libraryList .library-entry').filter({hasText:'负约束领域'}).click();
+  await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('9 × 9'),null,{timeout:60000});
+  await back.waitFor({state:'visible'});
+  await back.click();
+  await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('40 × 50'),null,{timeout:60000});
+  assert.equal(await back.isHidden(),true);
+  console.log('Direct linked-puzzle -> main-map return passed.');
+
   // End-to-end editing and Rust-native undo/redo on a deterministic demo board.
   // The demo is intentionally hidden in compact phone layouts; the smoke
   // test uses it only as a deterministic fixture, not as a UI affordance.
