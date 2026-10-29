@@ -25,7 +25,7 @@ test('extracts and deduplicates valid SudokuPad links from LMD HTML',()=>{
     '<a href="https://www.sudokupad.app/another123">Second</a></p>';
   const entries=parseLogicMastersPage(html,'000OKF');
   assert.equal(entries.length,2);
-  assert.equal(entries[0].id,'lmd:000OKF:1');
+  assert.equal(entries[0].id,'lmd:000OKF:l1sowokb08');
   assert.equal(entries[0].sourceUrl,
     'https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000OKF');
   assert.equal(entries[0].puzzleUrl,
