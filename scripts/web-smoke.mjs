@@ -49,6 +49,37 @@ try{
     console.log('Rendered '+id+' ('+dimensions+')');
   }
 
+  // Original wording remains readable in parallel with the Chinese translation.
+  for(const [id,phrase,source] of [
+    ['k4995f3fx1','血黑色的虚无','And blood-black nothingness'],
+    ['utmh5dybvf','关卡入口与符号线索','sudokupad.app/z7qsv9k00p'],
+    ['mfhh567b60','标准数独规则始终适用','Sudoku rules always apply'],
+    ['k7qc98e00u','遥远国度的回忆','𝐌𝐞𝐦𝐨𝐫𝐢𝐞𝐬 𝐨𝐟 𝐚']
+  ]){
+    const url=new URL(root);
+    url.searchParams.set('puzzle',id);
+    await page.goto(url.href,{waitUntil:'domcontentloaded'});
+    await page.waitForFunction(expected=>
+      document.querySelector('#boardMeta')?.textContent?.includes(expected),
+      id==='k4995f3fx1'?'8 × 7':'9 × 9',{timeout:60000});
+    await page.locator('#rulesButton').click();
+    const columns=page.locator('#fullRules .bilingual-column');
+    await columns.first().waitFor({timeout:10000});
+    assert.equal(await columns.count(),2,'Both languages must appear in rules');
+    assert.ok((await columns.nth(0).textContent()).includes(phrase),
+      id+' missing Chinese');
+    assert.ok((await columns.nth(1).textContent()).includes(source),
+      id+' missing original text');
+    await page.locator('#dismissRules').click();
+  }
+  // Restore the boss route before testing backwards navigation.
+  {
+    const url=new URL(root);
+    url.searchParams.set('puzzle','boss-6cn54q09sv');
+    await page.goto(url.href,{waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('9 × 9'),null,{timeout:60000});
+  }
+
   // A linked boss opened by a direct URL must still provide a route to its
   // correct parent adventure map (there is no in-memory navigation stack).
   const back=page.locator('#backButton');

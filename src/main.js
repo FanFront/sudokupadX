@@ -6,6 +6,7 @@ import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
 import {setupOnlineLibrary} from './online-ui.js';
+import {bilingualTitle,displayBilingual} from './bilingual.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -169,10 +170,11 @@ function updateSector() {
   const rules=translateDisplay(sector?.rules||puzzle.rules||'暂无规则');
   const title=sector?[sector.author,sector.title].filter(Boolean).join(' · '):'全局谜题规则';
   $('sectorHeading').textContent=title;
-  $('modalSectorTitle').textContent=title;
+  const local=localeZh[currentEntry?.id];
+  $('modalSectorTitle').textContent=sector?title:bilingualTitle(puzzle.title,local?.titleOriginal);
   $('nextSector').hidden=matchingSectors.length<2;
   $('rulesPreview').textContent=rules;
-  $('fullRules').textContent=rules;
+  displayBilingual($('fullRules'),rules,sector?null:local?.rulesOriginal);
   // Links may be held by a larger underlying grid rather than the currently
   // displayed (smallest) overlapping story sector. Do not expose fogged links.
   activeLinkedPuzzles=eligible?linksAtCell(puzzle,progress,selected,catalog,currentEntry?.id):[];
@@ -272,8 +274,9 @@ function updateInfo() {
   lmdSource.hidden=!currentEntry?.sourceUrl;
   if(currentEntry?.sourceUrl) lmdSource.href=currentEntry.sourceUrl;
   else lmdSource.removeAttribute('href');
-  $('puzzleTitle').textContent = puzzle.title;
-  $('puzzleAuthor').textContent = puzzle.author || 'SudokuPad / SudokuMaker';
+  const local=localeZh[currentEntry?.id];
+  $('puzzleTitle').textContent = bilingualTitle(puzzle.title,local?.titleOriginal);
+  $('puzzleAuthor').textContent = bilingualTitle(puzzle.author || 'SudokuPad / SudokuMaker',local?.authorOriginal);
   $('boardMeta').textContent = puzzle.rows+' × '+puzzle.cols+' · '+(puzzle.lines||[]).length+' lines';
   updateSector();
   const warning=$('warningList');
@@ -502,7 +505,8 @@ function draw() {
 function showCompletionIfNew(){
   const solved=Boolean(progress?.solved);
   if(solved&&!lastCompletion){
-    $('completionText').textContent=progress.completion||'已完成当前谜题。';
+    displayBilingual($('completionText'),progress.completion||'已完成当前谜题。',
+      localeZh[currentEntry?.id]?.msgcorrectOriginal);
     $('completionBack').hidden=!returnDestination(currentEntry,catalog,navigationStack);
     if(!$('completionDialog').open)$('completionDialog').showModal();
   }
