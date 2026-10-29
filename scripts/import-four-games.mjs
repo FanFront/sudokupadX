@@ -18,7 +18,8 @@ const roots=[
 const directory='public/puzzles';
 await mkdir(directory,{recursive:true});
 const summaries={};
-const puzzles=[...roots],seen=new Set(roots.map(p=>p.id));
+const puzzles=roots.map(p=>({...p,depth:0})),seen=new Set(roots.map(p=>p.id));
+const MAX_RELATED=120,MAX_DEPTH=15;
 
 
 function normalizeCompact(text) {
@@ -119,7 +120,8 @@ for(const game of puzzles) {
   const data=parsed.data, meta=data.metadata||data.me||{};
   const cells=data.cells||data.ce;
   summaries[game.id]={
-    url:game.url, group:game.group||game.id, kind:game.group?'linked':'standalone', rows:cells.length,
+    url:game.url, group:game.group||game.id, parent:game.parent||null,
+    depth:game.depth, kind:game.group?'linked':'standalone', rows:cells.length,
     cols:Math.max(0,...cells.map(row=>Array.isArray(row)?row.length:0)),
     title:meta.title||data.title||'',
     author:meta.author||'',
@@ -129,12 +131,15 @@ for(const game of puzzles) {
       title:grid.title||'',rules:grid.rules||'',author:grid.author||''
     }))
   };
-  if(!game.group) {
-    for(const link of String(meta.rules||'').matchAll(/https:\/\/sudokupad\.app\/([a-z0-9]{10})(?:\?[^\s)\]]*)?/gi)) {
+  if(game.depth<MAX_DEPTH) {
+    const sources=[String(meta.rules||''),String(meta.msgcorrect||''),
+      ...(meta.grids||[]).map(grid=>String(grid.rules||''))];
+    for(const link of sources.join('\n').matchAll(/https:\/\/sudokupad\.app\/([a-z0-9]{10})(?:\?[^\s)\]]*)?/gi)) {
       const id=link[1].toLowerCase();
       if(seen.has(id))continue;
       seen.add(id);
-      puzzles.push({id,url:link[0],group:game.id});
+      if(puzzles.length>=MAX_RELATED)throw Error('Too many related puzzles; review navigation graph');
+      puzzles.push({id,url:link[0],group:game.group||game.id,parent:game.id,depth:game.depth+1});
     }
   }
   console.log(game.id+': '+summaries[game.id].rows+'x'+summaries[game.id].cols+
