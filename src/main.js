@@ -3,6 +3,7 @@ import {invokeBrowser} from './web-runtime.js';
 import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,getLinkedPuzzles,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
+import {cellInk} from './cell-ink.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -46,7 +47,7 @@ function refreshConflicts() {
 }
 // Draw individual marks rather than a single string so only the conflicting
 // candidate is red (not every corner/center note in the cell).
-function drawNoteRow(entry,kind,x,y,redMarks) {
+function drawNoteRow(entry,kind,x,y,redMarks,fogged=false) {
   const marks=entry?.[kind];
   if(!Array.isArray(marks)||marks.length===0)return;
   const centered=kind==='center';
@@ -62,11 +63,29 @@ function drawNoteRow(entry,kind,x,y,redMarks) {
   ctx.scale(scale,1);
   let offset=0;
   for(let i=0;i<parts.length;i++){
-    ctx.fillStyle=redMarks?.has(parts[i])?'#c82038':centered?'#48617e':'#325b89';
+    ctx.fillStyle=redMarks?.has(parts[i])?(fogged?'#ff8c9b':'#c82038'):
+      fogged?(centered?'#e2ecfc':'#f2e9cb'):centered?'#48617e':'#325b89';
     ctx.fillText(parts[i],offset,0);
     offset+=widths[i]+gap;
   }
   ctx.restore();
+}
+// The original puzzle and player ink are separate layers. Visible cells are
+// painted before fog; player ink in hidden cells is painted *after* fog.
+function drawCellInk(index,x,y,fogLayer=false) {
+  const ink=cellInk(puzzle,progress,index);
+  if(!ink || ink.fogged!==fogLayer)return;
+  if(ink.value){
+    ctx.font=(ink.given?'700 ':'600 ')+CELL*.61+'px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=conflicts.valueCells.has(index)
+      ?(ink.fogged?'#ff8c9b':'#c82038')
+      :ink.fogged?'#f0f6ff':ink.given?'#263345':'#2560a1';
+    ctx.fillText(String(ink.value),x+CELL/2,y+CELL/2+1,CELL*.9);
+  } else {
+    drawNoteRow(ink,'corner',x,y,conflicts.noteSymbols[index],ink.fogged);
+    drawNoteRow(ink,'center',x,y,conflicts.noteSymbols[index],ink.fogged);
+  }
 }
 function validSymbol(s) {return /^[0-9A-Z]$/.test(s);}
 function saveKey() {return puzzle ? 'sudokupadx:v1:'+puzzle.key : '';}
@@ -404,20 +423,7 @@ function draw() {
   drawPuzzleLines(ctx,puzzle.lines,clip,'overlay');
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c;
-    const given=puzzle.cells[idx].given,entry=progress.cells[idx]||clearCell();
-    const x=c*CELL,y=r*CELL;
-    const value=given??entry.value;
-    if(value){
-      ctx.font=(given?'700 ':'600 ')+CELL*.61+'px sans-serif';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillStyle=conflicts.valueCells.has(idx)?'#c82038':given?'#263345':'#2560a1';
-      ctx.fillText(String(value),x+CELL/2,y+CELL/2+1,CELL*.9);
-    } else {
-      // A placed digit visually replaces notes. Retain them in progress so
-      // clearing or undoing that digit restores the earlier candidates.
-      drawNoteRow(entry,'corner',x,y,conflicts.noteSymbols[idx]);
-      drawNoteRow(entry,'center',x,y,conflicts.noteSymbols[idx]);
-    }
+    drawCellInk(idx,c*CELL,r*CELL,false);
   }
   // Source-authored cell-grids paths are the canonical adventure walls.
   // Do not add speculative rectangles around story metadata when they exist.
@@ -427,6 +433,12 @@ function draw() {
   // Keep deliberate scene outlines visible through the fog without exposing
   // hidden clues. They are independent of the optional fine grid lines.
   if(authoredBorders)drawPuzzleLines(ctx,puzzle.lines,clip,'grid');
+  // Restore *only the player's* entries above the opaque fog overlay.
+  // Never reveal hidden givens, original circle/arrow artwork or other clues.
+  for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
+    const idx=r*puzzle.cols+c;
+    if(!isVisible(progress,idx))drawCellInk(idx,c*CELL,r*CELL,true);
+  }
   for(const index of selectedCells){
     const x=(index%puzzle.cols)*CELL,y=Math.floor(index/puzzle.cols)*CELL;
     // Highlight covered cells without exposing their contents.
