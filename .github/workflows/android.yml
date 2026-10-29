@@ -35,6 +35,8 @@ jobs:
           "$SDKMANAGER" --install "ndk;27.2.12479018"
       - name: Install frontend packages
         run: npm install
+      - name: Verify puzzle rendering and controls
+        run: npm test
       - name: Assign unique increasing Android version code
         run: node scripts/android-release.mjs version
       - name: Generate Android project
