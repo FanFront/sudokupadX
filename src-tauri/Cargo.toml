@@ -12,6 +12,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri = { version = "2" }
 serde = { version = "1", features = ["derive"] }
 sudokupadx-core = { path = "../crates/sudokupadx-core" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 [build-dependencies]
 tauri-build = { version = "2" }
