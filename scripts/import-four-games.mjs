@@ -19,6 +19,54 @@ const directory='public/puzzles';
 await mkdir(directory,{recursive:true});
 const summaries={};
 
+
+function normalizeCompact(text) {
+  let out='',quote='',escaped=false;
+  const stack=[];
+  for(let i=0;i<text.length;i++) {
+    const ch=text[i];
+    if(quote){
+      out+=ch;
+      if(escaped)escaped=false;
+      else if(ch==='\\')escaped=true;
+      else if(ch===quote)quote='';
+      continue;
+    }
+    if(ch==="'"||ch==='"'){quote=ch;out+=ch;continue;}
+    if(ch==='['||ch==='{')stack.push(ch);
+    if(ch===']'||ch==='}')stack.pop();
+    if(ch===','&&stack.at(-1)==='['&&/[\[,]/.test(out.trimEnd().at(-1)||''))out+='null';
+    if('tfn'.includes(ch)&&/[:,\[]/.test(out.trimEnd().at(-1)||'') &&
+       /[,}\]]/.test((text.slice(i+1).trimStart()[0]||''))){
+      out+=({t:'true',f:'false',n:'null'})[ch];continue;
+    }
+    out+=ch;
+  }
+  return out;
+}
+function quoteColors(text) {
+  let out='',quote='',escaped=false;
+  for(let i=0;i<text.length;i++) {
+    const ch=text[i];
+    if(quote){
+      out+=ch;if(escaped)escaped=false;
+      else if(ch==='\\')escaped=true;
+      else if(ch===quote)quote='';
+      continue;
+    }
+    if(ch==="'"||ch==='"'){quote=ch;out+=ch;continue;}
+    if(ch===':'){
+      const match=text.slice(i+1).match(/^(\s*)(#[0-9a-fA-F]+|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?=[,}\]\s]|$)/);
+      if(match&&(match[2][0]==='#'||/[a-fA-F]/.test(match[2]))){
+        out+=':'+match[1]+"'"+match[2]+"'";
+        i+=match[0].length;continue;
+      }
+    }
+    out+=ch;
+  }
+  return out;
+}
+
 function normalize(text) {
   let value=text.trim().replace(/^\uFEFF/,'');
   if(value.startsWith('"')) {
@@ -36,7 +84,7 @@ function normalize(text) {
     throw Error('Endpoint did not provide a bounded valid SCL package');
   const decoded=LZString.decompressFromBase64(value.slice(3));
   if(!decoded||decoded.length>32*1024*1024)throw Error('SCL decompression failed');
-  const data=JSON5.parse(decoded);
+  const data=JSON5.parse(quoteColors(normalizeCompact(decoded)));
   if(!Array.isArray(data.cells)&&!Array.isArray(data.ce))throw Error('Source puzzle has no cells');
   return {value,data};
 }
