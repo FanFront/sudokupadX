@@ -66,7 +66,7 @@ export function parseLogicMastersPage(html, reference) {
     if (url) unique.add(url);
   }
   return [...unique].slice(0,20).map((puzzleUrl, index) => ({
-    id:'lmd:' + ref.id + ':' + (index + 1),
+    id:'lmd:' + ref.id + ':' + puzzleIdFromUrl(puzzleUrl),
     title:unique.size === 1 ? title : title + ' · 链接 ' + (index + 1),
     sourceId:'logic-masters',
     sourceName:LOGIC_MASTERS_NAME,
