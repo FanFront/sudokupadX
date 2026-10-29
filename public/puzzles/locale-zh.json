@@ -129,7 +129,8 @@
         "original": "DARK",
         "zh": "黑暗"
       }
-    ]
+    ],
+    "author": "迈克尔·莱夫科维茨"
   },
   "utmh5dybvf": {
     "title": "生命之树",
@@ -138,7 +139,8 @@
     "titleOriginal": "Tree of Life",
     "rulesOriginal": "[🟨](https://sudokupad.app/z7qsv9k00p?setting-digitoutlines=0&setting-nogrid=1)\n    [🟫](https://sudokupad.app/11xe5cvmg7?setting-digitoutlines=0)\n      [🟦](https://sudokupad.app/4zusdo2z80?setting-digitoutlines=0)",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "You win at life!"
+    "msgcorrectOriginal": "You win at life!",
+    "author": "迈克尔·莱夫科维茨"
   },
   "mfhh567b60": {
     "title": "形状之战",
@@ -163,7 +165,8 @@
         "original": "Guard Duty",
         "zh": "守卫任务"
       }
-    ]
+    ],
+    "author": "迈克尔·莱夫科维茨"
   },
   "k7qc98e00u": {
     "title": "遥远国度的回忆",
@@ -179,7 +182,8 @@
     "msgcorrect": "“约翰·谢德是个做事井井有条的人，通常会在午夜抄写当天完成的诗行。即使后来又重新誊抄——我怀疑他确实这样做过——他在卡片上标注的也不是最后修改的日期，而是‘修订稿’或第一份‘清稿’的日期。也就是说，他保留的是实际创作的日期，而非第二次、第三次修改时的日期。”\n—— 弗拉基米尔·纳博科夫，《微暗的火》",
     "rulesOriginal": "A system of [cells](https://sudokupad.app/vgwd2sewcb?setting-digitoutlines=0) interlinked [with](https://sudokupad.app/velqhose8v?setting-digitoutlines=0)in\nCells interlinked within cells [in](https://sudokupad.app/mwqksbnwkg?setting-digitoutlines=0)terlinked",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "'A methodical man, John Shade usually copied out his daily quota of completed lines at midnight but even if he recopied them again later, as I suspect he sometimes did, he marked his card or cards not with the date of his final adjustments, but with that of his Corrected Draft or first Fair Copy. I mean, he preserved the date of actual creation rather than that of second or third thoughts.'\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "'A methodical man, John Shade usually copied out his daily quota of completed lines at midnight but even if he recopied them again later, as I suspect he sometimes did, he marked his card or cards not with the date of his final adjustments, but with that of his Corrected Draft or first Fair Copy. I mean, he preserved the date of actual creation rather than that of second or third thoughts.'\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "wzyjchj6ss": {
     "title": "交织 · 茎",
@@ -187,7 +191,8 @@
     "msgcorrect": "“……在一处小小的藤架门廊下，透过盘绕的藤蔓，我能看见一块油布的一角；他的胳膊肘搁在上面，圆润如小天使的拳头托着太阳穴，把那儿的皮肤挤出了褶皱。视角与光线的变化，以及支架或叶片的遮挡，常常让我看不清他的脸。”\n—— 弗拉基米尔·纳博科夫，《微暗的火》",
     "rulesOriginal": "Wi[thin](https://sudokupad.app/afv1a86wyu?setting-digitoutlines=0) [one](https://sudokupad.app/z6hl3kgo71?setting-digitoutlines=0) stem",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "'…among the vines of a small arborlike portico, through the garlands of which I could glimpse a stretch of oilcloth, his elbow upon it, and the plump cherubic fist propping and crimpling his temple. Incidents of perspective and lighting, interference by framework or leaves, usually deprived me of a clear view of his face.'\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "'…among the vines of a small arborlike portico, through the garlands of which I could glimpse a stretch of oilcloth, his elbow upon it, and the plump cherubic fist propping and crimpling his temple. Incidents of perspective and lighting, interference by framework or leaves, usually deprived me of a clear view of his face.'\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "d2xwyazqf9": {
     "title": "交织 · 黑暗",
@@ -195,53 +200,61 @@
     "msgcorrect": "“我怀着沉重的心情和满腹疑惑，悄悄返回那毫无慰藉的住所。心情依旧沉重，但几天后，谜团终于解开了……”\n—— 弗拉基米尔·纳博科夫，《微暗的火》",
     "rulesOriginal": "And dreadfully [distinct](https://sudokupad.app/qu3r74uwax?setting-digitoutlines=0) [again](https://sudokupad.app/jf9e6dz872?setting-digitoutlines=0)st the d[ark](https://sudokupad.app/t0pxonouyj?setting-digitoutlines=0)",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "'I crept back to my cheerless domicile with a heavy heart and a puzzled mind. The heart remained heavy but the puzzle was solved a few days later…'\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "'I crept back to my cheerless domicile with a heavy heart and a puzzled mind. The heart remained heavy but the puzzle was solved a few days later…'\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "z7qsv9k00p": {
     "title": "生命之树 · 支线 1",
     "rules": "关卡入口与符号线索：\n[🟧](https://sudokupad.app/ou13tbgd6s?setting-digitoutlines=0) [🟨](https://sudokupad.app/tqr6w94dc8?setting-digitoutlines=0)\n    [🪲](https://sudokupad.app/2zdlag4xh1?setting-digitoutlines=0)",
     "rulesOriginal": "[🟧](https://sudokupad.app/ou13tbgd6s?setting-digitoutlines=0) [🟨](https://sudokupad.app/tqr6w94dc8?setting-digitoutlines=0)\n    [🪲](https://sudokupad.app/2zdlag4xh1?setting-digitoutlines=0)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "11xe5cvmg7": {
     "title": "生命之树 · 支线 2",
     "rules": "关卡入口与符号线索：\n⠀    [🟫](https://sudokupad.app/vfkdvae1s8?setting-digitoutlines=0)\n  [🟦](https://sudokupad.app/bz1d323nx3?setting-digitoutlines=0)\n[🟩](https://sudokupad.app/3xltag99db?setting-digitoutlines=0)",
     "rulesOriginal": "⠀    [🟫](https://sudokupad.app/vfkdvae1s8?setting-digitoutlines=0)\n  [🟦](https://sudokupad.app/bz1d323nx3?setting-digitoutlines=0)\n[🟩](https://sudokupad.app/3xltag99db?setting-digitoutlines=0)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "4zusdo2z80": {
     "title": "生命之树 · 支线 3",
     "rules": "关卡入口与符号线索：\n⠀    [🟢](https://sudokupad.app/locvdyuyrh?setting-digitoutlines=0)\n [🟫](https://sudokupad.app/rpasmxrt2q?setting-digitoutlines=0)",
     "rulesOriginal": "⠀    [🟢](https://sudokupad.app/locvdyuyrh?setting-digitoutlines=0)\n [🟫](https://sudokupad.app/rpasmxrt2q?setting-digitoutlines=0)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "sxa2lmgsa9": {
     "title": "圆环之城",
     "rules": "→ [曲线球](https://sudokupad.app/u164tr3aed)",
     "titleOriginal": "Circle City",
     "rulesOriginal": "→ [Curve Balls](https://sudokupad.app/u164tr3aed)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "ngbyvop7o3": {
     "title": "钻石矿洞",
     "rules": "→ [发现差异](https://sudokupad.app/wy9zfy41pa)",
     "titleOriginal": "Diamond Mine",
     "rulesOriginal": "→ [Making a Difference](https://sudokupad.app/wy9zfy41pa)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "74mrv27me3": {
     "title": "圆圈与箭头",
     "rules": "→ [靶场练习](https://sudokupad.app/017bto6z45)",
     "titleOriginal": "Circles & Arrows",
     "rulesOriginal": "→ [Target Practice](https://sudokupad.app/017bto6z45)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "c8qj3qrh28": {
     "title": "守卫任务",
     "rules": "→ [沿着长矛](https://sudokupad.app/c0ortk7210)",
     "titleOriginal": "Guard Duty",
     "rulesOriginal": "→ [Down the Pike](https://sudokupad.app/c0ortk7210)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "mhyr83irby": {
     "title": "邮票",
@@ -289,7 +302,8 @@
     "titleOriginal": "Cells",
     "rulesOriginal": "A system of cells interlinked within\nCells interlinked within cells interlinked",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"My heart had stopped to beat,\nIt seems, and several moments passed before\nIt heaved and went on trudging to a more\nConclusive destination.\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"My heart had stopped to beat,\nIt seems, and several moments passed before\nIt heaved and went on trudging to a more\nConclusive destination.\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "velqhose8v": {
     "title": "交织的细胞 · 支线 1",
@@ -297,7 +311,8 @@
     "msgcorrect": "“我仿佛一只被击毙的太平鸟的影子，\n死于窗玻璃上那虚假的蔚蓝。”\n—— 弗拉基米尔·纳博科夫，《微暗的火》",
     "rulesOriginal": "[A](https://sudokupad.app/diklunds4z?setting-digitoutlines=0) system of cells interlinked within\nCells interlinked within cells inter[linked](https://sudokupad.app/12emzwuclg?setting-conflictchecker=0&setting-digitoutlines=0)",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "'I was the shadow of the waxwing slain\nBy the false azure in the windowpane'\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "'I was the shadow of the waxwing slain\nBy the false azure in the windowpane'\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "mwqksbnwkg": {
     "title": "交织的细胞 · 支线 2",
@@ -305,7 +320,8 @@
     "msgcorrect": "“而从内侧，我也会将它复制。”\n—— 弗拉基米尔·纳博科夫，《微暗的火》",
     "rulesOriginal": "A system of cells interlinked within\nCells interlinked within cells interlinked [???](https://sudokupad.app/9xmps9ans5?setting-digitoutlines=0)",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "'And from the inside too, I’d duplicate'\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "'And from the inside too, I’d duplicate'\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "afv1a86wyu": {
     "title": "纤细",
@@ -314,7 +330,8 @@
     "titleOriginal": "Thin",
     "rulesOriginal": "Within one stem",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"Time means growth\nAnd growth means nothing in Elysian life.\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"Time means growth\nAnd growth means nothing in Elysian life.\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "z6hl3kgo71": {
     "title": "一",
@@ -323,7 +340,8 @@
     "titleOriginal": "One",
     "rulesOriginal": "Within one stem",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"And while this lasted all I had to do\nWas close my eyes to reproduce the leaves\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"And while this lasted all I had to do\nWas close my eyes to reproduce the leaves\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "qu3r74uwax": {
     "title": "分明",
@@ -332,7 +350,8 @@
     "titleOriginal": "Distinct",
     "rulesOriginal": "And dreadfully distinct against the dark",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"Instead of poetry divinely terse,\nDisjointed notes, Insomnia’s mean verse!\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"Instead of poetry divinely terse,\nDisjointed notes, Insomnia’s mean verse!\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "jf9e6dz872": {
     "title": "再一次",
@@ -341,7 +360,8 @@
     "titleOriginal": "Again",
     "rulesOriginal": "And dreadfully distinct against the dark",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"For as we know from dreams it is so hard\nTo speak to our dear dead! They disregard\nOur apprehension, queaziness and shame—\nThe awful sense that they’re not quite the same.\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"For as we know from dreams it is so hard\nTo speak to our dear dead! They disregard\nOur apprehension, queaziness and shame—\nThe awful sense that they’re not quite the same.\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "t0pxonouyj": {
     "title": "交织的细胞 · 支线 3",
@@ -349,88 +369,101 @@
     "msgcorrect": "“终于，迎来了那个无法入睡的夜晚，\n我决定深入探索、奋力对抗\n那污秽、那不可容忍的深渊，\n为此献出我扭曲的一生。”\n—— 弗拉基米尔·纳博科夫，《微暗的火》",
     "rulesOriginal": "And dreadfully distinct against the dark\nAnd [blood](https://sudokupad.app/md70aqp30y?setting-digitoutlines=0)-black nothingness began to spin",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "'And finally there was the sleepless night\nWhen I decided to explore and fight\nThe foul, the inadmissible abyss,\nDevoting all my twisted life to this'\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "'And finally there was the sleepless night\nWhen I decided to explore and fight\nThe foul, the inadmissible abyss,\nDevoting all my twisted life to this'\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "ou13tbgd6s": {
     "title": "生命之树 · 支线 4",
     "rules": "……",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "tqr6w94dc8": {
     "title": "纪念碑",
     "rules": "关卡入口与符号线索：\n[🔎](https://sudokupad.app/r0j85pl40t?setting-digitoutlines=0&setting-nogrid=1)\n\n[⬛](https://sudokupad.app/mdef8wu53g?setting-digitoutlines=0&setting-nogrid=1)",
     "titleOriginal": "Monument",
     "rulesOriginal": "[🔎](https://sudokupad.app/r0j85pl40t?setting-digitoutlines=0&setting-nogrid=1)\n\n[⬛](https://sudokupad.app/mdef8wu53g?setting-digitoutlines=0&setting-nogrid=1)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "2zdlag4xh1": {
     "title": "生命之树 · 支线 5",
     "rules": "……",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "vfkdvae1s8": {
     "title": "树林",
     "rules": "关卡入口与符号线索：\n[🟩](https://sudokupad.app/3xltag99db?setting-digitoutlines=0)",
     "titleOriginal": "Grove",
     "rulesOriginal": "[🟩](https://sudokupad.app/3xltag99db?setting-digitoutlines=0)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "bz1d323nx3": {
     "title": "湖泊",
     "rules": "关卡入口与符号线索：\n[⬜](https://sudokupad.app/dztbkdgio8?setting-digitoutlines=0)",
     "titleOriginal": "Lake",
     "rulesOriginal": "[⬜](https://sudokupad.app/dztbkdgio8?setting-digitoutlines=0)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "3xltag99db": {
     "title": "猴面包树",
     "rules": "……",
     "titleOriginal": "Baobab",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "locvdyuyrh": {
     "title": "青蛙",
     "rules": "关卡入口与符号线索：\n[🟦](https://sudokupad.app/fqi72y7mnn?setting-digitoutlines=0)\n     [🟦](https://sudokupad.app/v0hjyng61f?setting-digitoutlines=0)",
     "titleOriginal": "Frog",
     "rulesOriginal": "[🟦](https://sudokupad.app/fqi72y7mnn?setting-digitoutlines=0)\n     [🟦](https://sudokupad.app/v0hjyng61f?setting-digitoutlines=0)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "rpasmxrt2q": {
     "title": "生命之树 · 支线 6",
     "rules": "关卡入口与符号线索：\n[⬜](https://sudokupad.app/d3egy44ae1?setting-digitoutlines=0)\n    [⬜](https://sudokupad.app/5xssxd6lgm?setting-digitoutlines=0)",
     "rulesOriginal": "[⬜](https://sudokupad.app/d3egy44ae1?setting-digitoutlines=0)\n    [⬜](https://sudokupad.app/5xssxd6lgm?setting-digitoutlines=0)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "u164tr3aed": {
     "title": "曲线球",
     "rules": "→ [围捕](https://sudokupad.app/cktjx1o2nx)",
     "titleOriginal": "Curve Balls",
     "rulesOriginal": "→ [Round Up](https://sudokupad.app/cktjx1o2nx)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "wy9zfy41pa": {
     "title": "发现差异",
     "rules": "……",
     "titleOriginal": "Making a Difference",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "017bto6z45": {
     "title": "靶场练习",
     "rules": "→ [射箭](https://sudokupad.app/ag3ipm7kbh)",
     "titleOriginal": "Target Practice",
     "rulesOriginal": "→ [Archery](https://sudokupad.app/ag3ipm7kbh)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "c0ortk7210": {
     "title": "沿着长矛",
     "rules": "→ [抓住要点](https://sudokupad.app/66ypvkjzh1)",
     "titleOriginal": "Down the Pike",
     "rulesOriginal": "→ [Getting the Point](https://sudokupad.app/66ypvkjzh1)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "d7w151rl1z": {
     "title": "旗帜",
@@ -469,7 +502,8 @@
     "titleOriginal": "A",
     "rulesOriginal": "A system of cells interlinked within\nCells interlinked within cells interlinked",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"And, from the outside, bits of colored light\nReaching his bed like dark hands from the past\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"And, from the outside, bits of colored light\nReaching his bed like dark hands from the past\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "12emzwuclg": {
     "title": "相连",
@@ -478,7 +512,8 @@
     "titleOriginal": "Linked",
     "rulesOriginal": "A system of cells interlinked within\nCells interlinked within cells interlinked",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"And then the gradual and dual blue\nAs night unites the viewer and the view\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"And then the gradual and dual blue\nAs night unites the viewer and the view\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "9xmps9ans5": {
     "title": "？？？",
@@ -487,7 +522,8 @@
     "titleOriginal": "???",
     "rulesOriginal": "???",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"As a rule, Shade destroyed drafts the moment he ceased to need them: well do I recall seeing him from my porch, on a brilliant morning, burning a whole stack of them in the pale fire of the incinerator before which he stood with bent head like an official mourner among the wind-borne black butterflies.\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"As a rule, Shade destroyed drafts the moment he ceased to need them: well do I recall seeing him from my porch, on a brilliant morning, burning a whole stack of them in the pale fire of the incinerator before which he stood with bent head like an official mourner among the wind-borne black butterflies.\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "md70aqp30y": {
     "title": "交织的细胞 · 支线 4",
@@ -495,72 +531,83 @@
     "msgcorrect": "“我感到血一下涌上脸颊，含糊地嘟囔了几句，说他还没给我看过其中任何一部分。她挺直身子，把额前黑灰相间的头发拂到一旁，瞪着我说：‘你说什么——给你看过？他从不把未完成的东西给任何人看。从来没有，绝对没有。不到彻底、彻底完成的时候，他连讨论都不会同你讨论。’”\n—— 弗拉基米尔·纳博科夫，《微暗的火》",
     "rulesOriginal": "[Spin](https://sudokupad.app/mbvavupwl0?setting-digitoutlines=0) to began nothingness black-blood and\nand blood-b[lack](https://sudokupad.app/4ohoka3ejc?setting-digitoutlines=0) nothingness [beg](https://sudokupad.app/mct3cumq3f?setting-digitoutlines=0)an to Spin",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "'I felt the blood rush to my face and mumbled something about his not having shown any of it to me yet, and she straightened herself, and swept the black and gray hair off her forehead, and stared at me, and said: 'What do you mean—shown any of it? He never shows anything unfinished. Never, never. He will not even discuss it with you until it is quite, quite finished.'\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "'I felt the blood rush to my face and mumbled something about his not having shown any of it to me yet, and she straightened herself, and swept the black and gray hair off her forehead, and stared at me, and said: 'What do you mean—shown any of it? He never shows anything unfinished. Never, never. He will not even discuss it with you until it is quite, quite finished.'\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "r0j85pl40t": {
     "title": "纪念碑（放大）",
     "rules": "……",
     "titleOriginal": "Monument (zoom)",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "mdef8wu53g": {
     "title": "生命之树 · 支线 7",
     "rules": "……",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "dztbkdgio8": {
     "title": "溪流",
     "rules": "……",
     "titleOriginal": "Creek",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "fqi72y7mnn": {
     "title": "生命之树 · 支线 8",
     "rules": "……",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "v0hjyng61f": {
     "title": "生命之树 · 支线 9",
     "rules": "……",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "d3egy44ae1": {
     "title": "生命之树 · 支线 10",
     "rules": "……",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "5xssxd6lgm": {
     "title": "生命之树 · 支线 11",
     "rules": "……",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "cktjx1o2nx": {
     "title": "围捕",
     "rules": "……",
     "titleOriginal": "Round Up",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "ag3ipm7kbh": {
     "title": "射箭",
     "rules": "→ [上升之物](https://sudokupad.app/lqg8n7s0vv)",
     "titleOriginal": "Archery",
     "rulesOriginal": "→ [What Goes Up](https://sudokupad.app/lqg8n7s0vv)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "66ypvkjzh1": {
     "title": "抓住要点",
     "rules": "→ [罗马数字](https://sudokupad.app/s29oiohiet)",
     "titleOriginal": "Getting the Point",
     "rulesOriginal": "→ [Roman Numerals](https://sudokupad.app/s29oiohiet)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "jsccrlmi02": {
     "title": "奇异汉字",
@@ -608,7 +655,8 @@
     "titleOriginal": "Spin",
     "rulesOriginal": "Spin to began nothingness black-blood and\nand blood-black nothingness began to Spin",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"…there remained to be written only one line of the poem (namely verse 1000) which would have been identical to line 1 and would have completed the symmetry of the structure.\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"…there remained to be written only one line of the poem (namely verse 1000) which would have been identical to line 1 and would have completed the symmetry of the structure.\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "4ohoka3ejc": {
     "title": "缺失",
@@ -617,7 +665,8 @@
     "titleOriginal": "Lack",
     "rulesOriginal": "Spin to began nothingness black-blood and\nand blood-black nothingness began to Spin",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"Often when troubled by the outer glare\nOf street and strife, inward I'd turn, and there,\nThere in the background of my soul it stood\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"Often when troubled by the outer glare\nOf street and strife, inward I'd turn, and there,\nThere in the background of my soul it stood\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "mct3cumq3f": {
     "title": "开端",
@@ -626,21 +675,24 @@
     "titleOriginal": "Beg",
     "rulesOriginal": "Spin to began nothingness black-blood and\nand blood-black nothingness began to Spin",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "\"Dying in a motel, with the loud fan\nRevolving in the torrid prairie night\"\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "\"Dying in a motel, with the loud fan\nRevolving in the torrid prairie night\"\n― Vladimir Nabokov, Pale Fire",
+    "author": "迈克尔·莱夫科维茨"
   },
   "lqg8n7s0vv": {
     "title": "上升之物",
     "rules": "……",
     "titleOriginal": "What Goes Up",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "s29oiohiet": {
     "title": "罗马数字",
     "rules": "……",
     "titleOriginal": "Roman Numerals",
     "rulesOriginal": "...",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "author": "迈克尔·莱夫科维茨"
   },
   "buekyq1ax3": {
     "title": "开始",
