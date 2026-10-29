@@ -395,6 +395,13 @@ function draw() {
   drawPuzzleLines(ctx,puzzle.lines,clip);
   drawArrows(ctx,puzzle,clip);
   drawCages(ctx,puzzle,clip);
+  // Circle-arrow rings and other authored overlays sit above the board's
+  // decoration/constraints, but below the player's large and pencil digits.
+  // Keeping this layer before the values prevents opaque overlay shapes from
+  // obscuring givens, corner notes, or center notes.
+  drawPathMarks(ctx,puzzle.overlays);
+  drawDecorations(ctx,puzzle.overlays,clip);
+  drawPuzzleLines(ctx,puzzle.lines,clip,'overlay');
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c;
     const given=puzzle.cells[idx].given,entry=progress.cells[idx]||clearCell();
@@ -412,9 +419,6 @@ function draw() {
       drawNoteRow(entry,'center',x,y,conflicts.noteSymbols[idx]);
     }
   }
-  drawPathMarks(ctx,puzzle.overlays);
-  drawDecorations(ctx,puzzle.overlays,clip);
-  drawPuzzleLines(ctx,puzzle.lines,clip,'overlay');
   // Source-authored cell-grids paths are the canonical adventure walls.
   // Do not add speculative rectangles around story metadata when they exist.
   const authoredBorders=(puzzle.lines||[]).some(line=>line?.target==='cell-grids');
