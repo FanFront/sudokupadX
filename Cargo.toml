@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/sudokupadx-core", "src-tauri"]
+members = ["crates/sudokupadx-core", "crates/sudokupadx-web", "src-tauri"]
 
 # Compact Android/desktop native binaries. ARM64 release builds avoid debug symbols.
 [profile.release]
