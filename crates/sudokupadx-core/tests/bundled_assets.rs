@@ -24,9 +24,11 @@ fn all_bundled_scl_packages_decode() {
             assert!(puzzle.foglight.as_ref().is_some_and(|v|!v.is_empty()));
             assert!(!puzzle.triggers.is_empty(),"{} triggers missing",path);
             assert!(puzzle.solution.is_some(),"{} solution missing",path);
+            let mut initial=vec![false;puzzle.cells.len()];
+            for &index in puzzle.foglight.as_ref().unwrap() { initial[index]=true; }
             let session=sudokupadx_core::Session::new(puzzle);
-            assert!(session.snapshot().visible.iter().any(|v|!*v),
-                "{} must start fogged",path);
+            assert_eq!(session.snapshot().visible,initial,
+                "{} must start with exactly the source foglight cells",path);
         }
     }
     let locale=fs::read_to_string(root.join("locale-zh.json")).expect("locales");
