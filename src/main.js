@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { makeDemo } from './demo.js';
-import {drawArrows,drawCages,drawPathMarks,drawFog,getSectors,getLinkedPuzzles,isVisible,focusInitialFog} from './adventure-ui.js';
+import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,getSectors,getLinkedPuzzles,isVisible,focusInitialFog} from './adventure-ui.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -388,59 +388,6 @@ function gridIndex(x,y) {
   const r=Math.floor(((y-camera.y)/camera.scale)/CELL);
   return r>=0&&c>=0&&r<puzzle.rows&&c<puzzle.cols?r*puzzle.cols+c:-1;
 }
-function point(pair) {
-  if (!Array.isArray(pair)||pair.length<2) return null;
-  const x=Number(pair[0]),y=Number(pair[1]);
-  return Number.isFinite(x)&&Number.isFinite(y)?[x*CELL,y*CELL]:null;
-}
-function drawMarks(items,clip,foreground) {
-  if (!Array.isArray(items)) return;
-  for (const item of items) {
-    if(!item||typeof item!=='object') continue;
-    const p=point(item.center);
-    if(!p) continue;
-    const w=(Number(item.width)||0)*CELL,h=(Number(item.height)||0)*CELL;
-    if((w<=0||h<=0)&&!item.text)continue;
-    if(w>10000||h>10000)continue;
-    const x=p[0]-w/2,y=p[1]-h/2;
-    const textRadius=Math.max(15,Number(item.fontSize||0)*CELL/64);
-    if (x-textRadius>clip.right||x+w+textRadius<clip.left||
-        y-textRadius>clip.bottom||y+h+textRadius<clip.top) continue;
-    ctx.save();
-    const angle=Number(item.angle)||0;
-    if(angle){ctx.translate(p[0],p[1]);ctx.rotate(angle*Math.PI/180);ctx.translate(-p[0],-p[1]);}
-    if(typeof item.backgroundColor==='string'&&item.backgroundColor!=='transparent'){
-      ctx.fillStyle=item.backgroundColor;ctx.fillRect(x,y,w,h);
-    }
-    if(typeof item.borderColor==='string'){
-      ctx.lineWidth=Math.max(0.5,Number(item.borderSize)||1);
-      ctx.strokeStyle=item.borderColor;ctx.strokeRect(x,y,w,h);
-    }
-    if(typeof item.text==='string'&&item.text&&foreground){
-      const size=Math.max(9,Math.min(420,(Number(item.fontSize)||19)*CELL/64));
-      ctx.fillStyle=item.textColor||'#172534';
-      ctx.font='600 '+size+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      const lines=item.text.split('\n').slice(0,3);
-      for(let i=0;i<lines.length;i++)
-        ctx.fillText(lines[i].slice(0,90),p[0],p[1]+(i-(lines.length-1)/2)*size*1.1,
-          Math.max(CELL*.7,w||CELL*8));
-    }
-    ctx.restore();
-  }
-}
-function drawLines(clip) {
-  for(const line of puzzle.lines||[]) {
-    const points=(line.wayPoints||line.points||[]).map(point).filter(Boolean);
-    if(points.length<2)continue;
-    const minX=Math.min(...points.map(p=>p[0])),maxX=Math.max(...points.map(p=>p[0]));
-    const minY=Math.min(...points.map(p=>p[1])),maxY=Math.max(...points.map(p=>p[1]));
-    if(maxX<clip.left||minX>clip.right||maxY<clip.top||minY>clip.bottom)continue;
-    ctx.beginPath();ctx.moveTo(...points[0]);
-    for(let n=1;n<points.length;n++)ctx.lineTo(...points[n]);
-    ctx.strokeStyle=line.color||'#657a8d';ctx.lineWidth=Math.max(1,Math.min(18,Number(line.thickness)||3));
-    ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
-  }
-}
 function draw() {
   if(!puzzle||!progress||!ctx)return;
   const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -455,7 +402,8 @@ function draw() {
   const r0=Math.max(0,Math.floor(clip.top/CELL)-1),r1=Math.min(puzzle.rows,Math.ceil(clip.bottom/CELL)+1);
   ctx.fillStyle='#fbfdfb';ctx.fillRect(0,0,puzzle.cols*CELL,puzzle.rows*CELL);
   drawPathMarks(ctx,puzzle.underlays);
-  drawMarks(puzzle.underlays,clip,true);
+  drawDecorations(ctx,puzzle.underlays,clip);
+  drawPuzzleLines(ctx,puzzle.lines,clip,'underlay');
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c,entry=progress.cells[idx]||clearCell();
     const x=c*CELL,y=r*CELL;
@@ -480,7 +428,7 @@ function draw() {
     }
     ctx.stroke();
   }
-  drawLines(clip);
+  drawPuzzleLines(ctx,puzzle.lines,clip);
   drawArrows(ctx,puzzle,clip);
   drawCages(ctx,puzzle,clip);
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
@@ -503,7 +451,8 @@ function draw() {
     }
   }
   drawPathMarks(ctx,puzzle.overlays);
-  drawMarks(puzzle.overlays,clip,true);
+  drawDecorations(ctx,puzzle.overlays,clip);
+  drawPuzzleLines(ctx,puzzle.lines,clip,'overlay');
   drawFog(ctx,puzzle,progress,clip);
   if(selected>=0 && isVisible(progress,selected)){
     const x=(selected%puzzle.cols)*CELL,y=Math.floor(selected/puzzle.cols)*CELL;
