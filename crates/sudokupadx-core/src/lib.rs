@@ -316,6 +316,16 @@ pub struct Snapshot {
     pub completion: Option<String>,
 }
 
+/// A manual correctness check reports counts, never solution values or positions.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgressCheck {
+    pub has_solution: bool,
+    pub checked: usize,
+    pub unverifiable: usize,
+    pub mistakes: usize,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct ChangedCell {
     pub index: usize,
@@ -392,6 +402,27 @@ impl Session {
     }
     fn completion(&self) -> Option<String> {
         if self.solved() { self.puzzle.completion_text.clone() } else { None }
+    }
+    /// Compare only player-placed large digits against known solution entries.
+    /// Givens and candidate notes are not checked. The state and fog do not change.
+    pub fn check_progress(&self) -> ProgressCheck {
+        let solution = self.puzzle.solution.as_ref();
+        let mut result = ProgressCheck {
+            has_solution: solution.is_some_and(|s| s.iter().any(Option::is_some)),
+            checked: 0, unverifiable: 0, mistakes: 0,
+        };
+        for (index, cell) in self.cells.iter().enumerate() {
+            if self.puzzle.cells[index].given.is_some() { continue; }
+            let Some(entered) = cell.value.as_ref() else { continue; };
+            let expected = solution.and_then(|s| s.get(index)).and_then(Option::as_ref);
+            if let Some(expected) = expected {
+                result.checked += 1;
+                if entered != expected { result.mistakes += 1; }
+            } else {
+                result.unverifiable += 1;
+            }
+        }
+        result
     }
     fn refresh_fog(&mut self) {
         if let Some(initial) = &self.puzzle.foglight {
@@ -642,6 +673,37 @@ mod tests {
         assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("9"));
         session.redo().unwrap();
         assert_eq!(session.snapshot().cells[2].corner, vec!["2"]);
+    }
+
+    #[test]
+    fn manual_progress_check_reports_counts_without_mutating_fog_or_history() {
+        let raw = r#"{"metadata":{"solution":"1234"},"cells":[[{"value":1},{}],[{},{}]],
+          "foglight":[[0,1]]}"#;
+        let mut session = Session::new(load(raw).unwrap());
+        session.apply(1, "value", "9").unwrap();
+        session.apply(2, "corner", "9").unwrap();
+        let before = session.snapshot();
+        let check = session.check_progress();
+        assert!(check.has_solution);
+        assert_eq!(check.checked, 1);
+        assert_eq!(check.unverifiable, 0);
+        assert_eq!(check.mistakes, 1);
+        assert_eq!(session.snapshot().visible, before.visible);
+        assert_eq!(session.snapshot().can_undo, before.can_undo);
+        assert_eq!(session.snapshot().cells[1].value, before.cells[1].value);
+        session.apply(1, "value", "2").unwrap();
+        assert_eq!(session.check_progress().mistakes, 0);
+    }
+
+    #[test]
+    fn manual_progress_check_never_claims_correctness_without_a_solution() {
+        let mut session = Session::new(load(DEMO).unwrap());
+        session.apply(2, "value", "9").unwrap();
+        let check = session.check_progress();
+        assert!(!check.has_solution);
+        assert_eq!(check.checked, 0);
+        assert_eq!(check.unverifiable, 1);
+        assert_eq!(check.mistakes, 0);
     }
 
     #[test]

@@ -35,6 +35,9 @@ export async function invokeBrowser(command, args = {}) {
     case 'update_cells':
       payload = engine.update_cells(JSON.stringify(args.indices), args.mode, args.symbol || '');
       break;
+    case 'check_progress':
+      payload = engine.check_progress();
+      break;
     case 'undo':
       payload = engine.undo();
       break;

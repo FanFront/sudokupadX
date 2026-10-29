@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::sync::Mutex;
-use sudokupadx_core::{EditResult, InputCell, Puzzle, Session, Snapshot, DEMO};
+use sudokupadx_core::{EditResult, InputCell, ProgressCheck, Puzzle, Session, Snapshot, DEMO};
 use tauri::State;
 
 #[derive(Default)]
@@ -81,6 +81,10 @@ fn update_cells(
     with_session(&state, |session| session.apply_many(&indices, &mode, &symbol))
 }
 #[tauri::command]
+fn check_progress(state: State<'_, AppState>) -> Result<ProgressCheck, String> {
+    with_session(&state, |session| Ok(session.check_progress()))
+}
+#[tauri::command]
 fn undo(state: State<'_, AppState>) -> Result<EditResult, String> {
     with_session(&state, Session::undo)
 }
@@ -100,7 +104,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            load_demo, open_puzzle, update_cell, update_cells, undo, redo, restore_progress
+            load_demo, open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");
