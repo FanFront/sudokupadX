@@ -40,7 +40,34 @@ npm run tauri -- dev
 
 The app opens the first bundled Sudokuvania map by default. Select **游戏库** to load any of the four main maps. Choose a visible sector to see its rules and a boss link if that sector already provides one. The library's checkbox to list all linked puzzles is for deliberate testing, since it may reveal spoilers.
 
-Pure browser preview (`npm run dev`) still loads the demo and can import regular JSON only. Compressed SCL and the authoritative fog/trigger engine require Tauri/Rust.
+### WebAssembly browser preview and GitHub Pages
+
+The browser runs **the same Rust `sudokupadx-core` puzzle engine** as Android, compiled to WebAssembly through `crates/sudokupadx-web/`. Compressed SCL decoding, bundled puzzles, Chinese metadata, fog triggers, input, undo/redo, and local save restoration work without a server or Tauri. All puzzles are bundled as static assets; saves remain in the browser's local storage.
+
+Hosted site (after enabling GitHub Pages → Build and deployment → **GitHub Actions**):
+**https://fanfront.github.io/sudokupadX/**
+
+Review a specific main map directly:
+
+- `https://fanfront.github.io/sudokupadX/?puzzle=digits-of-despair`
+- `https://fanfront.github.io/sudokupadX/?puzzle=lineage-of-logic`
+- `https://fanfront.github.io/sudokupadX/?puzzle=super-sudokoid-1`
+- `https://fanfront.github.io/sudokupadX/?puzzle=super-sudokoid-2`
+
+You can also use any bundled boss or linked puzzle's catalog ID in the `puzzle` query parameter. This is meant for visual review and can reveal content before it is discovered in the main map.
+
+Local web preview requires Rust's `wasm32-unknown-unknown` target and `wasm-pack`:
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack --locked
+npm install
+npm run dev:web
+```
+
+For a production-compatible static build run `npm run build:web`. The generated `public/wasm/` directory is intentionally untracked; do not commit generated binaries. Native Android builds continue to use `npm run build` and do not require wasm-pack.
+
+The [Deploy SudokuPad X to GitHub Pages](https://github.com/FanFront/sudokupadX/actions/workflows/pages.yml) workflow compiles WASM, runs Node rendering tests, builds Vite with the correct `/sudokupadX/` path, runs Chromium puzzle-opening/input smoke tests, uploads board screenshots as a workflow artifact, and deploys the static site. If Pages is not yet enabled, the repository administrator must choose **GitHub Actions** in Settings → Pages. The site link is only live after a successful deployment.
 
 ### Android: compact, stable-signed test APKs
 
