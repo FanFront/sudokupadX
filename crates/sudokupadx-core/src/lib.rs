@@ -385,9 +385,10 @@ impl Session {
             let mut visible = vec![false; self.cells.len()];
             for &index in initial { if index < visible.len() { visible[index] = true; } }
             for trigger in &self.puzzle.triggers {
-                // SudokuPad cellvalue sets are conjunctions: all referenced
-                // cells must hold their correct solution values.
-                if trigger.all_correct.iter().all(|&index| self.correct(index)) {
+                // Immutable givens cannot fire player-entry reveal events by themselves.
+                // Mixed trigger sets still require every referenced cell to be correct.
+                if trigger.all_correct.iter().any(|&index| self.puzzle.cells[index].given.is_none())
+                    && trigger.all_correct.iter().all(|&index| self.correct(index)) {
                     for &index in &trigger.reveals {
                         if index < visible.len() { visible[index] = true; }
                     }
@@ -594,6 +595,26 @@ mod tests {
         session.redo().unwrap();
         assert!(session.snapshot().visible[3]);
     }
+    #[test]
+    fn given_only_fog_triggers_do_not_activate_and_covered_cells_are_editable() {
+        let raw = r#"{"metadata":{"solution":"1234"},"cells":[[{"value":1},{}],[{},{}]],
+          "foglight":[[0,1]],
+          "triggereffect":[
+            {"trigger":{"type":"cellvalue","cell":"r1c1"},
+             "effect":{"type":"foglight","cells":"r2c2"}},
+            {"trigger":{"type":"cellvalue","cell":"r1c1r2c1"},
+             "effect":{"type":"foglight","cells":"r2c1"}}]}"#;
+        let mut session = Session::new(load(raw).unwrap());
+        assert_eq!(session.snapshot().visible, vec![false,true,false,false]);
+        // A player can enter the correct value into an as-yet fogged cell.
+        session.apply(2, "value", "3").unwrap();
+        assert_eq!(session.snapshot().visible, vec![false,true,true,false]);
+        session.undo().unwrap();
+        assert_eq!(session.snapshot().visible, vec![false,true,false,false]);
+        session.redo().unwrap();
+        assert_eq!(session.snapshot().visible, vec![false,true,true,false]);
+    }
+
     #[test]
     fn reject_bad_payload_and_save() {
         assert!(load("sclnot@valid").is_err());
