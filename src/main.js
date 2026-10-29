@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import {invokeBrowser} from './web-runtime.js';
-import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,getSectors,getLinkedPuzzles,isVisible,focusInitialFog} from './adventure-ui.js';
+import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,getLinkedPuzzles,isVisible,canSelectCell,focusInitialFog} from './adventure-ui.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -168,7 +168,7 @@ async function openBundled(id,push=false,backState=null){
     await openResult(result);
     if(backState){
       camera={...backState.camera};
-      if(isVisible(progress,backState.selected))selected=backState.selected;
+      if(canSelectCell(puzzle,backState.selected))selected=backState.selected;
       updateSelection();requestDraw();
     }
     updateBack();
@@ -275,7 +275,9 @@ function updateSelection() {
     return;
   }
   const row=Math.floor(selected/puzzle.cols)+1,col=selected%puzzle.cols+1;
-  $('selectionLabel').textContent='R'+row+'C'+col+(puzzle.cells[selected].given!==null?' · 提示':'');
+  const fogged=!isVisible(progress,selected);
+  $('selectionLabel').textContent='R'+row+'C'+col+
+    (fogged?' · 迷雾':puzzle.cells[selected].given!==null?' · 提示':'');
   updateSector();
 }
 
@@ -380,10 +382,13 @@ function draw() {
   drawPathMarks(ctx,puzzle.overlays);
   drawDecorations(ctx,puzzle.overlays,clip);
   drawPuzzleLines(ctx,puzzle.lines,clip,'overlay');
+  drawSectorBorders(ctx,puzzle.sectors,clip);
   drawFog(ctx,puzzle,progress,clip);
-  if(selected>=0 && isVisible(progress,selected)){
+  if(selected>=0){
     const x=(selected%puzzle.cols)*CELL,y=Math.floor(selected/puzzle.cols)*CELL;
-    ctx.strokeStyle='#137fbc';ctx.lineWidth=3.5;ctx.strokeRect(x+1,y+1,CELL-2,CELL-2);
+    // Highlight a selected fogged cell without exposing the hidden content.
+    ctx.strokeStyle=isVisible(progress,selected)?'#137fbc':'#ffcf73';
+    ctx.lineWidth=3.5;ctx.strokeRect(x+1,y+1,CELL-2,CELL-2);
   }
   if(showGridLines){
     ctx.strokeStyle='#263c51';ctx.lineWidth=3;
@@ -435,7 +440,7 @@ async function history(direction) {
   finally{pending=false;}
 }
 function select(index) {
-  if(index>=0&&!isVisible(progress,index)){toast('此格仍被迷雾覆盖');return;}
+  if(index!==-1&&!canSelectCell(puzzle,index))return;
   if(index!==selected)sectorCursor=0;
   selected=index;updateSelection();requestDraw();board.focus({preventScroll:true});
 }
