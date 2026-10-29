@@ -105,3 +105,22 @@ test('Logic Masters importer controls are present in the shared web and Android 
     assert.ok(html.includes('id="'+id+'"'),id);
   assert.match(main,/sourceUrl:entry\.sourceUrl \|\| null/);
 });
+
+
+test('search-and-select LMD interface is present on Android and web',()=>{
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const script=readFileSync(new URL('../src/online-ui.js',import.meta.url),'utf8');
+  const rust=readFileSync(new URL('../src-tauri/src/lib.rs',import.meta.url),'utf8');
+  for(const id of [
+    'lmdLibraryTab','lmdLibraryPanel','lmdSearchForm','lmdSearch',
+    'lmdSearchButton','lmdSearchResults','lmdPrev','lmdNext',
+    'lmdSelected','lmdResults','lmdLatest','lmdSaved'
+  ]) assert.ok(html.includes('id="'+id+'"'),id);
+  assert.match(script,/search_logic_masters/);
+  assert.match(script,/parseLogicMastersSearch\(html\)/);
+  assert.match(script,/selectLmdMatch\(item\)/);
+  assert.match(rust,/async fn search_logic_masters\(query: String, start: u32\)/);
+  assert.match(rust,/params\.append_pair\("suchtext", query\.trim\(\)\)/);
+  assert.match(rust,/params\.append_pair\("skname", "x"\)/);
+  assert.match(rust,/params\.append_pair\("sktext", "x"\)/);
+});

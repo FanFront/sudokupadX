@@ -89,7 +89,7 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 #linkedPuzzleButton[hidden]{display:none}
 @media(max-width:410px){.board-tools .linked-puzzle-entry{font-size:10px;padding:0 4px}}
 
-/* Logic Masters source page importer lives in the existing online library. */
+/* Mobile-first Logic Masters search, select and import. */
 .lmd-import{border:1px solid #3b6078;border-radius:11px;background:#11283b;padding:9px 11px}
 .lmd-import summary{cursor:pointer;min-height:28px;font-weight:650;font-size:13px;color:#bcefe0}
 .lmd-import p{font-size:12px;line-height:1.55;color:#aac8d7;margin:7px 0}
@@ -102,9 +102,9 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 @media(max-width:510px){.lmd-input-row{flex-direction:column}.lmd-input-row button{min-height:36px}}
 /* Online catalog is bundled into the APK/site; individual puzzles are downloaded
    on demand and stored in IndexedDB. Keep the library usable on narrow phones. */
-#bundledLibraryPanel[hidden],#onlineLibraryPanel[hidden]{display:none!important}
+#bundledLibraryPanel[hidden],#onlineLibraryPanel[hidden],#lmdLibraryPanel[hidden],#lmdSelected[hidden]{display:none!important}
 #bundledLibraryPanel{display:flex;flex-direction:column;gap:12px}
-.library-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.library-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .library-tabs button{min-height:40px;background:#1c3449}
 .library-tabs button[aria-selected="true"]{background:#b9e4d6;color:#173343;border-color:#b9e4d6;font-weight:700}
 #onlineLibraryPanel{display:flex;flex-direction:column;gap:10px;min-height:0}
@@ -130,4 +130,29 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
  .online-search-row{grid-template-columns:1fr}
  .online-index-list{max-height:42dvh}
  .online-entry-actions button{flex:1 0 auto}
+}
+
+#lmdLibraryPanel{display:flex;flex-direction:column;gap:9px;min-height:0}
+#lmdLibraryPanel>p{font-size:12px;line-height:1.55;color:#bcd4e1;margin:0}
+#lmdSearchForm{margin:0}
+#lmdSearchResults{max-height:34dvh;min-height:60px}
+.lmd-browse-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.lmd-browse-actions button,.lmd-pages button{padding:0 10px;min-height:34px;font-size:12px}
+#lmdSearchStatus{flex:1 1 180px;color:#a9c9d6;font-size:11px;line-height:1.4}
+.lmd-pages{display:flex;align-items:center;justify-content:center;gap:12px}
+#lmdPageLabel{font-size:12px;color:#aac7d8}
+.lmd-result-button{width:100%;display:flex;flex-direction:column;align-items:stretch;
+ text-align:left;padding:11px 12px;gap:5px;background:#18374e;border:1px solid #426a7f;
+ border-radius:10px;color:#ecf7fd}
+.lmd-result-button strong{font-size:13px;line-height:1.4}
+.lmd-result-button small{font-size:11px;color:#a7cbd9}
+.lmd-selected{border-top:1px solid #446578;padding:10px 0 4px;display:flex;flex-direction:column;gap:7px}
+.lmd-selected>strong{font-size:14px}
+.lmd-selected p{font-size:12px;color:#a9c9d6;margin:0}
+#lmdResults{max-height:28dvh}
+#lmdLibraryPanel>.lmd-import{flex-shrink:0}
+@media(max-width:500px){
+  #lmdSearchResults{max-height:32dvh}
+  #lmdLibraryPanel .lmd-result-button{min-height:54px}
+  .library-tabs button{padding:0 5px;font-size:11px}
 }

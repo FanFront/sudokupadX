@@ -133,12 +133,61 @@ async fn fetch_logic_masters_page(puzzle_id: String) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
+// Query the official LMD advanced-search endpoint. The server performs the
+// keyword filtering; clients fetch only one 20-item page at a time.
+#[tauri::command]
+async fn search_logic_masters(query: String, start: u32) -> Result<String, String> {
+    if query.chars().count() > 100 || query.contains('\0') {
+        return Err("Logic Masters 搜索关键词过长或无效".into());
+    }
+    if start > 20_000 || start % 20 != 0 {
+        return Err("Logic Masters 搜索页码无效".into());
+    }
+    let mut url = reqwest::Url::parse(
+        "https://logic-masters.de/Raetselportal/Suche/erweitert.php"
+    ).map_err(|e| e.to_string())?;
+    {
+        let mut params = url.query_pairs_mut();
+        params.append_pair("chlang", "en");
+        if !query.trim().is_empty() {
+            params.append_pair("skname", "x");
+            params.append_pair("sktext", "x");
+            params.append_pair("suchtext", query.trim());
+        }
+        if start > 0 {
+            params.append_pair("start", &start.to_string());
+        }
+    }
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .redirect(reqwest::redirect::Policy::none())
+        .build().map_err(|e| e.to_string())?;
+    let mut response = client.get(url).send().await
+        .map_err(|e| format!("检索 Logic Masters 失败: {e}"))?;
+    if !response.status().is_success() {
+        return Err(format!("Logic Masters 搜索返回 HTTP {}", response.status()));
+    }
+    const MAX_PAGE: usize = 1024 * 1024;
+    if response.content_length().is_some_and(|len| len > MAX_PAGE as u64) {
+        return Err("搜索结果超过大小限制".into());
+    }
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response.chunk().await
+        .map_err(|e| format!("读取 Logic Masters 搜索结果失败: {e}"))? {
+        if bytes.len() + chunk.len() > MAX_PAGE {
+            return Err("搜索结果超过大小限制".into());
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            load_demo, open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress, fetch_logic_masters_page
+            load_demo, open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress, fetch_logic_masters_page, search_logic_masters
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");

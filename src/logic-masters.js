@@ -86,3 +86,60 @@ export function directSudokuPadEntry(input) {
     sourceUrl:'',publishedAt:'',puzzleUrl:url
   };
 }
+
+
+// The portal supports a permanent, server-side advanced search URL.
+// Using search fields avoids downloading thousands of puzzles to a phone.
+export function logicMastersSearchUrl(keyword = '', start = 0) {
+  const search = String(keyword).trim();
+  if (search.length > 100) throw Error('搜索关键词最多 100 个字符');
+  if (!Number.isSafeInteger(start) || start < 0 || start > 20000 || start % 20 !== 0)
+    throw Error('无效的搜索页码');
+  const url = new URL('https://logic-masters.de/Raetselportal/Suche/erweitert.php');
+  url.searchParams.set('chlang','en');
+  if (search) {
+    url.searchParams.set('skname','x');
+    url.searchParams.set('sktext','x');
+    url.searchParams.set('suchtext',search);
+  }
+  if (start) url.searchParams.set('start',String(start));
+  return url.href;
+}
+
+// Result HTML includes official "zeigen.php?id=XXXXXX" links. Read the
+// actual result anchors, never construct records from guessed puzzle IDs.
+// The function is DOM-free so the parser can be unit-tested in Node.
+export function parseLogicMastersSearch(html) {
+  if (typeof html !== 'string' || html.length > 1024*1024)
+    throw Error('Logic Masters 搜索结果内容无效或超过 1 MiB');
+  const linkPattern = /<a\b([^>]*\bhref\s*=\s*(["'])(.*?)\2[^>]*)>([\s\S]*?)<\/a>/gi;
+  const items = [], seen = new Set();
+  let match;
+  while ((match=linkPattern.exec(html))!==null) {
+    let url;
+    try {
+      url = new URL(decodeEntities(match[3]),
+        'https://logic-masters.de/Raetselportal/Suche/erweitert.php');
+    } catch {continue;}
+    if (url.hostname !== 'logic-masters.de' && url.hostname !== 'www.logic-masters.de') continue;
+    if (url.pathname !== '/Raetselportal/Raetsel/zeigen.php') continue;
+    const id = (url.searchParams.get('id') || '').toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(id) || seen.has(id)) continue;
+    const title = plainText(match[4]);
+    if (!title) continue;
+    seen.add(id);
+    // Read the adjacent author link when it exists, without trusting any HTML.
+    const after = html.slice(linkPattern.lastIndex,linkPattern.lastIndex+450);
+    const authorMatch = after.match(/(?:\bby\b|\bvon\b)\s*(?:<a\b[^>]*>)?([^<(\n]{1,100})/i);
+    items.push({
+      id, title: title.slice(0,240),
+      author: authorMatch ? plainText(authorMatch[1]).slice(0,100) : '',
+      url:logicMastersReference(id).url
+    });
+    if (items.length >= 20) break;
+  }
+  const totalMatch = plainText(html.slice(0,15000))
+    .match(/([\d.,]+)\s+(?:entries have been found|Eintr[aä]ge (?:wurden )?gefunden|Rätsel (?:wurden )?gefunden)/i);
+  const total = totalMatch ? Number(totalMatch[1].replace(/[.,]/g,'')) : null;
+  return {items, total:Number.isSafeInteger(total) ? total : null};
+}
