@@ -35,3 +35,11 @@ test('display helper uses text nodes rather than HTML and supports legacy monoli
     assert.equal(container.textContent,'仅中文');
   }finally{globalThis.document=old;}
 });
+
+test('source artwork has bilingual glosses without rewriting text inside the puzzle',()=>{
+  for(const id of ['k4995f3fx1','mfhh567b60']){
+    const entries=local[id].boardGlossary;
+    assert.ok(Array.isArray(entries)&&entries.length>=3);
+    assert.ok(entries.every(x=>x.original?.trim()&&x.zh?.trim()));
+  }
+});

@@ -174,7 +174,7 @@ function updateSector() {
   $('modalSectorTitle').textContent=sector?title:bilingualTitle(puzzle.title,local?.titleOriginal);
   $('nextSector').hidden=matchingSectors.length<2;
   $('rulesPreview').textContent=rules;
-  displayBilingual($('fullRules'),rules,sector?null:local?.rulesOriginal);
+  displayBilingual($('fullRules'),rules,sector?null:local?.rulesOriginal,sector?null:local?.boardGlossary);
   // Links may be held by a larger underlying grid rather than the currently
   // displayed (smallest) overlapping story sector. Do not expose fogged links.
   activeLinkedPuzzles=eligible?linksAtCell(puzzle,progress,selected,catalog,currentEntry?.id):[];

@@ -4,7 +4,7 @@ export function bilingualTitle(localized, original) {
   const source=String(original||'').trim();
   return source && source!==zh ? zh+' / '+source : zh;
 }
-export function displayBilingual(container, translation, original) {
+export function displayBilingual(container, translation, original, glossary = []) {
   const zh=String(translation||'');
   const source=typeof original==='string'?original:'';
   container.replaceChildren();
@@ -27,4 +27,26 @@ export function displayBilingual(container, translation, original) {
     grid.append(column);
   }
   container.append(grid);
+  if(Array.isArray(glossary) && glossary.length){
+    const legend=document.createElement('section');
+    legend.className='bilingual-glossary';
+    const heading=document.createElement('strong');
+    heading.textContent='棋盘文字对照（棋盘原文保持不变）';
+    legend.append(heading);
+    const terms=document.createElement('div');
+    terms.className='bilingual-terms';
+    for(const item of glossary){
+      if(typeof item?.original!=='string'||typeof item?.zh!=='string')continue;
+      const row=document.createElement('div');
+      row.className='bilingual-term';
+      const original=document.createElement('span');
+      original.textContent=item.original;
+      const translated=document.createElement('span');
+      translated.textContent=item.zh;
+      row.append(original,translated);
+      terms.append(row);
+    }
+    legend.append(terms);
+    container.append(legend);
+  }
 }

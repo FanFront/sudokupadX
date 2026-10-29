@@ -115,7 +115,21 @@
     "msgcorrect": "“穿过那片果园，透过一缕似烟的薄雾，\n我瞥见高高的白色喷泉——随即醒来。”\n—— 弗拉基米尔·纳博科夫，《微暗的火》",
     "rulesOriginal": "And blood-black nothingness began to spin\nA system of cells interlinked [within](https://sudokupad.app/aaw113rfzh?setting-digitoutlines=0)\nCells interlinked within cells interlinked\nWithin one [stem](https://sudokupad.app/wzyjchj6ss?setting-digitoutlines=0). And dreadfully distinct\nAgainst the [dark](https://sudokupad.app/d2xwyazqf9?setting-digitoutlines=0), a tall white fountain played.\n\n― Vladimir Nabokov, Pale Fire",
     "authorOriginal": "Michael Lefkowitz",
-    "msgcorrectOriginal": "'Beyond that orchard through a kind of smoke\nI glimpsed a tall white fountain—and awoke.'\n― Vladimir Nabokov, Pale Fire"
+    "msgcorrectOriginal": "'Beyond that orchard through a kind of smoke\nI glimpsed a tall white fountain—and awoke.'\n― Vladimir Nabokov, Pale Fire",
+    "boardGlossary": [
+      {
+        "original": "> WITHIN <",
+        "zh": "〈其间 / 在内部〉"
+      },
+      {
+        "original": "STEM",
+        "zh": "茎"
+      },
+      {
+        "original": "DARK",
+        "zh": "黑暗"
+      }
+    ]
   },
   "utmh5dybvf": {
     "title": "生命之树",
@@ -131,7 +145,25 @@
     "rules": "标准数独规则始终适用。其余规则请自行探索。\n\n→ [圆环之城](https://sudokupad.app/sxa2lmgsa9)\n→ [钻石矿洞](https://sudokupad.app/ngbyvop7o3)\n→ [圆圈与箭头](https://sudokupad.app/74mrv27me3)\n→ [守卫任务](https://sudokupad.app/c8qj3qrh28)",
     "titleOriginal": "Shape Fight",
     "rulesOriginal": "Sudoku rules always apply. The rest is up to you to discover.\n\n→ [Circle City](https://sudokupad.app/sxa2lmgsa9)\n→ [Diamond Mine](https://sudokupad.app/ngbyvop7o3)\n→ [Circles & Arrows](https://sudokupad.app/74mrv27me3)\n→ [Guard Duty](https://sudokupad.app/c8qj3qrh28)",
-    "authorOriginal": "Michael Lefkowitz"
+    "authorOriginal": "Michael Lefkowitz",
+    "boardGlossary": [
+      {
+        "original": "Circles & Arrows",
+        "zh": "圆圈与箭头"
+      },
+      {
+        "original": "Diamond MIne",
+        "zh": "钻石矿洞"
+      },
+      {
+        "original": "Circle City",
+        "zh": "圆环之城"
+      },
+      {
+        "original": "Guard Duty",
+        "zh": "守卫任务"
+      }
+    ]
   },
   "k7qc98e00u": {
     "title": "遥远国度的回忆",

@@ -2,6 +2,10 @@
 
 **Android-first Rust + Tauri 2 reader for offline SudokuPad puzzle packages.** The board is rendered by our own Canvas engine, not by loading the original SudokuPad website.
 
+## Four fully bilingual game collections
+
+The four additional Michael Lefkowitz collections and all **65** linked puzzles have independently translated Simplified Chinese rules, hints and (where present) completion prose. For every puzzle the original source rules and original completion text are retained unmodified in `public/puzzles/locale-zh.json` as `rulesOriginal` and `msgcorrectOriginal`. Original titles are retained as `titleOriginal` where available. The rules and completion dialogs show the Chinese text beside its original (stacked on narrow phones); their source links and exact order are preserved. Original on-board text is never rewritten to avoid altering visual clues. The main *Interlinked* and *Shape Fight* maps also have a bilingual board-text legend in the rules dialog. New game translations change display metadata only, not the bundled `.scl` puzzles, solutions or save keys.
+
 ## Bundled offline games
 
 The repository contains **46 puzzle SCL packages** copied from the user's existing `FanFront/sodokupadAndroid/app/src/main/assets/offline/` snapshot:
