@@ -26,10 +26,12 @@ export function getLinkedPuzzles(rules, catalog, group) {
   }
   return results;
 }
-function point(pair) {
+// SudokuPad/SudokuMaker geometry uses [row, column], unlike Canvas [x, y].
+export function puzzlePoint(pair) {
   if (!Array.isArray(pair) || pair.length < 2) return null;
-  const [x,y] = pair.map(Number);
-  return Number.isFinite(x) && Number.isFinite(y) ? [x * CELL_SIZE,y * CELL_SIZE] : null;
+  const [row,col] = pair.map(Number);
+  return Number.isFinite(row) && Number.isFinite(col)
+    ? [col * CELL_SIZE,row * CELL_SIZE] : null;
 }
 function visibleRect(clip, points) {
   if (!points.length) return false;
@@ -39,20 +41,20 @@ function visibleRect(clip, points) {
 }
 export function drawArrows(ctx, puzzle, clip) {
   for (const arrow of puzzle.arrows||[]) {
-    const points = (arrow.wayPoints||arrow.points||[]).map(point).filter(Boolean);
+    const points = (arrow.wayPoints||arrow.points||[]).map(puzzlePoint).filter(Boolean);
     if (points.length<2 || !visibleRect(clip,points)) continue;
     ctx.save();
     const thickness=Number(arrow.thickness) || 3;
     const color=arrow.color || '#8885a1';
     ctx.strokeStyle=color;ctx.fillStyle=color;
-    ctx.lineWidth=Math.max(1,Math.min(15,thickness));
+    ctx.lineWidth=Math.max(.5,Math.min(CELL_SIZE,thickness*CELL_SIZE/64));
     ctx.lineCap='round';ctx.lineJoin='round';
     ctx.beginPath();ctx.moveTo(...points[0]);
     for (let i=1;i<points.length;i++)ctx.lineTo(...points[i]);
     ctx.stroke();
     const end=points[points.length-1],prev=points[points.length-2];
     const angle=Math.atan2(end[1]-prev[1],end[0]-prev[0]);
-    const size=Math.max(5,Math.min(18,(Number(arrow.headLength)||.24)*CELL_SIZE));
+    const size=Math.max(3,Math.min(CELL_SIZE,(Number(arrow.headLength)||.24)*CELL_SIZE));
     ctx.beginPath();ctx.moveTo(...end);
     ctx.lineTo(end[0]-size*Math.cos(angle-.45),end[1]-size*Math.sin(angle-.45));
     ctx.lineTo(end[0]-size*Math.cos(angle+.45),end[1]-size*Math.sin(angle+.45));
@@ -112,6 +114,112 @@ export function drawPathMarks(ctx, marks, cellSize=CELL_SIZE) {
     }catch{try{ctx.restore();}catch{}}
   }
 }
+
+function textOf(mark) {
+  const value=mark?.text;
+  return (typeof value==='string'||typeof value==='number') ? String(value) : '';
+}
+
+/** Draw original SudokuMaker overlay/underlay geometry with its row/column coordinates. */
+export function drawDecorations(ctx, marks, clip) {
+  for(const mark of marks||[]) {
+    if(!mark || typeof mark!=='object') continue;
+    const center=puzzlePoint(mark.center);
+    if(!center) continue;
+    const width=Math.max(0,Number(mark.width)||0)*CELL_SIZE;
+    const height=Math.max(0,Number(mark.height)||0)*CELL_SIZE;
+    if(width>CELL_SIZE*200||height>CELL_SIZE*200)continue;
+    const content=textOf(mark),lines=content.split('\n');
+    const explicitSize=Number(mark.fontSize);
+    const fontSize=Number.isFinite(explicitSize)&&explicitSize>0
+      ? Math.max(2,Math.min(420,explicitSize*CELL_SIZE/64))
+      : Math.max(2,Math.min(CELL_SIZE*.65,height>0?height*.8:19*CELL_SIZE/64));
+    // Width is frequently zero for free-floating text. In that case SudokuPad
+    // doesn't constrain the line to the width of a single cell.
+    const textSpan=content ? (width||Math.min(CELL_SIZE*50,
+      Math.max(CELL_SIZE*.5,Math.max(...lines.map(line=>Array.from(line).length))*fontSize))) : 0;
+    const halfX=Math.max(width,textSpan)/2;
+    const halfY=Math.max(height,content?lines.length*fontSize*1.2:0)/2;
+    if(center[0]+halfX<clip.left||center[0]-halfX>clip.right||
+       center[1]+halfY<clip.top||center[1]-halfY>clip.bottom)continue;
+    const x=center[0]-width/2,y=center[1]-height/2;
+    ctx.save();
+    const angle=Number(mark.angle)||0;
+    if(angle) {
+      ctx.translate(...center);
+      ctx.rotate(angle*Math.PI/180);
+      ctx.translate(-center[0],-center[1]);
+    }
+    if(width>0&&height>0) {
+      const background=mark.backgroundColor;
+      const border=mark.borderColor;
+      if((background&&background!=='none'&&background!=='transparent')||border) {
+        ctx.beginPath();
+        if(mark.rounded&&typeof ctx.roundRect==='function')
+          ctx.roundRect(x,y,width,height,Math.min(width,height)/2);
+        else ctx.rect(x,y,width,height);
+        if(typeof background==='string'&&background!=='none'&&background!=='transparent') {
+          ctx.fillStyle=background;
+          ctx.fill();
+        }
+        if(typeof border==='string'&&border!=='none'&&border!=='transparent') {
+          ctx.strokeStyle=border;
+          ctx.lineWidth=Math.max(.5,(Number(mark.thickness)||Number(mark.borderSize)||1)*CELL_SIZE/64);
+          ctx.stroke();
+        }
+      }
+    }
+    if(content) {
+      ctx.font='400 '+fontSize+'px system-ui, sans-serif';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillStyle=mark.textColor||mark.color||'#172534';
+      const stroke=mark.stroke,strokeWidth=Number(mark['stroke-width']);
+      for(let i=0;i<lines.length;i++) {
+        const yy=center[1]+(i-(lines.length-1)/2)*fontSize*1.08;
+        if(typeof stroke==='string'&&stroke!=='none'&&typeof ctx.strokeText==='function') {
+          ctx.strokeStyle=stroke;
+          ctx.lineWidth=Math.max(.5,(strokeWidth||1)*CELL_SIZE/64);
+          ctx.lineJoin='round';
+          if(width>0)ctx.strokeText(lines[i],center[0],yy,width);
+          else ctx.strokeText(lines[i],center[0],yy);
+        }
+        if(width>0)ctx.fillText(lines[i],center[0],yy,width);
+        else ctx.fillText(lines[i],center[0],yy);
+      }
+    }
+    ctx.restore();
+  }
+}
+
+/** Paint source lines in their intended layer, respecting [row, column]. */
+export function drawPuzzleLines(ctx, lines, clip, layer='normal') {
+  for(const line of lines||[]) {
+    if(!line||typeof line!=='object')continue;
+    const target=line.target||'';
+    if(layer==='overlay'?target!=='overlay'
+       :layer==='underlay'?target!=='underlay'
+       :target==='overlay'||target==='underlay')continue;
+    const points=(line.wayPoints||line.points||[]).map(puzzlePoint).filter(Boolean);
+    if(points.length<2||!visibleRect(clip,points))continue;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(...points[0]);
+    for(let i=1;i<points.length;i++)ctx.lineTo(...points[i]);
+    ctx.strokeStyle=line.color||'#657a8d';
+    ctx.lineWidth=Math.max(.5,Math.min(CELL_SIZE,(Number(line.thickness)||3)*CELL_SIZE/64));
+    ctx.lineCap='round';
+    ctx.lineJoin='round';
+    const dash=line['stroke-dasharray'];
+    if(dash&&typeof ctx.setLineDash==='function') {
+      const values=String(dash).split(/[ ,]+/).map(Number).filter(n=>Number.isFinite(n)&&n>=0);
+      if(values.length)ctx.setLineDash(values.map(n=>n*CELL_SIZE/64));
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 export function drawFog(ctx, puzzle, progress, clip) {
   if (!Array.isArray(progress?.visible)) return;
   const n=puzzle.cols,sz=CELL_SIZE;
