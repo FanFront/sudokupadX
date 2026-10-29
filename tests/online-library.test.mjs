@@ -76,3 +76,13 @@ test('download helper consumes valid proxy data and rejects HTTP errors',async()
     {cache:'no-store'}]]);
   await assert.rejects(fetchOnlinePuzzle(entry,async()=>({ok:false,status:404})),/HTTP 404/);
 });
+
+test('Tauri content security policy allows only required remote puzzle hosts',()=>{
+  const config=JSON.parse(readFileSync(
+    new URL('../src-tauri/tauri.conf.json',import.meta.url),'utf8'
+  ));
+  const csp=config.app.security.csp;
+  assert.ok(csp.includes('connect-src'), 'Tauri must allow in-app network downloads');
+  assert.ok(csp.includes('https://stefanlobbenmeier.github.io'));
+  assert.ok(csp.includes('https://sudokupad.svencodes.com'));
+});
