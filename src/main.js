@@ -9,6 +9,9 @@ import './style.css';
 
 const $ = id => document.getElementById(id);
 const native = !!window.__TAURI_INTERNALS__;
+// Android WebViews may render behind the status bar without exposing a
+// nonzero CSS safe-area inset. Apply a native-only cutout-safe fallback.
+document.documentElement.classList.toggle('android-native',native && /Android/i.test(navigator.userAgent));
 const CELL = 52;
 const MAX_IMPORT = 8 * 1024 * 1024;
 const colors = ['#f8cd75','#a9d9a1','#9fcbff','#e9b0d6','#bfb5fa'];
@@ -626,6 +629,31 @@ $('palette').addEventListener('click',event=>{
 $('eraseButton').addEventListener('click',()=>edit('erase'));
 $('undoButton').addEventListener('click',()=>history('undo'));
 $('redoButton').addEventListener('click',()=>history('redo'));
+$('checkButton').addEventListener('click',async()=>{
+  if(pending||!puzzle||!progress)return;
+  pending=true;
+  try{
+    const result=await call('check_progress');
+    let message;
+    if(!result.hasSolution || (result.checked===0 && result.unverifiable>0))
+      message='当前谜题缺少可用的答案数据，无法核对已填写的大数字。请参考普通冲突提示。';
+    else if(result.checked===0)
+      message='还没有可以核对的已填大数字。请先填写数字再检查。';
+    else if(result.mistakes>0)
+      message='已检查 '+result.checked+' 个大数字，发现 '+result.mistakes+' 个错误。'+
+        (result.unverifiable>0?'另外 '+result.unverifiable+' 个数字暂时无法核对。':'')+
+        '棋盘不会因为本次检查而标红。';
+    else
+      message='已检查 '+result.checked+' 个大数字，当前没有发现错误。'+
+        (result.unverifiable>0?'另有 '+result.unverifiable+' 个数字无法核对。':'')+
+        '这不代表整个谜题已经完成。';
+    $('checkResult').textContent=message;
+    if(!$('checkDialog').open)$('checkDialog').showModal();
+  }catch(error){notify('检查失败: '+String(error));}
+  finally{pending=false;}
+});
+$('closeCheck').addEventListener('click',()=>$('checkDialog').close());
+$('dismissCheck').addEventListener('click',()=>$('checkDialog').close());
 function showRules(){if(!$('rulesDialog').open)$('rulesDialog').showModal();}
 $('rulesButton').addEventListener('click',showRules);
 $('nextSector').addEventListener('click',()=>{
@@ -746,7 +774,7 @@ $('demoButton').addEventListener('click',async()=>{
 document.addEventListener('keydown',event=>{
   const active=document.activeElement;
   if(active?.matches('input,textarea')||$('importDialog').open||$('rulesDialog').open||
-      $('libraryDialog').open||$('completionDialog').open)return;
+      $('libraryDialog').open||$('completionDialog').open||$('checkDialog').open)return;
   if(event.key==='Escape'&&navigationStack.length){
     event.preventDefault();goBack().catch(notify);return;
   }
