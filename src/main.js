@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import {invokeBrowser} from './web-runtime.js';
-import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,getLinkedPuzzles,isVisible,canSelectCell,focusInitialFog} from './adventure-ui.js';
+import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,getLinkedPuzzles,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -11,6 +11,7 @@ const colors = ['#f8cd75','#a9d9a1','#9fcbff','#e9b0d6','#bfb5fa'];
 let puzzle = null;
 let progress = null;
 let selected = -1;
+let selectedCells = [];
 let mode = 'value';
 let alphabet = false;
 let letterPage = 0;
@@ -137,7 +138,7 @@ async function openBundled(id,push=false,backState=null){
   const entry=catalog.find(e=>e.id===id);
   if(!entry)throw Error('未找到已打包谜题: '+id);
   if(currentEntry && push){
-    save();navigationStack.push({id:currentEntry.id,camera:{...camera},selected});
+    save();navigationStack.push({id:currentEntry.id,camera:{...camera},selected,selectedCells:[...selectedCells]});
   }else if(!backState && !push) {
     if(puzzle)save();navigationStack=[];
   }
@@ -168,8 +169,7 @@ async function openBundled(id,push=false,backState=null){
     await openResult(result);
     if(backState){
       camera={...backState.camera};
-      if(canSelectCell(puzzle,backState.selected))selected=backState.selected;
-      updateSelection();requestDraw();
+      setSelection(backState.selectedCells?.length?backState.selectedCells:[backState.selected]);
     }
     updateBack();
     if($('rulesDialog').open)$('rulesDialog').close();
@@ -209,7 +209,8 @@ async function openResult(result) {
   puzzle=result.puzzle;
   progress=result.progress;
   undoStack=[];redoStack=[];
-  selected=-1;
+  selected=-1;selectedCells=[];
+  gesture=null;pointers.clear();
   buildRegions();
   updateInfo();
   await restoreSaved();
@@ -260,7 +261,7 @@ function updateControls() {
   for (const symbol of keys) {
     const btn=document.createElement('button');
     btn.type='button';btn.textContent=symbol;btn.dataset.symbol=symbol;
-    btn.disabled=mode==='pan'||mode==='color';
+    btn.disabled=mode==='color';
     pad.appendChild(btn);
   }
   $('undoButton').disabled=!progress?.canUndo;
@@ -277,7 +278,8 @@ function updateSelection() {
   const row=Math.floor(selected/puzzle.cols)+1,col=selected%puzzle.cols+1;
   const fogged=!isVisible(progress,selected);
   $('selectionLabel').textContent='R'+row+'C'+col+
-    (fogged?' · 迷雾':puzzle.cells[selected].given!==null?' · 提示':'');
+    (selectedCells.length>1?' · 已选 '+selectedCells.length+' 格':
+      fogged?' · 迷雾':puzzle.cells[selected].given!==null?' · 提示':'');
   updateSector();
 }
 
@@ -337,7 +339,7 @@ function draw() {
     const idx=r*puzzle.cols+c,entry=progress.cells[idx]||clearCell();
     const x=c*CELL,y=r*CELL;
     if(entry.color){ctx.fillStyle=entry.color;ctx.fillRect(x+1,y+1,CELL-2,CELL-2);}
-    if(idx===selected){ctx.fillStyle='#a0d5eb6d';ctx.fillRect(x,y,CELL,CELL);}
+    if(selectedCells.includes(idx)){ctx.fillStyle='#a0d5eb6d';ctx.fillRect(x,y,CELL,CELL);}
     if(showGridLines) {
       ctx.strokeStyle='#bec7c9';ctx.lineWidth=.65;ctx.strokeRect(x,y,CELL,CELL);
     }
@@ -390,11 +392,12 @@ function draw() {
   // Keep deliberate scene outlines visible through the fog without exposing
   // hidden clues. They are independent of the optional fine grid lines.
   if(authoredBorders)drawPuzzleLines(ctx,puzzle.lines,clip,'grid');
-  if(selected>=0){
-    const x=(selected%puzzle.cols)*CELL,y=Math.floor(selected/puzzle.cols)*CELL;
-    // Highlight a selected fogged cell without exposing the hidden content.
-    ctx.strokeStyle=isVisible(progress,selected)?'#137fbc':'#ffcf73';
-    ctx.lineWidth=3.5;ctx.strokeRect(x+1,y+1,CELL-2,CELL-2);
+  for(const index of selectedCells){
+    const x=(index%puzzle.cols)*CELL,y=Math.floor(index/puzzle.cols)*CELL;
+    // Highlight covered cells without exposing their contents.
+    ctx.strokeStyle=isVisible(progress,index)?'#137fbc':'#ffcf73';
+    ctx.lineWidth=index===selected?3.5:2.4;
+    ctx.strokeRect(x+1,y+1,CELL-2,CELL-2);
   }
   if(showGridLines){
     ctx.strokeStyle='#263c51';ctx.lineWidth=3;
@@ -411,19 +414,24 @@ function showCompletionIfNew(){
   }
   lastCompletion=solved;
 }
+function applyChange(change) {
+  const changed=Array.isArray(change.changes)?change.changes:[{index:change.index,cell:change.cell}];
+  for(const entry of changed)progress.cells[entry.index]=entry.cell;
+  progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
+  if(Array.isArray(change.visible))progress.visible=change.visible;
+  progress.solved=Boolean(change.solved);
+  progress.completion=change.completion??null;
+}
 async function edit(action,symbol='') {
   if(pending||!puzzle)return;
-  if(selected<0){toast('请先选择格子');return;}
-  if(puzzle.cells[selected].given!==null){toast('提示数字不可修改');return;}
-  if(action==='pan')return;
+  const indices=selectedCells.filter(index=>puzzle.cells[index]?.given==null);
+  if(!indices.length){toast(selectedCells.length?'提示数字不可修改':'请先选择格子');return;}
   pending=true;
   try {
-    const change=await call('update_cell',{index:selected,mode:action,symbol});
-    progress.cells[change.index]=change.cell;
-    progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
-    if(Array.isArray(change.visible))progress.visible=change.visible;
-    progress.solved=Boolean(change.solved);
-    progress.completion=change.completion??null;
+    const change=indices.length===1
+      ?await call('update_cell',{index:indices[0],mode:action,symbol})
+      :await call('update_cells',{indices,mode:action,symbol});
+    applyChange(change);
     updateControls();scheduleSave();requestDraw();
     showCompletionIfNew();
   } catch(error){notify(error);}
@@ -434,64 +442,85 @@ async function history(direction) {
   pending=true;
   try {
     const change=await call(direction);
-    progress.cells[change.index]=change.cell;
-    progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
-    if(Array.isArray(change.visible))progress.visible=change.visible;
-    progress.solved=Boolean(change.solved);
-    progress.completion=change.completion??null;
-    selected=change.index;
-    updateControls();scheduleSave();requestDraw();
+    applyChange(change);
+    if(selectedCells.length<=1&&canSelectCell(puzzle,change.index))
+      setSelection([change.index]);
+    else {updateControls();requestDraw();}
+    scheduleSave();
     showCompletionIfNew();
   } catch(error){notify(error);}
   finally{pending=false;}
 }
-function select(index) {
-  if(index!==-1&&!canSelectCell(puzzle,index))return;
-  if(index!==selected)sectorCursor=0;
-  selected=index;updateSelection();requestDraw();board.focus({preventScroll:true});
+function setSelection(indices) {
+  const valid=[...new Set(indices.filter(index=>canSelectCell(puzzle,index)))];
+  if(valid.length===selectedCells.length&&valid.every((id,i)=>id===selectedCells[i]))return;
+  const next=valid.at(-1)??-1;
+  if(next!==selected)sectorCursor=0;
+  selectedCells=valid;selected=next;
+  updateSelection();requestDraw();
+  board.focus({preventScroll:true});
+}
+function select(index) {setSelection(index<0?[]:[index]);}
+function extendSelection(indices) {
+  const set=new Set(selectedCells),next=[...selectedCells];
+  for(const index of indices){
+    if(canSelectCell(puzzle,index)&&!set.has(index)){
+      next.push(index);set.add(index);
+    }
+  }
+  if(next.length!==selectedCells.length)setSelection(next);
 }
 function locationInFrame(event) {
   const b=frame.getBoundingClientRect();
   return {x:event.clientX-b.left,y:event.clientY-b.top};
 }
 function pointerDistance(a,b) {return Math.hypot(a.x-b.x,a.y-b.y);}
+function pointerCenter(a,b) {return {x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
+board.addEventListener('contextmenu',event=>event.preventDefault());
 board.addEventListener('pointerdown',event=>{
+  if(!puzzle)return;
   event.preventDefault();board.setPointerCapture(event.pointerId);
-  const p=locationInFrame(event);
-  pointers.set(event.pointerId,p);
-  if(pointers.size===1) gesture={start:p,last:p,moved:false,pinch:false};
-  if(pointers.size===2){
+  const p=locationInFrame(event);pointers.set(event.pointerId,p);
+  if(pointers.size===1){
+    const panMouse=event.pointerType==='mouse' &&
+      (event.button===1||event.button===2||event.shiftKey||event.altKey);
+    const oldSelection=[...selectedCells];
+    gesture={kind:panMouse?'mouse-pan':'select',last:p,moved:false,oldSelection};
+    if(!panMouse)select(gridIndex(p.x,p.y));
+  }else if(pointers.size===2){
+    if(gesture?.kind==='select'&&!gesture.moved)setSelection(gesture.oldSelection);
     const [a,b]=[...pointers.values()];
-    gesture={lastDistance:pointerDistance(a,b),pinch:true,moved:true};
-  }
+    gesture={kind:'transform',lastCenter:pointerCenter(a,b),lastDistance:pointerDistance(a,b)};
+  }else gesture={kind:'ignore'};
 });
 board.addEventListener('pointermove',event=>{
   if(!pointers.has(event.pointerId)||!gesture)return;
   const p=locationInFrame(event),previous=pointers.get(event.pointerId);
   pointers.set(event.pointerId,p);
-  if(pointers.size===2){
-    const [a,b]=[...pointers.values()],distance=pointerDistance(a,b);
-    const center={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-    if(gesture.lastDistance&&distance>0)setZoom(camera.scale*distance/gesture.lastDistance,center.x,center.y);
-    gesture.lastDistance=distance;gesture.moved=true;gesture.pinch=true;
-  }else if(pointers.size===1){
-    if(Math.hypot(p.x-gesture.start.x,p.y-gesture.start.y)>6)gesture.moved=true;
-    if(gesture.moved){
-      camera.x+=p.x-previous.x;camera.y+=p.y-previous.y;requestDraw();
-    }
+  if(pointers.size===2&&gesture.kind==='transform'){
+    const [a,b]=[...pointers.values()];
+    const center=pointerCenter(a,b),distance=pointerDistance(a,b);
+    // Two fingers pan with their midpoint, and pinch to zoom.
+    camera.x+=center.x-gesture.lastCenter.x;
+    camera.y+=center.y-gesture.lastCenter.y;
+    if(gesture.lastDistance>0&&distance>0)
+      setZoom(camera.scale*distance/gesture.lastDistance,center.x,center.y);
+    else requestDraw();
+    gesture.lastCenter=center;gesture.lastDistance=distance;
+  }else if(pointers.size===1&&gesture.kind==='mouse-pan'){
+    camera.x+=p.x-previous.x;camera.y+=p.y-previous.y;
+    gesture.last=p;requestDraw();
+  }else if(pointers.size===1&&gesture.kind==='select'){
+    if(Math.hypot(p.x-gesture.last.x,p.y-gesture.last.y)>0.5)gesture.moved=true;
+    extendSelection(dragCellIndices(previous,p,camera,puzzle));
     gesture.last=p;
   }
 });
 function endPointer(event){
   if(!pointers.has(event.pointerId))return;
-  const position=locationInFrame(event);
-  const tap=pointers.size===1&&gesture&&!gesture.moved&&!gesture.pinch;
   pointers.delete(event.pointerId);
-  if(tap&&mode!=='pan')select(gridIndex(position.x,position.y));
-  if(pointers.size===1){
-    const last=[...pointers.values()][0];
-    gesture={start:last,last,moved:true,pinch:true};
-  }else if(pointers.size===0)gesture=null;
+  if(pointers.size===1)gesture={kind:'ignore'};
+  else if(pointers.size===0)gesture=null;
 }
 board.addEventListener('pointerup',endPointer);
 board.addEventListener('pointercancel',endPointer);
@@ -579,7 +608,7 @@ document.addEventListener('keydown',event=>{
   const k=event.key.toUpperCase();
   if(k.length===1&&validSymbol(k)){
     event.preventDefault();
-    if(mode!=='color'&&mode!=='pan')edit(mode,k);
+    if(mode!=='color')edit(mode,k);
     return;
   }
   const delta={ArrowUp:-puzzle?.cols,ArrowDown:puzzle?.cols,ArrowLeft:-1,ArrowRight:1}[event.key];
