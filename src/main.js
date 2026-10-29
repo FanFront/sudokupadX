@@ -445,7 +445,10 @@ async function history(direction) {
     applyChange(change);
     if(selectedCells.length<=1&&canSelectCell(puzzle,change.index))
       setSelection([change.index]);
-    else {updateControls();requestDraw();}
+    // setSelection is a no-op when the active cell stays the same. Undo/redo
+    // still changed the engine's history flags and visible cell contents.
+    updateControls();
+    requestDraw();
     scheduleSave();
     showCompletionIfNew();
   } catch(error){notify(error);}
