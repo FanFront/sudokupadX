@@ -88,3 +88,35 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .board-tools .linked-puzzle-entry{background:#2c756d;color:#f0fff7;border-color:#62b4a6;white-space:nowrap}
 #linkedPuzzleButton[hidden]{display:none}
 @media(max-width:410px){.board-tools .linked-puzzle-entry{font-size:10px;padding:0 4px}}
+
+/* Online catalog is bundled into the APK/site; individual puzzles are downloaded
+   on demand and stored in IndexedDB. Keep the library usable on narrow phones. */
+#bundledLibraryPanel[hidden],#onlineLibraryPanel[hidden]{display:none!important}
+#bundledLibraryPanel{display:flex;flex-direction:column;gap:12px}
+.library-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.library-tabs button{min-height:40px;background:#1c3449}
+.library-tabs button[aria-selected="true"]{background:#b9e4d6;color:#173343;border-color:#b9e4d6;font-weight:700}
+#onlineLibraryPanel{display:flex;flex-direction:column;gap:10px;min-height:0}
+.online-search-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,170px);gap:8px}
+.online-search-row input,.online-search-row select{
+ min-width:0;min-height:41px;padding:0 9px;border-radius:9px;
+ border:1px solid #456b80;background:#0d2033;color:#eefaff;font-size:13px
+}
+.online-index-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:#b5cddd}
+.online-index-controls label{display:flex;align-items:center;gap:6px}
+.online-index-controls input{accent-color:#addccd}
+.online-index-controls button{padding:0 10px;min-height:34px;font-size:12px}
+#onlineIndexStatus{color:#9ebfcf;font-size:11px;overflow-wrap:anywhere}
+.online-index-list{display:flex;flex-direction:column;gap:9px;max-height:45dvh;overflow-y:auto;scrollbar-color:#4d6d82 transparent}
+.online-entry{padding:11px 12px;border:1px solid #36566d;background:#172e43;border-radius:11px;display:flex;flex-direction:column;gap:6px}
+.online-entry strong{font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+.online-entry small{font-size:11px;color:#a3c1d4;line-height:1.4}
+.online-entry-actions{display:flex;gap:7px;flex-wrap:wrap}
+.online-entry-actions button{min-height:32px;padding:0 10px;font-size:12px;background:#25465a}
+.online-entry-actions .online-primary-action{background:#a9d9cc;color:#14303e;border-color:#a9d9cc}
+.online-empty{padding:16px 6px;color:#b2c9d8;text-align:center}
+@media(max-width:500px){
+ .online-search-row{grid-template-columns:1fr}
+ .online-index-list{max-height:42dvh}
+ .online-entry-actions button{flex:1 0 auto}
+}
