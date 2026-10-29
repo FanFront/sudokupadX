@@ -82,3 +82,46 @@ test('hidden fog clues do not reveal themselves through conflict colors',()=>{
   progress.visible[0]=true;
   assert.equal(detectConflicts(puzzle,progress).noteSymbols[1].has('3'),true);
 });
+
+
+test('unique killer cages exclude matching placed values and candidates even across houses',()=>{
+  const {puzzle,progress}=game(45,42);
+  // Super Sudokoid 1 has visible unique killer cages spanning multiple rows.
+  puzzle.cages=[{cells:[[7,8],[7,9],[8,9]],value:13,unique:true}];
+  progress.cells[7*42+8].value='6';
+  progress.cells[8*42+9].value='6';
+  let result=detectConflicts(puzzle,progress);
+  assert.equal(result.valueCells.has(7*42+8),true);
+  assert.equal(result.valueCells.has(8*42+9),true);
+  progress.cells[8*42+9].value=null;
+  progress.cells[8*42+9].center=['6','4'];
+  result=detectConflicts(puzzle,progress);
+  assert.equal(result.noteSymbols[8*42+9].has('6'),true);
+  assert.equal(result.noteSymbols[8*42+9].has('4'),false);
+});
+
+test('hidden unique cages constrain candidates, but decorative cages do not',()=>{
+  const {puzzle,progress}=game(45,42);
+  puzzle.cages=[
+    {cells:[[2,1],[3,2]],unique:true,hidden:true},
+    {cells:[[6,1],[7,2]],outlineC:'#ffb594ff'}
+  ];
+  progress.cells[2*42+1].value='9';
+  progress.cells[3*42+2].corner=['9'];
+  progress.cells[6*42+1].value='7';
+  progress.cells[7*42+2].center=['7'];
+  const result=detectConflicts(puzzle,progress);
+  assert.equal(result.noteSymbols[3*42+2].has('9'),true);
+  assert.equal(result.noteSymbols[7*42+2].has('7'),false);
+});
+
+test('foggy killer clues do not leak through duplicate or candidate conflicts',()=>{
+  const {puzzle,progress}=game(45,42);
+  puzzle.cages=[{cells:[[2,1],[3,2]],unique:true,value:10}];
+  puzzle.cells[2*42+1].given='4';
+  progress.cells[3*42+2].corner=['4'];
+  progress.visible[2*42+1]=false;
+  assert.equal(detectConflicts(puzzle,progress).noteSymbols[3*42+2].size,0);
+  progress.visible[2*42+1]=true;
+  assert.equal(detectConflicts(puzzle,progress).noteSymbols[3*42+2].has('4'),true);
+});
