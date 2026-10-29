@@ -67,6 +67,33 @@ test('hidden constraint cages never draw; visible single-cell clues show only la
   ]);
 });
 
+test('killer sum is anchored to an actual top-left cage cell, not its empty bounding corner',()=>{
+  const labels=[];
+  const ctx={
+    save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},
+    setLineDash(){},stroke(){},
+    fillText(text,x,y){labels.push([text,x,y]);}
+  };
+  const clip={left:0,top:0,right:1000,bottom:1000};
+  drawCages(ctx,{cages:[
+    // L: bounding top-left is [0,0], but no cage cell lives there.
+    {cells:[[1,0],[1,1],[0,1]],value:12},
+    // Irregular top row has two cells; choose its leftmost one even if
+    // the input arrays are unsorted and lower rows have smaller columns.
+    {cells:[[4,2],[2,5],[3,4],[2,3]],value:18},
+    // Keep the same position for standard rectangular and single-cell cages.
+    {cells:[[6,6],[5,5],[5,6],[6,5]],value:22},
+    {cells:[[8,7]],value:9},
+    {hidden:true,cells:[[9,9],[9,10]],value:30}
+  ]},clip);
+  assert.deepEqual(labels,[
+    ['12',58,5], // r0c1: top-left actual cage cell
+    ['18',162,109], // r2c3, not bbox [2,2]
+    ['22',266,265], // r5c5
+    ['9',370,421] // r8c7
+  ]);
+});
+
 test('fog is painted only over the covered cells',()=>{
   const fills=[];
   const context={save(){},restore(){},fillRect(...args){fills.push(args)},set fillStyle(x){this.color=x}};
