@@ -44,7 +44,7 @@ test('decode short ids while rejecting malicious external URLs',()=>{
   assert.equal(puzzleDownloadUrl('https://sudokupad.app/abc123'),
     'https://sudokupad.svencodes.com/ctclegacy/abc123');
   assert.equal(puzzleDownloadUrl('https://sudokupad.app/path/to/puzzle'),
-    'https://sudokupad.svencodes.com/ctclegacy/path%2Fto%2Fpuzzle');
+    'https://sudokupad.svencodes.com/ctclegacy/path/to/puzzle');
   for (const url of ['http://sudokupad.app/a','https://evil.example/abc',
     'https://sudokupad.app.evil.example/a','https://sudokupad.app/']) {
     assert.equal(puzzleIdFromUrl(url),null,url);
