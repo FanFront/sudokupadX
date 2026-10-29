@@ -54,7 +54,7 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 
 @media(max-width:410px){
   #libraryButton{display:block}
-  #demoButton{display:none}
+  #demoButton{padding:0 7px;min-height:35px;font-size:11px}
   .board-tools button{min-height:30px;padding:0 5px}
 }
 @media(max-width:370px){
@@ -75,6 +75,7 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   .top-actions #importButton{padding:0 8px;min-height:35px;font-size:11px}
 }
 @media(max-width:410px){
+  #demoButton{display:none}
   .top-actions #importButton{font-size:0;min-width:38px}
   .top-actions #importButton::after{content:'导题';font-size:11px}
 }
