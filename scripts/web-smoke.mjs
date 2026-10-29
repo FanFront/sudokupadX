@@ -89,6 +89,18 @@ try{
     return !document.querySelector('#undoButton').disabled &&
       document.querySelector('#redoButton').disabled;
   },null,{timeout:10000});
+  // Manual check is a dialog only: it never marks the board or gives away answers.
+  await page.locator('#checkButton').click();
+  await page.locator('#checkDialog').waitFor({state:'visible'});
+  assert.match(await page.locator('#checkResult').textContent(),/无法核对/);
+  await page.locator('#dismissCheck').click();
+  assert.equal(await page.locator('#checkDialog').isHidden(),true);
+  // Emulate an Android WebView that does not report the camera-cutout inset.
+  await page.evaluate(()=>document.documentElement.classList.add('android-native'));
+  const brand=await page.locator('.brand').boundingBox();
+  assert.ok(brand && brand.y>=40,'Toolbar must sit below the camera/status-bar safe area');
+  await page.evaluate(()=>document.documentElement.classList.remove('android-native'));
+
   // A checkpoint roundtrip must restore the actual Rust/WASM board state.
   await page.locator('#checkpointButton').click();
   await page.locator('#exportCheckpoint').click();
