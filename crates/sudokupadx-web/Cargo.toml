@@ -14,8 +14,9 @@ wasm-bindgen = "0.2"
 serde = "1"
 serde_json = "1"
 
-# wasm-pack's bundled Binaryen/wasm-opt may lag the Rust compiler's WASM
-# feature set and reject an otherwise valid wasm-bindgen output. Keep Rust's
-# workspace release optimizations; skip only the incompatible post-pass.
+# Rust 1.87+ enables WebAssembly bulk-memory by default, including memory.copy.
+# wasm-opt must be explicitly told to validate this feature; without the flag
+# it fails with "Bulk memory operations require bulk memory".
+# Retain wasm-opt release optimization instead of disabling the post-pass.
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = false
+wasm-opt = ["-O", "--enable-bulk-memory"]
