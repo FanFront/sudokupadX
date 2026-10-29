@@ -188,6 +188,10 @@ async function goBack(){
 }
 
 function updateInfo() {
+  const original=$('originalPuzzleLink');
+  original.hidden=!currentEntry?.url;
+  if(currentEntry?.url) original.href=currentEntry.url;
+  else original.removeAttribute('href');
   $('puzzleTitle').textContent = puzzle.title;
   $('puzzleAuthor').textContent = puzzle.author || 'SudokuPad / SudokuMaker';
   $('boardMeta').textContent = puzzle.rows+' × '+puzzle.cols+' · '+(puzzle.lines||[]).length+' lines';
