@@ -640,13 +640,11 @@ $('checkButton').addEventListener('click',async()=>{
     else if(result.checked===0)
       message='还没有可以核对的已填大数字。请先填写数字再检查。';
     else if(result.mistakes>0)
-      message='已检查 '+result.checked+' 个大数字，发现 '+result.mistakes+' 个错误。'+
-        (result.unverifiable>0?'另外 '+result.unverifiable+' 个数字暂时无法核对。':'')+
-        '棋盘不会因为本次检查而标红。';
+      message='检查结果：当前已填写的大数字存在错误。请重新检查盘面。';
+    else if(result.unverifiable>0)
+      message='检查结果：能够核对的已填数字均正确，但部分数字没有对应答案，尚不能完全确认。';
     else
-      message='已检查 '+result.checked+' 个大数字，当前没有发现错误。'+
-        (result.unverifiable>0?'另有 '+result.unverifiable+' 个数字无法核对。':'')+
-        '这不代表整个谜题已经完成。';
+      message='检查结果：当前已填写的大数字均正确。注意这不代表整道谜题已经完成。';
     $('checkResult').textContent=message;
     if(!$('checkDialog').open)$('checkDialog').showModal();
   }catch(error){notify('检查失败: '+String(error));}
