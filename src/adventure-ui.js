@@ -98,6 +98,11 @@ export function drawCages(ctx, puzzle, clip) {
     if (!cells.length)continue;
     const set=new Set(cells.map(([row,col])=>row+','+col));
     const left=Math.min(...cells.map(c=>c[1]))*size,top=Math.min(...cells.map(c=>c[0]))*size;
+    // The bounding rectangle's top-left corner may be outside an L-shaped or
+    // otherwise irregular cage. Anchor its sum to the actual topmost cell,
+    // breaking ties by the leftmost cell in that row (Sudoku reading order).
+    const labelCell=cells.reduce((best,cell)=>
+      cell[0]<best[0] || (cell[0]===best[0] && cell[1]<best[1]) ? cell : best);
     if(left>clip.right || top>clip.bottom ||
        Math.max(...cells.map(c=>c[1]))*size<clip.left ||
        Math.max(...cells.map(c=>c[0]))*size<clip.top)continue;
@@ -120,7 +125,7 @@ export function drawCages(ctx, puzzle, clip) {
     const sum=cage.value??cage.sum;
     if(sum!==undefined&&sum!==null&&String(sum)){
       ctx.textAlign='left';ctx.textBaseline='top';ctx.font='600 10px sans-serif';
-      ctx.fillStyle=cage.fontC||'#5a4c74';ctx.fillText(String(sum).slice(0,8),left+6,top+5);
+      ctx.fillStyle=cage.fontC||'#5a4c74';ctx.fillText(String(sum).slice(0,8),labelCell[1]*size+6,labelCell[0]*size+5);
     }
     ctx.restore();
   }
