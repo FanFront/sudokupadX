@@ -30,6 +30,18 @@ The catalog is `public/puzzles/catalog.json`. Puzzle files are in `public/puzzle
 - **Input:** 0–9, A–Z alphabet pages, corner/center notes, five cell colors, undo/redo, erase, mobile pan mode; Rust owns the authoritative state.
 - **Completion:** when every solution value matches, puzzle-completion text (localized for linked Super Sudokoid puzzles) is shown.
 
+## Move saved checkpoints between the two Android apps and the web version
+
+Open the puzzle you want to transfer. Use **存档互通** in SudokuPad X to export the current puzzle to a portable JSON file (or copy the JSON to your clipboard). In the updated **sodokupadAndroid** APK, open the same game and use **导出存档**, **读取文件**, or **粘贴存档**. These controls allow transfers in either direction, without a network or account.
+
+- **Old Android → SudokuPad X:** Upgrade the old app **in place** so WebView local storage survives, open the saved puzzle in the old app, choose **导出存档**, save the JSON through the Android document picker, then in SudokuPad X select **存档互通 → 选择文件 → 确认并导入存档**. SudokuPad X can select the appropriate bundled puzzle automatically from the saved source URL.
+- **SudokuPad X → old Android:** Choose **存档互通 → 导出当前存档**, then open the same puzzle in the old app and choose **读取文件**. Alternatively use **复制 JSON** in SudokuPad X and **粘贴存档** in the old app. The clipboard method works even when a WebView does not provide file downloads.
+- **SudokuPad X Android ↔ GitHub Pages:** Use the same export/import controls on each side; local storage is not automatically shared between browsers and apps.
+
+Import asks before overwriting a destination save. Checkpoint format v1 carries the puzzle URL/identity, grid dimensions, given digits, entered values, corner/center marks, and one supported cell color. The Rust core validates cell contents before restoring a save. **This is a snapshot of the open puzzle, not a bulk export of every puzzle's progress.** SudokuPad's draw/pen paths, timer, and undo/redo timeline are not portable; SudokuPad X's limited five-color palette may omit other SudokuPad colors. Keep the original installed app and exported JSON as backups until you verify the transfer.
+
+**Important:** The older APK needs the companion checkpoint-transfer update; existing `progress_*` saves in its WebView remain in place when upgrading with the same signing certificate. Do **not** uninstall the old app to enable transfer, since uninstalling removes its local saves.
+
 ## Test it
 
 ```sh
@@ -109,7 +121,7 @@ The Rust CI suite includes:
 
 ## Important compatibility limits
 
-This is **not yet fully pixel-equivalent** to the original SudokuPad renderer. Special lines/arrowheads, complex SVG objects, nonrectangular textures, emoji positioning, precise cage outlines, and unusual constraint artwork may differ. Native Sudoku variant validation, overlapping sector rule enforcement, challenge-specific scripted actions beyond `cellvalue -> foglight`, imported cell coloring, autosolving, and original SudokuPad save-file migration are not yet implemented. The current linked-boss navigation is based on links in the visible area's rule text; it is not a complete quest or inventory simulation.
+This is **not yet fully pixel-equivalent** to the original SudokuPad renderer. Special lines/arrowheads, complex SVG objects, nonrectangular textures, emoji positioning, precise cage outlines, and unusual constraint artwork may differ. Native Sudoku variant validation, overlapping sector rule enforcement, challenge-specific scripted actions beyond `cellvalue -> foglight`, imported cell coloring, autosolving, and automatic native SudokuPad replay-file migration are not yet implemented; checkpoint migration is supported through the updated old-Android companion export feature. The current linked-boss navigation is based on links in the visible area's rule text; it is not a complete quest or inventory simulation.
 
 For spoiler-free play, use only the normal map links (not “show all”). Verify complex adventure mechanics against the original puzzle before trusting the new application as a complete replacement.
 
