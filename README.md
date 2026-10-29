@@ -33,7 +33,7 @@ The catalog is `public/puzzles/catalog.json`. Puzzle files are in `public/puzzle
 
 在 **游戏库 → Logic Masters** 中直接使用中文 UI 搜索真实的 Logic Masters Deutschland 题目，无需在外部网站手工寻找 ID / SudokuPad 链接。
 
-- **直接搜索**：输入题名、规则关键词（例如 `German Whispers`）、按“搜索”；搜索由 LMD 官方高级搜索页面执行。**最新题目**直接列出最新的 20 道。可翻页，点任意结果选择题目；搜索结果显示标题、题号和网页中提供的作者信息。
+- **直接搜索**：输入题名或题目正文关键词（例如 `German Whispers`）、按“搜索”；搜索由 LMD 官方高级搜索页面执行。**最新题目**直接列出最新的 20 道。可翻页，点任意结果选择题目；搜索结果显示标题、题号和网页中提供的作者信息。
 - **选择并导入**：选择结果后，安卓版通过原生 HTTPS 获取该题页面并识别作者分享的 SudokuPad 题面；在应用内按 **在线打开** 或 **下载离线**。离线下载保存完整 SCL/JSON 题面至 IndexedDB，解题进度继续自动保存在本地；**已下载**可断网访问。
 - **可选旧入口**：保留高级手动输入 LMD 六位 ID、页面 URL、SudokuPad URL 或粘贴 HTML；普通用户不需要使用。网页版也展示 UI，但若 Logic Masters 禁止跨域读取网页，则需要用高级选项粘贴作者的 SudokuPad 直链；安卓端使用 Rust 原生请求避免 CORS。
 - **兼容性边界**：Logic Masters 站点本身并不提供统一的可玩棋盘格式。只有作者提供可解码的 SudokuPad 链接时才能导入 Rust 棋盘，图片 / PDF / Penpa-only 条目不自动转换。对于此类页面会显示明确的说明而非伪造题面。始终保留 LMD 原题链接与版权归属。
