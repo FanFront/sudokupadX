@@ -204,7 +204,8 @@ export function drawPuzzleLines(ctx, lines, clip, layer='normal') {
     const target=line.target||'';
     if(layer==='overlay'?target!=='overlay'
        :layer==='underlay'?target!=='underlay'
-       :target==='overlay'||target==='underlay')continue;
+       :layer==='grid'?target!=='cell-grids'
+       :target==='overlay'||target==='underlay'||target==='cell-grids')continue;
     const points=(line.wayPoints||line.points||[]).map(puzzlePoint).filter(Boolean);
     if(points.length<2||!visibleRect(clip,points))continue;
     ctx.save();
