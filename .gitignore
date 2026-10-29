@@ -10,3 +10,5 @@ src-tauri/target/
 *.scl
 *.puz
 !tests/fixtures/*.scl
+public/wasm/
+artifacts/web/
