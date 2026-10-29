@@ -18,6 +18,17 @@ The 20 Sudokuvania boss SCL files exist in the old `offline/translated/` directo
 
 The catalog is `public/puzzles/catalog.json`. Puzzle files are in `public/puzzles/*.scl`; Chinese title/rule dictionaries are in `public/puzzles/locale-zh.json` and `public/puzzles/i18n/`. Vite packages these for offline use by the Android/desktop app. The four main game packs are translated copies supplied by the previous project; additional display-only translations are applied where their source text still matches the original.
 
+## 在线题库索引与离线下载
+
+在 **游戏库 → 在线题库索引** 中搜索标题、来源或谜题链接，也可以按来源筛选、只看已下载的题目。题库索引来自 [Stefan Lobbenmeier 的 Sudoku Index](https://stefanlobbenmeier.github.io/sudoku-index/index.json)，并将一个 **2026-10-29 的完整索引快照** 打包为 `public/puzzles/online-index.json`（此快照共有 99 条索引记录）。因此**安卓 APK 首次断网启动也能浏览、搜索这个索引**，不依赖 GitHub Pages 或远程接口。点击“联网更新索引”会读取最新版并把可用的更新存入本机 IndexedDB；离线时仍可回退到打包快照。
+
+- **在线打开：** 按短链接通过 SudokuPad 的跨域谜题接口获取题面，交给现有 Rust 引擎加载；不需要离开 SudokuPad X。
+- **下载离线：** 显式把选中题目的 SCL/JSON 数据保存在 IndexedDB。以后可用 **离线打开**，断网继续游玩；数据与本机自动保存的解题进度彼此独立。
+- **移除下载：** 只删除离线题面，不删除同一谜题的解题进度。索引与题面不等同，**未下载的谜题不能仅凭离线索引进行游玩**。
+- **网页版：** HTTPS GitHub Pages 注册轻量 Service Worker，首次联网访问时缓存网页核心文件、WASM 引擎与打包索引。缓存完成后可断网访问已缓存的网页版；仅本地打开过或明确下载的题面可离线游玩。浏览器清除站点数据会同时清除网页离线内容和进度。
+
+在线题库的部分谜题可能使用尚未被 Rust 引擎支持的变体编码或绘图规则。无法解码时会提示错误，不会代替原题生成简化谜题。在线索引仅储存公开的发现信息，不批量下载第三方题面。
+
 **Permissions:** Third-party puzzle artwork, text, and data remain the creators' work. This repository is public; confirm permission to redistribute bundled assets and consider moving it to a private repository if it is only for personal testing.
 
 ## Gameplay implemented so far
