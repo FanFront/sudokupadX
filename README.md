@@ -24,9 +24,9 @@ The catalog is `public/puzzles/catalog.json`. Puzzle files are in `public/puzzle
 
 - **Native Rust puzzle decoding:** SudokuPad `scl` / LZ-String Base64, standard JSON, compact SudokuMaker literals (including sparse arrays and abbreviated geometry), parsed as data without `eval`.
 - **Large-map UI:** Canvas pan, pinch/wheel zoom, viewport culling, fit-to-board, initial camera focused on the visible starting area, correct x/y placement of lines and overlays, rectangular text/underlay drawing, imported region boundaries, approximate arrows and killer cages, and selected-cell styling.
-- **Fog of war:** reads `foglight` (initially visible cells) and `triggereffect` / `cellvalue` -> `foglight` rules in Rust. All cells in a trigger must contain their exact solution value before its linked cells become visible. Fog state is recomputed after entry, undo, redo, or save restoration. Fog-covered content is masked, and the normal UI does not select covered cells.
+- **Fog of war:** reads `foglight` (initially visible cells) and `triggereffect` / `cellvalue` -> `foglight` rules in Rust. All cells in a trigger must contain their exact solution value before its linked cells become visible. Fog state is recomputed after entry, undo, redo, or save restoration. Fog-covered authored clues remain masked, but players can enter and see their own values and candidate marks in covered cells.
 - **Regional rules:** `metadata.grids` is parsed into independently selectable sectors; tapping a revealed cell shows the corresponding rules, including localized Chinese text. Overlapping sectors can be cycled using **切换区域**.
-- **Linked puzzles and bosses:** valid SudokuPad links actually present in a **revealed sector's rules** resolve to bundled offline puzzles and open in the same app. Progress is separately saved per puzzle; **返回地图** returns to the previous map and restores camera/selection. The optional library “show all” checkbox intentionally bypasses discovery gating for testing and warns about spoilers.
+- **Linked puzzles and bosses:** select any revealed cell in a linked grid or story sector; SudokuPad links from **all overlapping sectors** resolve to bundled offline puzzles. Tap **进入关联谜题** beside the board tools (or its corresponding entry in the rules dialog) to open a linked boss or side puzzle. Each puzzle saves separately. **返回主谜题** returns to the exact previous map camera/selection when entered from the map; direct links and spoiler-enabled library entries can return to their catalog parent main map even without a navigation history. Unrevealed links remain hidden. Unbundled external targets cannot be opened offline. The optional library “show all” checkbox intentionally bypasses discovery gating for testing and warns about spoilers.
 - **Input:** 0–9, A–Z alphabet pages, corner/center notes, five cell colors, undo/redo, erase, mobile pan mode; Rust owns the authoritative state.
 - **Completion:** when every solution value matches, puzzle-completion text (localized for linked Super Sudokoid puzzles) is shown.
 
@@ -50,7 +50,7 @@ cargo test -p sudokupadx-core --all-targets
 npm run tauri -- dev
 ```
 
-The app opens the first bundled Sudokuvania map by default. Select **游戏库** to load any of the four main maps. Choose a visible sector to see its rules and a boss link if that sector already provides one. The library's checkbox to list all linked puzzles is for deliberate testing, since it may reveal spoilers.
+The app opens the first bundled Sudokuvania map by default. Select **游戏库** to load any of the four main maps. Choose a revealed cell within a linked sector and tap **进入关联谜题** (or open **规则** and tap the linked puzzle). When finished, tap **返回主谜题**; progress is saved independently for the map and linked puzzle. The library's checkbox to list all linked puzzles is for deliberate testing, since it may reveal spoilers.
 
 ### WebAssembly browser preview and GitHub Pages
 
@@ -121,7 +121,7 @@ The Rust CI suite includes:
 
 ## Important compatibility limits
 
-This is **not yet fully pixel-equivalent** to the original SudokuPad renderer. Special lines/arrowheads, complex SVG objects, nonrectangular textures, emoji positioning, precise cage outlines, and unusual constraint artwork may differ. Native Sudoku variant validation, overlapping sector rule enforcement, challenge-specific scripted actions beyond `cellvalue -> foglight`, imported cell coloring, autosolving, and automatic native SudokuPad replay-file migration are not yet implemented; checkpoint migration is supported through the updated old-Android companion export feature. The current linked-boss navigation is based on links in the visible area's rule text; it is not a complete quest or inventory simulation.
+This is **not yet fully pixel-equivalent** to the original SudokuPad renderer. Special lines/arrowheads, complex SVG objects, nonrectangular textures, emoji positioning, precise cage outlines, and unusual constraint artwork may differ. Native Sudoku variant validation, overlapping sector rule enforcement, challenge-specific scripted actions beyond `cellvalue -> foglight`, imported cell coloring, autosolving, and automatic native SudokuPad replay-file migration are not yet implemented; checkpoint migration is supported through the updated old-Android companion export feature. Linked-puzzle navigation uses discoverable source rule URLs and the bundled puzzle catalog; it is not a complete quest or inventory simulation.
 
 For spoiler-free play, use only the normal map links (not “show all”). Verify complex adventure mechanics against the original puzzle before trusting the new application as a complete replacement.
 
