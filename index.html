@@ -112,10 +112,30 @@
   </dialog>
 <dialog id="libraryDialog" class="modal">
     <div class="modal-content">
-      <div class="modal-top"><h2>离线谜题库</h2><button id="closeLibrary" class="modal-close" type="button">✕</button></div>
-      <p>内置四张冒险主地图和配套首领 / 支线谜题。未探索区域的首领链接只在解锁后显示。</p>
-      <div id="libraryList" class="library-list"></div>
-      <label class="library-spoiler"><input id="showAllPuzzles" type="checkbox"> 显示全部首领与支线（可能剧透）</label>
+      <div class="modal-top"><h2>谜题库</h2><button id="closeLibrary" class="modal-close" type="button">✕</button></div>
+      <div class="library-tabs" role="tablist" aria-label="谜题来源">
+        <button id="bundledLibraryTab" type="button" role="tab" aria-controls="bundledLibraryPanel" aria-selected="true">内置谜题</button>
+        <button id="onlineLibraryTab" type="button" role="tab" aria-controls="onlineLibraryPanel" aria-selected="false">在线题库索引</button>
+      </div>
+      <div id="bundledLibraryPanel" role="tabpanel">
+        <p>内置四张冒险主地图和配套首领 / 支线谜题。未探索区域的首领链接只在解锁后显示。</p>
+        <div id="libraryList" class="library-list"></div>
+        <label class="library-spoiler"><input id="showAllPuzzles" type="checkbox"> 显示全部首领与支线（可能剧透）</label>
+      </div>
+      <section id="onlineLibraryPanel" role="tabpanel" hidden>
+        <p>本地内置在线题库的索引快照；离线可检索目录。首次游玩需联网获取题面，使用“下载离线”保存后才可断网打开。</p>
+        <div class="online-search-row">
+          <input id="onlineSearch" type="search" placeholder="搜索标题、作者来源、题目编号或链接" aria-label="搜索在线谜题">
+          <select id="onlineSourceFilter" aria-label="按来源筛选"><option value="">所有来源</option></select>
+        </div>
+        <div class="online-index-controls">
+          <label><input id="onlineOfflineOnly" type="checkbox"> 仅看已下载</label>
+          <span id="onlineResultCount" aria-live="polite"></span>
+          <button id="refreshOnlineIndex" type="button">联网更新索引</button>
+        </div>
+        <p id="onlineIndexStatus" role="status" aria-live="polite">正在读取本机题库索引…</p>
+        <div id="onlineIndexList" class="online-index-list"></div>
+      </section>
     </div>
   </dialog>
   <dialog id="checkDialog" class="modal" aria-labelledby="checkTitle">
