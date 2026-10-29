@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import {invokeBrowser} from './web-runtime.js';
 import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,getLinkedPuzzles,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
+import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -18,6 +19,8 @@ let alphabet = false;
 let letterPage = 0;
 let camera = {x:0,y:0,scale:1};
 let regionMap = [];
+let conflictHouses = [];
+let conflicts = {valueCells:new Set(),noteSymbols:[]};
 let drawQueued = false;
 let pending = false;
 let undoStack = [];
@@ -38,6 +41,33 @@ function cloneCell(v) {
   return {value:v.value ?? null,corner:[...(v.corner || [])],center:[...(v.center || [])],color:v.color ?? null};
 }
 function clearCell() { return {value:null,corner:[],center:[],color:null}; }
+function refreshConflicts() {
+  conflicts=detectConflicts(puzzle,progress,conflictHouses);
+}
+// Draw individual marks rather than a single string so only the conflicting
+// candidate is red (not every corner/center note in the cell).
+function drawNoteRow(entry,kind,x,y,redMarks) {
+  const marks=entry?.[kind];
+  if(!Array.isArray(marks)||marks.length===0)return;
+  const centered=kind==='center';
+  ctx.save();
+  ctx.font='600 '+(centered?11:10)+'px sans-serif';
+  ctx.textAlign='left';ctx.textBaseline=centered?'middle':'top';
+  const parts=marks.slice(0,26).map(String),gap=2.5;
+  const widths=parts.map(part=>ctx.measureText(part).width);
+  const total=widths.reduce((sum,width)=>sum+width,0)+gap*Math.max(0,parts.length-1);
+  const scale=Math.min(1,(CELL-8)/Math.max(1,total));
+  const left=centered?x+CELL/2-total*scale/2:x+4;
+  ctx.translate(left,centered?y+CELL*.76:y+3);
+  ctx.scale(scale,1);
+  let offset=0;
+  for(let i=0;i<parts.length;i++){
+    ctx.fillStyle=redMarks?.has(parts[i])?'#c82038':centered?'#48617e':'#325b89';
+    ctx.fillText(parts[i],offset,0);
+    offset+=widths[i]+gap;
+  }
+  ctx.restore();
+}
 function validSymbol(s) {return /^[0-9A-Z]$/.test(s);}
 function saveKey() {return puzzle ? 'sudokupadx:v1:'+puzzle.key : '';}
 function save() {
@@ -215,6 +245,8 @@ async function openResult(result) {
   buildRegions();
   updateInfo();
   await restoreSaved();
+  conflictHouses=buildConflictHouses(puzzle);
+  refreshConflicts();
   lastCompletion=Boolean(progress.solved);
   // Sudokuvania source URLs explicitly used setting-nogrid=1.
   // Super Sudokoid source URLs did not: retain their fine grid by default.
@@ -370,16 +402,14 @@ function draw() {
     const value=given??entry.value;
     if(value){
       ctx.font=(given?'700 ':'600 ')+CELL*.61+'px sans-serif';
-      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=given?'#263345':'#2560a1';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle=conflicts.valueCells.has(idx)?'#c82038':given?'#263345':'#2560a1';
       ctx.fillText(String(value),x+CELL/2,y+CELL/2+1,CELL*.9);
-    }
-    if(entry.corner?.length){
-      ctx.fillStyle='#325b89';ctx.font='600 10px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
-      ctx.fillText(entry.corner.join(' ').slice(0,16),x+4,y+3,CELL-6);
-    }
-    if(entry.center?.length){
-      ctx.fillStyle='#48617e';ctx.font='600 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(entry.center.join(' ').slice(0,17),x+CELL/2,y+CELL*.76,CELL-6);
+    } else {
+      // A placed digit visually replaces notes. Retain them in progress so
+      // clearing or undoing that digit restores the earlier candidates.
+      drawNoteRow(entry,'corner',x,y,conflicts.noteSymbols[idx]);
+      drawNoteRow(entry,'center',x,y,conflicts.noteSymbols[idx]);
     }
   }
   drawPathMarks(ctx,puzzle.overlays);
@@ -422,6 +452,7 @@ function applyChange(change) {
   if(Array.isArray(change.visible))progress.visible=change.visible;
   progress.solved=Boolean(change.solved);
   progress.completion=change.completion??null;
+  refreshConflicts();
 }
 async function edit(action,symbol='') {
   if(pending||!puzzle)return;
@@ -654,6 +685,7 @@ $('importCheckpoint').addEventListener('click',async()=>{
     // cells and given-cell edits without mutating the current session.
     save();
     progress=await call('restore_progress',{cells});
+    refreshConflicts();
     save();lastCompletion=Boolean(progress.solved);
     selected=-1;selectedCells=[];updateControls();requestDraw();
     $('checkpointDialog').close();
