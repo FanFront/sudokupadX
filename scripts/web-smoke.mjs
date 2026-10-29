@@ -54,12 +54,20 @@ try{
   await canvas.click({position:{x:bounds.width/2,y:bounds.height/2}});
   const selection=await page.locator('#selectionLabel').textContent();
   assert.match(selection,/R5C5/);
+  const undo=page.locator('#undoButton'),redo=page.locator('#redoButton');
   await page.locator('#keypad button[data-symbol="1"]').click();
   await page.waitForFunction(()=>!document.querySelector('#undoButton').disabled);
-  await page.locator('#undoButton').click();
-  await page.waitForFunction(()=>!document.querySelector('#redoButton').disabled);
-  await page.locator('#redoButton').click();
-  await page.waitForFunction(()=>!document.querySelector('#undoButton').disabled);
+  assert.equal(await redo.isDisabled(),true,'Redo must be disabled after a new edit');
+  await undo.click();
+  // Undo keeps the same cell selected; both history buttons must still refresh.
+  await page.waitForFunction(()=>!document.querySelector('#redoButton').disabled,
+    null,{timeout:10000});
+  assert.equal(await undo.isDisabled(),true,'Undo must be disabled after reversing the only edit');
+  await redo.click();
+  await page.waitForFunction(()=>{
+    return !document.querySelector('#undoButton').disabled &&
+      document.querySelector('#redoButton').disabled;
+  },null,{timeout:10000});
   await page.screenshot({path:'artifacts/web/demo-input.png'});
   assert.deepEqual(errors,[]);
   console.log('Rust WASM input, undo and redo passed; screenshots in artifacts/web/');
