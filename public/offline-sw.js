@@ -1,6 +1,6 @@
 // GitHub Pages offline shell. Bundled index is prefetched on service worker install;
 // downloaded online puzzles themselves are stored explicitly in IndexedDB.
-const CACHE = 'sudokupadx-offline-shell-v3';
+const CACHE = 'sudokupadx-offline-shell-v4';
 const scope = self.registration.scope;
 const shell = [
   'puzzles/online-index.json',
