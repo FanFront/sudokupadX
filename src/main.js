@@ -1,9 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
 import {invokeBrowser} from './web-runtime.js';
-import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,getLinkedPuzzles,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
+import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
+import {linksAtCell,returnDestination} from './linked-navigation.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -30,6 +31,7 @@ let toastTimer = 0;
 let saveTimer = 0;
 let catalog = [], localeZh = {}, mainDictionary = {};
 let currentEntry = null, navigationStack = [], matchingSectors = [], sectorCursor = 0;
+let activeLinkedPuzzles = [];
 let lastCompletion = false;
 let showGridLines = true;
 const board = $('boardCanvas');
@@ -138,7 +140,13 @@ function buildRegions() {
 function translateDisplay(text) {
   return typeof text === 'string' ? (mainDictionary[text] || text) : text;
 }
-function updateBack(){ $('backButton').hidden=navigationStack.length===0; }
+function updateBack(){
+  const destination=returnDestination(currentEntry,catalog,navigationStack);
+  $('backButton').hidden=!destination;
+  $('backButton').textContent=destination?.fromStack &&
+    catalog.find(entry=>entry.id===destination.id)?.kind!=='main'
+      ?'返回上一谜题':'返回主谜题';
+}
 function renderSectorLinks(container,items) {
   container.replaceChildren();
   for(const entry of items){
@@ -161,9 +169,15 @@ function updateSector() {
   $('nextSector').hidden=matchingSectors.length<2;
   $('rulesPreview').textContent=rules;
   $('fullRules').textContent=rules;
-  const links=eligible?getLinkedPuzzles(rules,catalog,currentEntry?.group):[];
-  renderSectorLinks($('sectorLinks'),links);
-  renderSectorLinks($('modalLinks'),links);
+  // Links may be held by a larger underlying grid rather than the currently
+  // displayed (smallest) overlapping story sector. Do not expose fogged links.
+  activeLinkedPuzzles=eligible?linksAtCell(puzzle,progress,selected,catalog,currentEntry?.id):[];
+  renderSectorLinks($('sectorLinks'),activeLinkedPuzzles);
+  renderSectorLinks($('modalLinks'),activeLinkedPuzzles);
+  const entrance=$('linkedPuzzleButton');
+  entrance.hidden=activeLinkedPuzzles.length===0;
+  entrance.textContent=activeLinkedPuzzles.length===1?'进入关联谜题':'关联谜题 · '+activeLinkedPuzzles.length;
+  entrance.title=activeLinkedPuzzles.length===1?activeLinkedPuzzles[0].title:'查看本区域的关联谜题';
 }
 function renderLibrary(){
   const list=$('libraryList');list.replaceChildren();
@@ -219,7 +233,9 @@ async function openBundled(id,push=false,backState=null){
     await openResult(result);
     if(backState){
       camera={...backState.camera};
+      $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
       setSelection(backState.selectedCells?.length?backState.selectedCells:[backState.selected]);
+      requestDraw();
     }
     updateBack();
     if($('rulesDialog').open)$('rulesDialog').close();
@@ -231,10 +247,15 @@ async function openBundled(id,push=false,backState=null){
   }finally{pending=false;}
 }
 async function goBack(){
-  const state=navigationStack.pop();
-  if(!state)return;
+  if(pending)return;
+  const destination=returnDestination(currentEntry,catalog,navigationStack);
+  if(!destination)return;
   save();
-  await openBundled(state.id,false,state);
+  // Keep the return state until the parent has loaded successfully. A missing
+  // puzzle asset or failed restore must not destroy the route back.
+  await openBundled(destination.id,false,destination.backState);
+  if(destination.fromStack)navigationStack.pop();
+  updateBack();
 }
 
 function updateInfo() {
@@ -456,7 +477,7 @@ function showCompletionIfNew(){
   const solved=Boolean(progress?.solved);
   if(solved&&!lastCompletion){
     $('completionText').textContent=progress.completion||'已完成当前谜题。';
-    $('completionBack').hidden=navigationStack.length===0;
+    $('completionBack').hidden=!returnDestination(currentEntry,catalog,navigationStack);
     if(!$('completionDialog').open)$('completionDialog').showModal();
   }
   lastCompletion=solved;
@@ -617,10 +638,16 @@ $('libraryButton').addEventListener('click',()=>{
 $('closeLibrary').addEventListener('click',()=>$('libraryDialog').close());
 $('showAllPuzzles').addEventListener('change',renderLibrary);
 $('backButton').addEventListener('click',()=>goBack().catch(notify));
+$('linkedPuzzleButton').addEventListener('click',()=>{
+  if(!activeLinkedPuzzles.length || pending)return;
+  if(activeLinkedPuzzles.length===1)
+    openBundled(activeLinkedPuzzles[0].id,true).catch(notify);
+  else showRules();
+});
 $('closeCompletion').addEventListener('click',()=>$('completionDialog').close());
 $('completionBack').addEventListener('click',()=>{
   $('completionDialog').close();
-  if(navigationStack.length)goBack().catch(notify);
+  if(returnDestination(currentEntry,catalog,navigationStack))goBack().catch(notify);
 });
 $('moreRules').addEventListener('click',showRules);
 $('closeRules').addEventListener('click',()=>$('rulesDialog').close());
