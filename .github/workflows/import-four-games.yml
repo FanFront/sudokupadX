@@ -1,0 +1,33 @@
+name: Capture four original SudokuPad puzzles
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/import-four-games.mjs
+      - .github/workflows/import-four-games.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/import-four-games.mjs
+      - name: Commit captured source puzzles and metadata
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/puzzles/new-*.scl public/puzzles/new-games-source-text.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Bundle four captured original SudokuPad puzzles"
+            git push
+          fi
