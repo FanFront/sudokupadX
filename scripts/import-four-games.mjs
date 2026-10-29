@@ -9,7 +9,7 @@ import {join} from 'node:path';
 import LZString from 'lz-string';
 import JSON5 from 'json5';
 
-const puzzles=[
+const roots=[
   {id:'k4995f3fx1',url:'https://sudokupad.app/k4995f3fx1?setting-outlinesonlines=0'},
   {id:'utmh5dybvf',url:'https://sudokupad.app/utmh5dybvf?setting-digitoutlines=0'},
   {id:'mfhh567b60',url:'https://sudokupad.app/mfhh567b60'},
@@ -18,6 +18,7 @@ const puzzles=[
 const directory='public/puzzles';
 await mkdir(directory,{recursive:true});
 const summaries={};
+const puzzles=[...roots],seen=new Set(roots.map(p=>p.id));
 
 
 function normalizeCompact(text) {
@@ -118,7 +119,7 @@ for(const game of puzzles) {
   const data=parsed.data, meta=data.metadata||data.me||{};
   const cells=data.cells||data.ce;
   summaries[game.id]={
-    url:game.url, rows:cells.length,
+    url:game.url, group:game.group||game.id, kind:game.group?'linked':'standalone', rows:cells.length,
     cols:Math.max(0,...cells.map(row=>Array.isArray(row)?row.length:0)),
     title:meta.title||data.title||'',
     author:meta.author||'',
@@ -128,8 +129,17 @@ for(const game of puzzles) {
       title:grid.title||'',rules:grid.rules||'',author:grid.author||''
     }))
   };
+  if(!game.group) {
+    for(const link of String(meta.rules||'').matchAll(/https:\/\/sudokupad\.app\/([a-z0-9]{10})(?:\?[^\s)\]]*)?/gi)) {
+      const id=link[1].toLowerCase();
+      if(seen.has(id))continue;
+      seen.add(id);
+      puzzles.push({id,url:link[0],group:game.id});
+    }
+  }
   console.log(game.id+': '+summaries[game.id].rows+'x'+summaries[game.id].cols+
     ' ('+summaries[game.id].title+')');
 }
+console.log('Captured '+puzzles.length+' main/linked puzzles');
 await writeFile(join(directory,'new-games-source-text.json'),
   JSON.stringify(summaries,null,2)+'\n');
