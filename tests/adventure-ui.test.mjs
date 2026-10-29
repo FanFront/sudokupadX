@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isVisible,getSectors,getLinkedPuzzles,drawFog,focusInitialFog} from '../src/adventure-ui.js';
+import {isVisible,getSectors,getLinkedPuzzles,drawFog,focusInitialFog,puzzlePoint,drawDecorations,drawPuzzleLines,drawArrows} from '../src/adventure-ui.js';
 
 test('hidden cells are not selectable while ordinary boards remain visible',()=>{
   assert.equal(isVisible({visible:[true,false]},0),true);
@@ -46,4 +46,73 @@ test('initial camera focuses a dense visible area instead of whole map',()=>{
   const camera=focusInitialFog(puzzle,{visible},{width:400,height:600});
   assert.ok(camera.scale>.1);
   assert.ok(camera.x<0&&camera.y<0);
+});
+
+test('SudokuMaker art coordinates are row then column, just like fog and cages',()=>{
+  assert.deepEqual(puzzlePoint([1,4]),[208,52]);
+  assert.deepEqual(puzzlePoint([0.5,1.5]),[78,26]);
+  assert.deepEqual(puzzlePoint([4,2]),[104,208]);
+  assert.equal(puzzlePoint([Infinity,0]),null);
+});
+
+test('source line layers preserve coordinates, widths and overlay ordering',()=>{
+  const paths=[];
+  const ctx={
+    save(){},restore(){},beginPath(){},setLineDash(){},
+    moveTo(...xy){paths.push(['move',...xy]);},
+    lineTo(...xy){paths.push(['line',...xy]);},
+    stroke(){paths.push(['stroke',this.lineWidth,this.strokeStyle]);}
+  };
+  const clip={left:0,top:0,right:800,bottom:800};
+  const lines=[
+    {wayPoints:[[1,2],[3,4]],thickness:6.4,color:'#123456'},
+    {target:'overlay',wayPoints:[[2,1],[2,3]],thickness:3.2}
+  ];
+  drawPuzzleLines(ctx,lines,clip);
+  assert.deepEqual(paths.slice(0,3),[
+    ['move',104,52],['line',208,156],['stroke',5.2,'#123456']
+  ]);
+  assert.equal(paths.length,3);
+  drawPuzzleLines(ctx,lines,clip,'overlay');
+  assert.deepEqual(paths.slice(3,5),[['move',52,104],['line',156,104]]);
+});
+
+test('arrow geometry follows SudokuPad row/column placement',()=>{
+  const points=[];
+  const ctx={
+    save(){},restore(){},beginPath(){},closePath(){},stroke(){},fill(){},
+    moveTo(...xy){points.push(['move',...xy]);},
+    lineTo(...xy){points.push(['line',...xy]);}
+  };
+  drawArrows(ctx,{arrows:[{wayPoints:[[1,2],[1,3]],thickness:3.2}]},
+    {left:0,top:0,right:500,bottom:500});
+  assert.deepEqual(points.slice(0,2),[['move',104,52],['line',156,52]]);
+});
+
+test('underlay rectangles and numeric, long and colored text retain source geometry',()=>{
+  const events=[];
+  const ctx={
+    save(){},restore(){},beginPath(){},fill(){},stroke(){},
+    rect(...args){events.push(['rect',...args]);},
+    roundRect(...args){events.push(['rounded',...args]);},
+    fillText(...args){events.push(['text',...args,this.fillStyle]);},
+    strokeText(...args){events.push(['outline',...args]);},
+    translate(){},rotate(){}
+  };
+  const clip={left:0,top:0,right:2000,bottom:2000};
+  drawDecorations(ctx,[
+    {center:[0.5,1.5],width:1,height:1,backgroundColor:'#a0a0a0'},
+    {center:[2.5,7.5],width:0,height:1,text:'A long map label',color:'#c0ffee',fontSize:15},
+    {center:[9.88,17.915],width:0.1,height:0.1,text:4,color:'#ff2222'}
+  ],clip);
+  assert.deepEqual(events.find(e=>e[0]==='rect'),['rect',52,0,52,52]);
+  const label=events.find(e=>e[0]==='text'&&e[1]==='A long map label');
+  assert.equal(label[2],390);
+  assert.equal(label[3],130);
+  assert.equal(label[4],'#c0ffee'); // No artificial maxWidth for zero-width labels.
+  const number=events.find(e=>e[0]==='text'&&e[1]==='4');
+  assert.ok(number);
+  assert.ok(Math.abs(number[2]-931.58)<.01);
+  assert.ok(Math.abs(number[3]-513.76)<.01);
+  assert.equal(number[5],'#ff2222');
 });
