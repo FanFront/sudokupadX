@@ -75,6 +75,12 @@ fn update_cell(
     with_session(&state, |session| session.apply(index, &mode, &symbol))
 }
 #[tauri::command]
+fn update_cells(
+    indices: Vec<usize>, mode: String, symbol: String, state: State<'_, AppState>
+) -> Result<EditResult, String> {
+    with_session(&state, |session| session.apply_many(&indices, &mode, &symbol))
+}
+#[tauri::command]
 fn undo(state: State<'_, AppState>) -> Result<EditResult, String> {
     with_session(&state, Session::undo)
 }
@@ -94,7 +100,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            load_demo, open_puzzle, update_cell, undo, redo, restore_progress
+            load_demo, open_puzzle, update_cell, update_cells, undo, redo, restore_progress
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");
