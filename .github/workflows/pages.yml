@@ -1,0 +1,82 @@
+name: Deploy SudokuPad X to GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: sudokupadx-pages
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Build WASM and deploy review site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install dependencies
+        run: npm install
+      - name: Check JavaScript rendering regressions
+        run: npm test
+      - name: Check Rust core
+        run: cargo test -p sudokupadx-core --all-targets
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+      - name: Compile shared Rust core to WebAssembly and build Pages assets
+        env:
+          GITHUB_PAGES: 'true'
+        run: npm run build:web
+      - name: Verify deployed asset paths
+        run: |
+          test -s dist/index.html
+          test -s dist/wasm/sudokupadx_web.js
+          test -s dist/wasm/sudokupadx_web_bg.wasm
+          test -s dist/puzzles/catalog.json
+          test -s dist/puzzles/digits-of-despair.scl
+          test -s dist/puzzles/super-sudokoid-1.scl
+          grep -q '/sudokupadX/assets/' dist/index.html
+      - name: Install Chromium browser checks
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Run real-browser WASM puzzle smoke checks
+        run: |
+          set -euo pipefail
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/sudokupadx-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" || true' EXIT
+          for i in {1..45}; do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:4173/sudokupadX/; then break; fi
+            sleep 1
+          done
+          node scripts/web-smoke.mjs
+      - name: Upload puzzle screenshots for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudokupadx-wasm-board-screenshots
+          path: artifacts/web/*.png
+          if-no-files-found: warn
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
