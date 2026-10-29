@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost https://stefanlobbenmeier.github.io https://sudokupad.svencodes.com"
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost https://stefanlobbenmeier.github.io https://sudokupad.svencodes.com https://logic-masters.de"
     }
   },
   "bundle": {
