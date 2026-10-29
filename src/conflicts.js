@@ -30,14 +30,20 @@ export function buildConflictHouses(puzzle) {
       addRowsAndColumns(left, top, width, height);
     }
   }
+  const coordinates = pairs => pairs.map(pair => {
+    if (!Array.isArray(pair) || pair.length < 2) return -1;
+    const [r,c] = pair;
+    return Number.isInteger(r) && Number.isInteger(c) && r >= 0 && c >= 0 && r < rows && c < cols
+      ? r * cols + c : -1;
+  });
   for (const region of puzzle.regions || []) {
-    if (!Array.isArray(region)) continue;
-    add(region.map(pair => {
-      if (!Array.isArray(pair) || pair.length < 2) return -1;
-      const [r,c] = pair;
-      return Number.isInteger(r) && Number.isInteger(c) && r >= 0 && c >= 0 && r < rows && c < cols
-        ? r * cols + c : -1;
-    }));
+    if (Array.isArray(region)) add(coordinates(region));
+  }
+  // SudokuMaker represents non-repeating killer cages as unique:true.
+  // Some are hidden helper constraints (not drawn), but they still restrict
+  // which numbers may coexist. Decorative cages without unique:true do not.
+  for (const cage of puzzle.cages || []) {
+    if (cage?.unique === true && Array.isArray(cage.cells)) add(coordinates(cage.cells));
   }
   return houses;
 }
