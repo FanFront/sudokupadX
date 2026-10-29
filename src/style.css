@@ -54,7 +54,7 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 
 @media(max-width:410px){
   #libraryButton{display:block}
-  #demoButton{display:none}
+  #demoButton{padding:0 7px;min-height:35px;font-size:11px}
   .board-tools button{min-height:30px;padding:0 5px}
 }
 @media(max-width:370px){
@@ -62,4 +62,20 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   .brand{gap:0}
   #backButton{max-width:63px;padding:0 4px}
   .top-actions button{padding:0 5px}
+}
+
+/* Checkpoint transfer keeps file input and copyable JSON accessible on Android. */
+#checkpointDialog input[type=file]{width:100%;min-width:0;color:#bfd9e8;font-size:13px}
+#checkpointDialog #checkpointError{color:#ffe1a9;white-space:pre-wrap;min-height:1.2em}
+.checkpoint-actions{justify-content:flex-start;flex-wrap:wrap}
+.checkpoint-actions button{padding:0 12px}
+@media(max-width:850px){
+  #demoButton{display:none}
+  .top-actions #checkpointButton{padding:0 8px;min-height:35px;font-size:11px}
+  .top-actions #importButton{padding:0 8px;min-height:35px;font-size:11px}
+}
+@media(max-width:410px){
+  #demoButton{display:none}
+  .top-actions #importButton{font-size:0;min-width:38px}
+  .top-actions #importButton::after{content:'导题';font-size:11px}
 }

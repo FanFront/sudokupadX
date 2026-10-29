@@ -68,6 +68,24 @@ try{
     return !document.querySelector('#undoButton').disabled &&
       document.querySelector('#redoButton').disabled;
   },null,{timeout:10000});
+  // A checkpoint roundtrip must restore the actual Rust/WASM board state.
+  await page.locator('#checkpointButton').click();
+  await page.locator('#exportCheckpoint').click();
+  const savedText=await page.locator('#checkpointText').inputValue();
+  const checkpoint=JSON.parse(savedText);
+  assert.equal(checkpoint.format,'sudokupadx-checkpoint');
+  assert.equal(checkpoint.rows,9);
+  assert.equal(checkpoint.cols,9);
+  assert.equal(checkpoint.cells[40].value,'1');
+  await page.locator('#closeCheckpoint').click();
+  await page.locator('#eraseButton').click();
+  await page.waitForFunction(()=>!document.querySelector('#undoButton').disabled);
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('#checkpointButton').click();
+  await page.locator('#importCheckpoint').click();
+  await page.waitForFunction(()=>document.querySelector('#checkpointDialog')?.open===false);
+  assert.equal(await page.locator('#undoButton').isDisabled(),true,
+    'Restoring a checkpoint should clear the previous undo stack');
   await page.screenshot({path:'artifacts/web/demo-input.png'});
   assert.deepEqual(errors,[]);
   console.log('Rust WASM input, undo and redo passed; screenshots in artifacts/web/');

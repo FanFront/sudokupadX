@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import {invokeBrowser} from './web-runtime.js';
 import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,getLinkedPuzzles,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
+import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -588,6 +589,76 @@ $('confirmImport').addEventListener('click',async()=>{
     const input=file?await file.text():$('pasteInput').value.trim();
     await openInput(input);
   }catch(error){$('importError').textContent=String(error);}
+});
+// Cross-app checkpoints are verified against puzzle dimensions and all givens
+// before calling Rust's validated restore_progress. No remote upload is involved.
+$('checkpointButton').addEventListener('click',()=>{
+  $('checkpointError').textContent='';
+  $('checkpointDialog').showModal();
+});
+$('closeCheckpoint').addEventListener('click',()=>$('checkpointDialog').close());
+$('exportCheckpoint').addEventListener('click',()=>{
+  try{
+    if(!puzzle||!progress)throw Error('请先打开一道谜题');
+    save();
+    const data=createCheckpoint(puzzle,currentEntry,progress);
+    const contents=JSON.stringify(data);
+    $('checkpointText').value=contents;
+    $('checkpointFile').value='';
+    const filename='sudokupadx-'+(currentEntry?.id||'puzzle')+'-'+new Date().toISOString().slice(0,10)+'.json';
+    const url=URL.createObjectURL(new Blob([contents],{type:'application/json'}));
+    const link=document.createElement('a');
+    link.href=url;link.download=filename;
+    document.body.append(link);link.click();link.remove();
+    // Android WebViews may not expose a download handler; the JSON remains
+    // available for copying and for transfer through a messaging app.
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+    $('checkpointError').textContent='已生成存档。若设备未下载文件，请使用“复制 JSON”。';
+  }catch(error){$('checkpointError').textContent=String(error.message||error);}
+});
+$('copyCheckpoint').addEventListener('click',async()=>{
+  try{
+    if(!$('checkpointText').value.trim()&&puzzle)
+      $('checkpointText').value=JSON.stringify(createCheckpoint(puzzle,currentEntry,progress));
+    const text=$('checkpointText').value.trim();
+    if(!text)throw Error('没有可复制的存档');
+    if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
+    else {
+      $('checkpointText').select();
+      if(!document.execCommand('copy'))throw Error('无法自动复制，请手动选择文本');
+    }
+    $('checkpointError').textContent='存档已复制到剪贴板';
+  }catch(error){$('checkpointError').textContent=String(error.message||error);}
+});
+$('importCheckpoint').addEventListener('click',async()=>{
+  if(pending)return;
+  const errorLabel=$('checkpointError');
+  errorLabel.textContent='';
+  try{
+    const file=$('checkpointFile').files?.[0];
+    if(file && file.size>8*1024*1024)throw Error('存档文件超过 8 MiB');
+    const raw=file?await file.text():$('checkpointText').value.trim();
+    const cp=inspectCheckpoint(raw);
+    const target=matchingCatalogEntry(cp,catalog);
+    const sameSource=puzzleSlug(currentEntry?.url)&&
+      puzzleSlug(currentEntry?.url)===puzzleSlug(cp.sourceUrl);
+    const sameKey=cp.key&&cp.key===puzzle?.key;
+    if(!target&&!sameSource&&!sameKey)
+      throw Error('找不到对应的内置谜题。请先手动打开同一谜题再导入。');
+    if(!window.confirm('导入“'+(cp.title||cp.puzzleId||'存档')+
+        '”会替换目标谜题当前进度。继续？'))return;
+    if(target&&currentEntry?.id!==target.id)
+      await openBundled(target.id,false);
+    const cells=verifyCheckpoint(cp,puzzle,currentEntry);
+    // Save any previous progress before importing. Rust rejects malformed
+    // cells and given-cell edits without mutating the current session.
+    save();
+    progress=await call('restore_progress',{cells});
+    save();lastCompletion=Boolean(progress.solved);
+    selected=-1;selectedCells=[];updateControls();requestDraw();
+    $('checkpointDialog').close();
+    toast('存档导入成功 · '+cells.filter(c=>c.value||c.corner.length||c.center.length||c.color).length+' 格已恢复');
+  }catch(error){errorLabel.textContent=String(error.message||error);}
 });
 $('demoButton').addEventListener('click',async()=>{
   if(pending)return;
