@@ -34,6 +34,8 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 #rulesDialog .sector-links{max-height:180px;overflow-y:auto}
 #completionDialog .full-rules{white-space:pre-wrap}
 #rulesDialog .full-rules{white-space:pre-wrap;overflow-y:auto;max-height:45dvh}
+.source-link{display:block;color:#b9e4d6;text-decoration:underline;font-size:13px;line-height:1.5}
+.source-link[hidden]{display:none}
 .board-panel .board-hud{z-index:1}
 @media(max-width:850px){
   #backButton{display:block;white-space:nowrap}
