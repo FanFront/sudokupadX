@@ -268,6 +268,10 @@ function updateInfo() {
   original.hidden=!currentEntry?.url;
   if(currentEntry?.url) original.href=currentEntry.url;
   else original.removeAttribute('href');
+  const lmdSource=$('lmdSourceLink');
+  lmdSource.hidden=!currentEntry?.sourceUrl;
+  if(currentEntry?.sourceUrl) lmdSource.href=currentEntry.sourceUrl;
+  else lmdSource.removeAttribute('href');
   $('puzzleTitle').textContent = puzzle.title;
   $('puzzleAuthor').textContent = puzzle.author || 'SudokuPad / SudokuMaker';
   $('boardMeta').textContent = puzzle.rows+' × '+puzzle.cols+' · '+(puzzle.lines||[]).length+' lines';
@@ -331,7 +335,7 @@ async function openIndexedPuzzle(entry,input,offline) {
     // Parsing failure leaves the current Rust session intact.
     const result=await call('open_puzzle',{input,localization:null});
     currentEntry={id:'online:'+entry.id,kind:'online',title:entry.title,
-      group:entry.sourceName,url:entry.puzzleUrl};
+      group:entry.sourceName,url:entry.puzzleUrl,sourceUrl:entry.sourceUrl || null};
     navigationStack=[];mainDictionary={};
     await openResult(result);
     updateBack();
