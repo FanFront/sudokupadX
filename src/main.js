@@ -5,6 +5,7 @@ import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
+import {setupOnlineLibrary} from './online-ui.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -317,6 +318,22 @@ async function openInput(input) {
     $('pasteInput').value='';
     $('filePicker').value='';
     toast('谜题已导入');
+  } finally {pending=false;}
+}
+
+async function openIndexedPuzzle(entry,input,offline) {
+  if (pending) throw Error('请先等待当前谜题加载结束');
+  pending=true;
+  try {
+    if (puzzle) save();
+    // Parsing failure leaves the current Rust session intact.
+    const result=await call('open_puzzle',{input,localization:null});
+    currentEntry={id:'online:'+entry.id,kind:'online',title:entry.title,
+      group:entry.sourceName,url:entry.puzzleUrl};
+    navigationStack=[];mainDictionary={};
+    await openResult(result);
+    updateBack();
+    toast(offline?'已打开离线下载的谜题':'已打开在线谜题');
   } finally {pending=false;}
 }
 
@@ -658,6 +675,7 @@ $('nextSector').addEventListener('click',()=>{
   if(!matchingSectors.length)return;
   sectorCursor=(sectorCursor+1)%matchingSectors.length;updateSector();
 });
+setupOnlineLibrary({openPuzzle:openIndexedPuzzle,notify});
 $('libraryButton').addEventListener('click',()=>{
   renderLibrary();$('libraryDialog').showModal();
 });
