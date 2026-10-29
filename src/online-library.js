@@ -62,7 +62,7 @@ export function puzzleDownloadUrl(puzzleUrl) {
   if (/^(fpuz|fpuzzles|ctc|scf)/i.test(id)) {
     throw Error('这个索引条目使用了当前 Rust 解码器暂不支持的内嵌格式');
   }
-  return 'https://sudokupad.svencodes.com/ctclegacy/' + encodeURIComponent(id);
+  return 'https://sudokupad.svencodes.com/ctclegacy/' + id.split('/').map(encodeURIComponent).join('/');
 }
 
 export function normalizeRemotePuzzle(text) {
