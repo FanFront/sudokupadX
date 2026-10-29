@@ -1,12 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isVisible,getSectors,getLinkedPuzzles,drawFog,focusInitialFog,puzzlePoint,drawDecorations,drawPuzzleLines,drawArrows} from '../src/adventure-ui.js';
+import {isVisible,canSelectCell,getSectors,getLinkedPuzzles,drawFog,drawSectorBorders,focusInitialFog,puzzlePoint,drawDecorations,drawPuzzleLines,drawArrows} from '../src/adventure-ui.js';
 
-test('hidden cells are not selectable while ordinary boards remain visible',()=>{
+test('fog limits visibility, not selection of covered cells',()=>{
   assert.equal(isVisible({visible:[true,false]},0),true);
   assert.equal(isVisible({visible:[true,false]},1),false);
   assert.equal(isVisible({cells:[]},0),true);
   assert.equal(isVisible({visible:[true]},-1),false);
+  const puzzle={cells:[{},{}]};
+  assert.equal(canSelectCell(puzzle,1),true);
+  assert.equal(canSelectCell(puzzle,-1),false);
+  assert.equal(canSelectCell(puzzle,2),false);
 });
 
 test('select smallest overlapping sector and keep its rules separate',()=>{
@@ -36,6 +40,22 @@ test('fog is painted only over the covered cells',()=>{
     {left:0,top:0,right:104,bottom:104});
   assert.equal(fills.length,2);
   assert.deepEqual(fills.map(x=>x.slice(0,2)),[[52,0],[0,52]]);
+});
+
+test('scene borders frame multi-cell sectors but skip single-cell markers',()=>{
+  const strokes=[];
+  const ctx={save(){},restore(){},strokeRect(...args){strokes.push([...args,this.lineWidth,this.strokeStyle]);}};
+  const clip={left:0,top:0,right:520,bottom:520};
+  drawSectorBorders(ctx,[
+    {left:1,top:2,width:4,height:4},
+    {left:1,top:2,width:4,height:4}, // Duplicated rule metadata.
+    {left:6,top:1,width:3,height:1}, // Narrow passage boundary.
+    {left:0,top:0,width:1,height:1}, // One-cell rule marker.
+    {left:30,top:30,width:9,height:9} // Outside the viewport.
+  ],clip);
+  assert.equal(strokes.length,2);
+  assert.deepEqual(strokes[0],[53.6,105.6,204.8,204.8,3.2,'#354e62']);
+  assert.deepEqual(strokes[1],[313.1,53.1,153.8,49.8,2.2,'#354e62']);
 });
 
 test('initial camera focuses a dense visible area instead of whole map',()=>{
