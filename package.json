@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
+    "wasm:build": "wasm-pack build crates/sudokupadx-web --target web --release --out-dir ../../public/wasm",
+    "build:web": "npm run wasm:build && vite build",
+    "dev:web": "npm run wasm:build && vite --host 127.0.0.1",
     "preview": "vite preview",
     "tauri": "tauri",
     "android:init": "tauri android init",
