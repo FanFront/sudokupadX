@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import {invokeBrowser} from './web-runtime.js';
-import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
+import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
