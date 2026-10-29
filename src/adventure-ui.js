@@ -69,7 +69,9 @@ export function drawArrows(ctx, puzzle, clip) {
 export function drawCages(ctx, puzzle, clip) {
   const size=CELL_SIZE;
   for (const cage of puzzle.cages||[]) {
-    if (!Array.isArray(cage.cells) || cage.cells.length===0)continue;
+    // Hidden cages describe ordinary row/column/box constraints and are not
+    // visual killer cages. Drawing them invents dashed borders and 45/21 sums.
+    if (cage?.hidden===true || !Array.isArray(cage?.cells) || cage.cells.length===0)continue;
     const cells=cage.cells.map(pair=>
       Array.isArray(pair)?[Number(pair[0]),Number(pair[1])]:null
     ).filter(p=>p&&p.every(Number.isFinite));
@@ -79,21 +81,26 @@ export function drawCages(ctx, puzzle, clip) {
     if(left>clip.right || top>clip.bottom ||
        Math.max(...cells.map(c=>c[1]))*size<clip.left ||
        Math.max(...cells.map(c=>c[0]))*size<clip.top)continue;
-    ctx.save();ctx.strokeStyle=cage.outlineC||'#6d5e8b';
-    ctx.lineWidth=1.4;ctx.setLineDash([4,3]);ctx.beginPath();
-    const inset=3;
-    for(const [r,c] of cells){
-      const x=c*size,y=r*size;
-      if(!set.has((r-1)+','+c)){ctx.moveTo(x+inset,y+inset);ctx.lineTo(x+size-inset,y+inset);}
-      if(!set.has((r+1)+','+c)){ctx.moveTo(x+inset,y+size-inset);ctx.lineTo(x+size-inset,y+size-inset);}
-      if(!set.has(r+','+(c-1))){ctx.moveTo(x+inset,y+inset);ctx.lineTo(x+inset,y+size-inset);}
-      if(!set.has(r+','+(c+1))){ctx.moveTo(x+size-inset,y+inset);ctx.lineTo(x+size-inset,y+size-inset);}
+    ctx.save();
+    if(cells.length>1){
+      ctx.strokeStyle=cage.outlineC||'#6d5e8b';
+      ctx.lineWidth=1.4;ctx.setLineDash([4,3]);ctx.beginPath();
+      const inset=3;
+      for(const [r,c] of cells){
+        const x=c*size,y=r*size;
+        if(!set.has((r-1)+','+c)){ctx.moveTo(x+inset,y+inset);ctx.lineTo(x+size-inset,y+inset);}
+        if(!set.has((r+1)+','+c)){ctx.moveTo(x+inset,y+size-inset);ctx.lineTo(x+size-inset,y+size-inset);}
+        if(!set.has(r+','+(c-1))){ctx.moveTo(x+inset,y+inset);ctx.lineTo(x+inset,y+size-inset);}
+        if(!set.has(r+','+(c+1))){ctx.moveTo(x+size-inset,y+inset);ctx.lineTo(x+size-inset,y+size-inset);}
+      }
+      ctx.stroke();ctx.setLineDash([]);
     }
-    ctx.stroke();ctx.setLineDash([]);
+    // A single-cell cage can carry an intentional symbol or sum, but its
+    // redundant dashed inset would look like an extra rule on that cell.
     const sum=cage.value??cage.sum;
     if(sum!==undefined&&sum!==null&&String(sum)){
       ctx.textAlign='left';ctx.textBaseline='top';ctx.font='600 10px sans-serif';
-      ctx.fillStyle='#5a4c74';ctx.fillText(String(sum).slice(0,8),left+6,top+5);
+      ctx.fillStyle=cage.fontC||'#5a4c74';ctx.fillText(String(sum).slice(0,8),left+6,top+5);
     }
     ctx.restore();
   }
