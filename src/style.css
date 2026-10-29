@@ -89,6 +89,17 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 #linkedPuzzleButton[hidden]{display:none}
 @media(max-width:410px){.board-tools .linked-puzzle-entry{font-size:10px;padding:0 4px}}
 
+/* Logic Masters source page importer lives in the existing online library. */
+.lmd-import{border:1px solid #3b6078;border-radius:11px;background:#11283b;padding:9px 11px}
+.lmd-import summary{cursor:pointer;min-height:28px;font-weight:650;font-size:13px;color:#bcefe0}
+.lmd-import p{font-size:12px;line-height:1.55;color:#aac8d7;margin:7px 0}
+.lmd-input-row{display:flex;gap:7px;align-items:stretch;margin:7px 0}
+.lmd-input-row input,.lmd-input-row textarea{flex:1;min-width:0;padding:9px;border:1px solid #456b80;border-radius:8px;background:#0d2033;color:#eefaff;font-size:12px}
+.lmd-input-row button{flex-shrink:0;padding:0 10px;min-height:39px;font-size:12px}
+#lmdStatus{overflow-wrap:anywhere}
+#lmdResults{max-height:32dvh}
+.lmd-import .source-link{font-size:11px}
+@media(max-width:510px){.lmd-input-row{flex-direction:column}.lmd-input-row button{min-height:36px}}
 /* Online catalog is bundled into the APK/site; individual puzzles are downloaded
    on demand and stored in IndexedDB. Keep the library usable on narrow phones. */
 #bundledLibraryPanel[hidden],#onlineLibraryPanel[hidden]{display:none!important}

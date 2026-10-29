@@ -3,6 +3,10 @@ import {
   fetchOnlinePuzzle, readOnlineIndex, saveOnlineIndex,
   listOfflinePuzzles, readOfflinePuzzle, saveOfflinePuzzle, removeOfflinePuzzle
 } from './online-library.js';
+import {invoke} from '@tauri-apps/api/core';
+import {
+  logicMastersReference, parseLogicMastersPage, directSudokuPadEntry
+} from './logic-masters.js';
 
 // The bundled snapshot works without a network, including on first launch of the APK.
 // A newer index can be refreshed from the source; only explicitly downloaded
@@ -22,6 +26,138 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     const date = Date.parse(entry.publishedAt);
     return entry.sourceName + (Number.isFinite(date) ? ' · ' + new Date(date).toLocaleDateString('zh-CN') : '');
   };
+
+  // Logic Masters pages are usually HTML with an image, not a puzzle file.
+  // Import only an actual SudokuPad link published by the setter.
+  let lmdFound = [];
+  const lmdStatus = message => { $('lmdStatus').textContent = message; };
+  function renderLmd() {
+    if (!active) return;
+    const list = $('lmdResults');
+    list.replaceChildren();
+    const all = [...lmdFound];
+    for (const entry of saved.values()) {
+      if (entry.id?.startsWith('lmd:') && !all.some(item => item.id === entry.id))
+        all.push(entry);
+    }
+    if (!all.length) {
+      const p = document.createElement('p');
+      p.className = 'online-empty';
+      p.textContent = '尚无可导入的 SudokuPad 链接或已下载的 Logic Masters 谜题。';
+      list.append(p);
+    }
+    for (const entry of all) {
+      const downloaded = saved.has(entry.id);
+      const card = document.createElement('article');
+      card.className = 'online-entry';
+      const heading = document.createElement('strong');
+      heading.textContent = entry.title;
+      const detail = document.createElement('small');
+      detail.textContent = 'Logic Masters · ' + (downloaded ? '已离线保存' : '尚未下载');
+      const actions = document.createElement('div');
+      actions.className = 'online-entry-actions';
+      function addButton(label, action, primary = false) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.disabled = Boolean(actionId);
+        if (primary) button.className = 'online-primary-action';
+        button.addEventListener('click', () => operate(entry, action));
+        actions.append(button);
+      }
+      if (downloaded) {
+        addButton('离线打开', async () => {
+          const input = await readOfflinePuzzle(entry.id);
+          if (!input) throw Error('离线数据丢失，请重新下载');
+          await openPuzzle(entry,input,true);
+          $('libraryDialog').close();
+        },true);
+        addButton('移除下载',async () => {
+          await removeOfflinePuzzle(entry.id);
+          saved.delete(entry.id);
+          lmdStatus('离线谜题已移除，解题进度不会删除。');
+        });
+      }
+      addButton('在线打开',async () => {
+        await openPuzzle(entry,await fetchOnlinePuzzle(entry),false);
+        $('libraryDialog').close();
+      },!downloaded);
+      if (!downloaded) addButton('下载离线',async () => {
+        const input = await fetchOnlinePuzzle(entry);
+        await saveOfflinePuzzle(entry,input);
+        saved.set(entry.id,entry);
+        lmdStatus('已下载「' + entry.title + '」，可断网游玩。');
+      });
+      if (entry.sourceUrl) {
+        const source = document.createElement('a');
+        source.href = entry.sourceUrl;
+        source.target = '_blank';
+        source.rel = 'noopener noreferrer';
+        source.textContent = '查看作者在 Logic Masters 发布的原题与规则';
+        source.className = 'source-link';
+        card.append(heading,detail,actions,source);
+      } else card.append(heading,detail,actions);
+      list.append(card);
+    }
+  }
+  async function resolveLmdReference() {
+    const input = $('lmdReference').value.trim();
+    if (/^https:\/\/(?:www\.)?sudokupad\.app\//i.test(input)) {
+      lmdFound = [directSudokuPadEntry(input)];
+      lmdStatus('已识别 SudokuPad 直链，可在线打开或下载离线。');
+      renderLmd();
+      return;
+    }
+    const ref = logicMastersReference(input);
+    let html;
+    if (window.__TAURI_INTERNALS__) {
+      html = await invoke('fetch_logic_masters_page',{puzzleId:ref.id});
+    } else {
+      let response;
+      try {
+        response = await fetch(ref.url,{cache:'no-store',credentials:'omit'});
+      } catch {
+        throw Error('网页版无法读取此跨域页面（可能是 CORS 限制）。请从原页面复制 SudokuPad 游玩链接，粘贴到上方输入框，或在安卓 App 中通过题号提取。');
+      }
+      if (!response.ok) throw Error('Logic Masters 页面请求失败：HTTP ' + response.status);
+      if (Number(response.headers.get('content-length') || 0)>1024*1024)
+        throw Error('页面超过 1 MiB 上限');
+      html = await response.text();
+    }
+    lmdFound = parseLogicMastersPage(html,ref);
+    lmdStatus(lmdFound.length ?
+      '从 Logic Masters ' + ref.id + ' 找到 ' + lmdFound.length + ' 个 SudokuPad 链接。':
+      '这个页面未提供可用的 SudokuPad 链接。仅有图片或 Penpa+ 的题目无法自动还原。');
+    renderLmd();
+  }
+  async function resolveLmdPasted() {
+    const input = $('lmdPasted').value.trim();
+    if (/^https:\/\/(?:www\.)?sudokupad\.app\//i.test(input)) {
+      lmdFound = [directSudokuPadEntry(input)];
+    } else {
+      const ref = logicMastersReference($('lmdReference').value);
+      lmdFound = parseLogicMastersPage(input,ref);
+    }
+    lmdStatus(lmdFound.length ?
+      '从粘贴内容提取到 ' + lmdFound.length + ' 道可加载的 SudokuPad 谜题。':
+      '粘贴内容没有可用的 SudokuPad 链接；图片题面暂不能自动转成可玩数独。');
+    renderLmd();
+  }
+  async function lmdAction(action) {
+    if (actionId) return;
+    actionId = 'lmd:lookup';
+    $('lmdFetch').disabled = true;
+    $('lmdParsePaste').disabled = true;
+    lmdStatus('正在提取谜题链接…');
+    try { await action(); }
+    catch (error) { lmdStatus('导入失败：' + errorText(error)); }
+    finally {
+      actionId = '';
+      $('lmdFetch').disabled = false;
+      $('lmdParsePaste').disabled = false;
+      renderLmd();
+    }
+  }
 
   function render() {
     if (!active) return;
@@ -106,7 +242,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     renderList();
     try { await action(); }
     catch(error) { status('操作失败：' + errorText(error)); notify(error); }
-    finally { actionId = ''; renderList(); }
+    finally { actionId = ''; renderList(); renderLmd(); }
   }
 
   async function open(entry, offline) {
@@ -140,6 +276,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
       status('目录可用，但无法读取离线下载记录：' + errorText(error));
     }
     render();
+    renderLmd();
   }
 
   async function refreshIndex() {
@@ -182,6 +319,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
         saved = new Map((await listOfflinePuzzles()).map(e=>[e.id,e]));
       } catch {}
       renderList();
+      renderLmd();
     }
   }
   function showBundled() {
@@ -197,4 +335,9 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   $('onlineSourceFilter').addEventListener('change', renderList);
   $('onlineOfflineOnly').addEventListener('change', renderList);
   $('refreshOnlineIndex').addEventListener('click', () => refreshIndex().catch(notify));
+  $('lmdFetch').addEventListener('click', () => lmdAction(resolveLmdReference));
+  $('lmdParsePaste').addEventListener('click', () => lmdAction(resolveLmdPasted));
+  $('lmdReference').addEventListener('keydown',event => {
+    if (event.key === 'Enter') { event.preventDefault(); lmdAction(resolveLmdReference); }
+  });
 }

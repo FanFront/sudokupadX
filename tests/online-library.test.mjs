@@ -86,3 +86,22 @@ test('Tauri content security policy allows only required remote puzzle hosts',()
   assert.ok(csp.includes('https://stefanlobbenmeier.github.io'));
   assert.ok(csp.includes('https://sudokupad.svencodes.com'));
 });
+
+
+test('Logic Masters native command and CSP are scoped to official puzzle pages',()=>{
+  const rust=readFileSync(new URL('../src-tauri/src/lib.rs',import.meta.url),'utf8');
+  const config=JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json',import.meta.url),'utf8'));
+  assert.match(rust,/async fn fetch_logic_masters_page/);
+  assert.match(rust,/puzzle_id\.len\(\) != 6/);
+  assert.match(rust,/redirect\(reqwest::redirect::Policy::none\(\)\)/);
+  assert.match(rust,/LIMIT: usize = 1024 \* 1024/);
+  assert.match(config.app.security.csp,/https:\/\/logic-masters\.de/);
+});
+
+test('Logic Masters importer controls are present in the shared web and Android UI',()=>{
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+  for(const id of ['lmdReference','lmdFetch','lmdPasted','lmdParsePaste','lmdResults','lmdStatus','lmdSourceLink'])
+    assert.ok(html.includes('id="'+id+'"'),id);
+  assert.match(main,/sourceUrl:entry\.sourceUrl \|\| null/);
+});

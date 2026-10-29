@@ -29,6 +29,16 @@ The catalog is `public/puzzles/catalog.json`. Puzzle files are in `public/puzzle
 
 在线题库的部分谜题可能使用尚未被 Rust 引擎支持的变体编码或绘图规则。无法解码时会提示错误，不会代替原题生成简化谜题。在线索引仅储存公开的发现信息，不批量下载第三方题面。
 
+## Logic Masters Deutschland 谜题导入
+
+打开 **游戏库 → 在线题库索引 → 从 Logic Masters Deutschland 导入谜题**：
+
+- 输入六位 Logic Masters 编号（例如 `000OKF`）或 `https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000OKF`；安卓版通过 Rust 原生 HTTPS 客户端读取公开页面，提取作者发布的 SudokuPad 链接。也可以直接粘贴 SudokuPad 游玩链接。
+- **在线打开**：沿用既有 SudokuPad SCL/JSON 下载器与 Rust 棋盘。**下载离线**：将实际题面存入 IndexedDB；断网后选择 **离线打开**。离线列表和解题进度均在本地保留。
+- GitHub Pages 网页版会尝试直接读取公开 Logic Masters 页面；若页面未授权跨站读取（CORS），浏览器无法自动解析，此时请复制原页面里的 SudokuPad 直链到输入框，或将网页 HTML 粘贴到备用输入区域。不依赖公共 CORS 代理。
+- 该网站的谜题不使用统一数据格式，也有只有图片、文字规则、PDF 或 Penpa+ 的条目。**没有 SudokuPad 链接的页面不会被伪造为可玩数独**。Rust 解码器未实现的变体仍会报错；自定义线条和约束可能不完全复现。请参看原题页面的完整规则。
+- 仅按需下载用户选择的题面，不批量抓取站点作品；保存来源链接并保留作者署名。
+
 **Permissions:** Third-party puzzle artwork, text, and data remain the creators' work. This repository is public; confirm permission to redistribute bundled assets and consider moving it to a private repository if it is only for personal testing.
 
 ## Gameplay implemented so far

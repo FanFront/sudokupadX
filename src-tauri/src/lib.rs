@@ -99,12 +99,46 @@ fn restore_progress(
     with_session(&state, |session| session.restore(cells))
 }
 
+// Read only the public Logic Masters puzzle HTML, not arbitrary user-provided
+// addresses. Native requests are necessary because the portal may not permit
+// cross-origin browser fetches. Do not send session cookies or credentials.
+#[tauri::command]
+async fn fetch_logic_masters_page(puzzle_id: String) -> Result<String, String> {
+    if puzzle_id.len() != 6 || !puzzle_id.bytes().all(|b| b.is_ascii_alphanumeric()) {
+        return Err("Logic Masters 谜题 ID 必须为六位字母或数字".into());
+    }
+    let id = puzzle_id.to_ascii_uppercase();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .redirect(reqwest::redirect::Policy::none())
+        .build().map_err(|e| format!("HTTPS 客户端初始化失败: {e}"))?;
+    let url = format!("https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id={id}");
+    let mut response = client.get(&url).send().await
+        .map_err(|e| format!("访问 Logic Masters 失败: {e}"))?;
+    if !response.status().is_success() {
+        return Err(format!("Logic Masters 返回 HTTP {}", response.status()));
+    }
+    const LIMIT: usize = 1024 * 1024;
+    if response.content_length().is_some_and(|len| len > LIMIT as u64) {
+        return Err("Logic Masters 页面超过 1 MiB 大小限制".into());
+    }
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response.chunk().await
+        .map_err(|e| format!("读取 Logic Masters 页面失败: {e}"))? {
+        if bytes.len() + chunk.len() > LIMIT {
+            return Err("Logic Masters 页面超过 1 MiB 大小限制".into());
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            load_demo, open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress
+            load_demo, open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress, fetch_logic_masters_page
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");

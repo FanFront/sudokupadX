@@ -106,6 +106,7 @@
       <div class="sector-switch"><strong id="modalSectorTitle">规则</strong><button id="nextSector" type="button" hidden>切换区域</button></div>
       <div id="fullRules" class="full-rules"></div>
       <a id="originalPuzzleLink" class="source-link" target="_blank" rel="noopener noreferrer" hidden>在原版 SudokuPad 中对比此谜题</a>
+      <a id="lmdSourceLink" class="source-link" target="_blank" rel="noopener noreferrer" hidden>查看 Logic Masters 原题与完整规则</a>
       <div id="modalLinks" class="sector-links"></div>
       <button id="dismissRules" class="primary-btn" type="button">返回棋盘</button>
     </div>
@@ -124,6 +125,21 @@
       </div>
       <section id="onlineLibraryPanel" role="tabpanel" hidden>
         <p>本地内置在线题库的索引快照；离线可检索目录。首次游玩需联网获取题面，使用“下载离线”保存后才可断网打开。</p>
+        <details class="lmd-import">
+          <summary>从 Logic Masters Deutschland 导入谜题</summary>
+          <p>输入 Logic Masters 六位题号、原题页面链接或页面中的 SudokuPad 游玩链接。只导入作者提供的可解析题面；图片题和 Penpa+ 题不能自动转换。</p>
+          <div class="lmd-input-row">
+            <input id="lmdReference" type="text" aria-label="Logic Masters ID or puzzle URL" placeholder="000OKF / Logic Masters 页面 / SudokuPad 链接" autocomplete="off" spellcheck="false">
+            <button id="lmdFetch" type="button">提取页面链接</button>
+          </div>
+          <p>如果网页版因为跨域限制不能读取 Logic Masters，请打开原页面复制 SudokuPad 链接；也可以粘贴页面 HTML 后解析（HTML 模式需先输入六位题号）。</p>
+          <div class="lmd-input-row">
+            <textarea id="lmdPasted" rows="2" placeholder="可选：粘贴 SudokuPad 链接或 Logic Masters 网页 HTML" aria-label="粘贴谜题链接或页面 HTML"></textarea>
+            <button id="lmdParsePaste" type="button">解析粘贴内容</button>
+          </div>
+          <p id="lmdStatus" role="status" aria-live="polite">已下载的 Logic Masters 谜题会在下方显示，可离线打开。</p>
+          <div id="lmdResults" class="online-index-list" aria-label="Logic Masters 导入与下载"></div>
+        </details>
         <div class="online-search-row">
           <input id="onlineSearch" type="search" placeholder="搜索标题、作者来源、题目编号或链接" aria-label="搜索在线谜题">
           <select id="onlineSourceFilter" aria-label="按来源筛选"><option value="">所有来源</option></select>
