@@ -61,6 +61,11 @@ impl WasmPuzzleEngine {
         to_json(&session.apply_many(&indices, mode, symbol).map_err(js_error)?)
     }
 
+    pub fn check_progress(&mut self) -> Result<String, JsValue> {
+        let session = self.session.as_ref().ok_or_else(|| js_error("No puzzle is open."))?;
+        to_json(&session.check_progress())
+    }
+
     pub fn undo(&mut self) -> Result<String, JsValue> {
         let session = self.session.as_mut().ok_or_else(|| js_error("No puzzle is open."))?;
         to_json(&session.undo().map_err(js_error)?)
