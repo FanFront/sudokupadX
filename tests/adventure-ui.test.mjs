@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isVisible,canSelectCell,getSectors,getLinkedPuzzles,drawFog,drawSectorBorders,focusInitialFog,puzzlePoint,drawDecorations,drawPuzzleLines,drawArrows} from '../src/adventure-ui.js';
+import {isVisible,canSelectCell,getSectors,getLinkedPuzzles,drawFog,drawSectorBorders,focusInitialFog,puzzlePoint,drawDecorations,drawPuzzleLines,drawArrows,drawCages,dragCellIndices} from '../src/adventure-ui.js';
 
 test('fog limits visibility, not selection of covered cells',()=>{
   assert.equal(isVisible({visible:[true,false]},0),true);
@@ -11,6 +11,20 @@ test('fog limits visibility, not selection of covered cells',()=>{
   assert.equal(canSelectCell(puzzle,1),true);
   assert.equal(canSelectCell(puzzle,-1),false);
   assert.equal(canSelectCell(puzzle,2),false);
+});
+
+test('drag crosses every cell, including fast diagonal moves, without panning',()=>{
+  const puzzle={rows:4,cols:5,cells:Array(20).fill(null)};
+  const camera={x:10,y:20,scale:1};
+  const start={x:36,y:46},end={x:36+52*3,y:46};
+  assert.deepEqual(dragCellIndices(start,end,camera,puzzle),[0,1,2,3]);
+  assert.deepEqual(
+    dragCellIndices(start,{x:36+52*3,y:46+52*3},camera,puzzle),
+    [0,6,12,18]
+  );
+  assert.deepEqual(dragCellIndices({x:-100,y:-100},start,camera,puzzle),[0]);
+  const zoomed={x:100,y:80,scale:2};
+  assert.deepEqual(dragCellIndices({x:152,y:132},{x:256,y:132},zoomed,puzzle),[0,1]);
 });
 
 test('select smallest overlapping sector and keep its rules separate',()=>{
@@ -31,6 +45,26 @@ test('only imported puzzle ids referenced by rules become links',()=>{
   const rules='[Play](https://sudokupad.app/abc) and [Again](https://sudokupad.app/abc).';
   assert.deepEqual(getLinkedPuzzles(rules,catalog,'a').map(x=>x.id),['boss-a']);
   assert.deepEqual(getLinkedPuzzles('No links yet',catalog,'a'),[]);
+});
+
+test('hidden constraint cages never draw; visible single-cell clues show only labels',()=>{
+  const calls=[];
+  const ctx={
+    save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},
+    setLineDash(){},stroke(){calls.push('stroke')},
+    fillText(text){calls.push(['text',text,this.fillStyle]);}
+  };
+  const clip={left:0,top:0,right:400,bottom:400};
+  drawCages(ctx,{cages:[
+    {hidden:true,cells:[[0,0],[0,1],[0,2]],value:45},
+    {hidden:true,cells:[[1,0]],value:12},
+    {cells:[[2,1]],value:'🪙',fontC:'#123456'},
+    {cells:[[3,0],[3,1]],value:10}
+  ]},clip);
+  assert.equal(calls.filter(x=>x==='stroke').length,1);
+  assert.deepEqual(calls.filter(x=>Array.isArray(x)),[
+    ['text','🪙','#123456'],['text','10','#5a4c74']
+  ]);
 });
 
 test('fog is painted only over the covered cells',()=>{
