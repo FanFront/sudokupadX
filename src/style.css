@@ -79,3 +79,8 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   .top-actions #importButton{font-size:0;min-width:38px}
   .top-actions #importButton::after{content:'导题';font-size:11px}
 }
+
+/* Visible-sector links stay reachable on phones where the detail panel is hidden. */
+.board-tools .linked-puzzle-entry{background:#2c756d;color:#f0fff7;border-color:#62b4a6;white-space:nowrap}
+#linkedPuzzleButton[hidden]{display:none}
+@media(max-width:410px){.board-tools .linked-puzzle-entry{font-size:10px;padding:0 4px}}
