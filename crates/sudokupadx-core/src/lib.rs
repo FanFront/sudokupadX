@@ -317,10 +317,18 @@ pub struct Snapshot {
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub struct ChangedCell {
+    pub index: usize,
+    pub cell: InputCell,
+}
+
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EditResult {
     pub index: usize,
     pub cell: InputCell,
+    /// All cells changed by this edit, including bulk edits and undo/redo.
+    pub changes: Vec<ChangedCell>,
     pub can_undo: bool,
     pub can_redo: bool,
     pub visible: Vec<bool>,
@@ -329,10 +337,15 @@ pub struct EditResult {
 }
 
 #[derive(Clone, Debug)]
-struct Edit {
+struct CellChange {
     index: usize,
     before: InputCell,
     after: InputCell,
+}
+
+#[derive(Clone, Debug)]
+struct Edit {
+    changes: Vec<CellChange>,
 }
 
 pub struct Session {
@@ -409,10 +422,13 @@ impl Session {
             completion: self.completion(),
         }
     }
-    fn result(&self, index: usize) -> EditResult {
+    fn result(&self, index: usize, indices: &[usize]) -> EditResult {
         EditResult {
             index,
             cell: self.cells[index].clone(),
+            changes: indices.iter().map(|&index| ChangedCell {
+                index, cell: self.cells[index].clone()
+            }).collect(),
             can_undo: !self.undo.is_empty(),
             can_redo: !self.redo.is_empty(),
             visible: self.visible.clone(),
@@ -449,52 +465,104 @@ impl Session {
         if self.puzzle.cells[index].given.is_some() {
             return Err("Given cells cannot be edited.".into());
         }
+        self.apply_many(&[index], mode, symbol)
+    }
+
+    /// Apply a single keypad action to all selected editable cells. Undo/redo
+    /// treats the group as one edit and fog is recalculated only once.
+    pub fn apply_many(&mut self, indices: &[usize], mode: &str, symbol: &str) -> Result<EditResult, String> {
+        if !matches!(mode, "value" | "corner" | "center" | "color" | "erase") {
+            return Err("Unknown input mode.".into());
+        }
+        if mode == "color" && !valid_color(symbol) {
+            return Err("Invalid palette color.".into());
+        }
         if mode != "erase" && mode != "color" && !valid_symbol(symbol) {
             return Err("Enter one digit or uppercase letter.".into());
         }
-        let before = self.cells[index].clone();
-        let next = &mut self.cells[index];
-        match mode {
-            "value" => {
-                next.value = if next.value.as_deref() == Some(symbol) {
-                    None
-                } else { Some(symbol.to_owned()) };
-            }
-            "corner" => toggle(&mut next.corner, symbol),
-            "center" => toggle(&mut next.center, symbol),
-            "color" => {
-                if !valid_color(symbol) { return Err("Invalid palette color.".into()); }
-                next.color = if next.color.as_deref() == Some(symbol) {
-                    None
-                } else { Some(symbol.to_owned()) };
-            }
-            "erase" => *next = InputCell::default(),
-            _ => return Err("Unknown input mode.".into()),
+        if indices.len() > self.cells.len() {
+            return Err("Too many selected cells.".into());
         }
-        let after = self.cells[index].clone();
-        if before != after {
-            self.undo.push(Edit { index, before, after });
+        let mut selected = Vec::new();
+        for &index in indices {
+            if index >= self.cells.len() { return Err("Cell is outside the board.".into()); }
+            if self.puzzle.cells[index].given.is_none() && !selected.contains(&index) {
+                selected.push(index);
+            }
+        }
+        if selected.is_empty() { return Err("No editable cells selected.".into()); }
+        // When some cells already contain the symbol, complete the selection
+        // rather than erasing those cells. A second press clears them all.
+        let all_active = selected.iter().all(|&index| {
+            let cell = &self.cells[index];
+            match mode {
+                "value" => cell.value.as_deref() == Some(symbol),
+                "corner" => cell.corner.iter().any(|s| s == symbol),
+                "center" => cell.center.iter().any(|s| s == symbol),
+                "color" => cell.color.as_deref() == Some(symbol),
+                _ => false,
+            }
+        });
+        let mut changes = Vec::new();
+        for &index in &selected {
+            let before = self.cells[index].clone();
+            let next = &mut self.cells[index];
+            match mode {
+                "value" => next.value = if all_active { None } else { Some(symbol.to_owned()) },
+                "corner" => {
+                    if all_active {
+                        next.corner.retain(|s| s != symbol);
+                    } else if !next.corner.iter().any(|s| s == symbol) {
+                        toggle(&mut next.corner, symbol);
+                    }
+                }
+                "center" => {
+                    if all_active {
+                        next.center.retain(|s| s != symbol);
+                    } else if !next.center.iter().any(|s| s == symbol) {
+                        toggle(&mut next.center, symbol);
+                    }
+                }
+                "color" => next.color = if all_active { None } else { Some(symbol.to_owned()) },
+                "erase" => *next = InputCell::default(),
+                _ => unreachable!(),
+            }
+            let after = next.clone();
+            if before != after { changes.push(CellChange { index, before, after }); }
+        }
+        let index = *selected.last().unwrap();
+        let changed_indices: Vec<usize> = changes.iter().map(|c| c.index).collect();
+        if !changes.is_empty() {
+            self.undo.push(Edit { changes });
             if self.undo.len() > 300 { self.undo.remove(0); }
             self.redo.clear();
         }
         self.refresh_fog();
-        Ok(self.result(index))
+        Ok(self.result(index, &changed_indices))
     }
     pub fn undo(&mut self) -> Result<EditResult, String> {
         let edit = self.undo.pop().ok_or_else(|| "Nothing to undo.".to_string())?;
-        self.cells[edit.index] = edit.before.clone();
-        let index = edit.index;
+        let mut indices = Vec::new();
+        for change in &edit.changes {
+            self.cells[change.index] = change.before.clone();
+            indices.push(change.index);
+        }
+        let index = *indices.last().expect("a stored edit must change a cell");
         self.redo.push(edit);
         self.refresh_fog();
-        Ok(self.result(index))
+        Ok(self.result(index, &indices))
     }
     pub fn redo(&mut self) -> Result<EditResult, String> {
         let edit = self.redo.pop().ok_or_else(|| "Nothing to redo.".to_string())?;
-        self.cells[edit.index] = edit.after.clone();
-        let index = edit.index;
+        let mut indices = Vec::new();
+        for change in &edit.changes {
+            self.cells[change.index] = change.after.clone();
+            indices.push(change.index);
+        }
+        let index = *indices.last().expect("a stored edit must change a cell");
         self.undo.push(edit);
         self.refresh_fog();
-        Ok(self.result(index))
+        Ok(self.result(index, &indices))
     }
 }
 
@@ -613,6 +681,39 @@ mod tests {
         assert_eq!(session.snapshot().visible, vec![false,true,false,false]);
         session.redo().unwrap();
         assert_eq!(session.snapshot().visible, vec![false,true,true,false]);
+    }
+
+    #[test]
+    fn bulk_input_is_one_undoable_edit_and_does_not_erase_matching_values() {
+        let raw = r#"{"metadata":{"solution":"1234"},"cells":[[{"value":1},{}],[{},{}]],
+          "foglight":[[0,1]],"triggereffect":[
+          {"trigger":{"type":"cellvalue","cell":"r1c2r2c1"},
+           "effect":{"type":"foglight","cells":"r2c2"}}]}"#;
+        let mut session = Session::new(load(raw).unwrap());
+        session.apply(1, "value", "2").unwrap();
+        let result = session.apply_many(&[0,1,2,2], "value", "2").unwrap();
+        assert_eq!(result.changes.len(), 1); // Given and already-correct values skipped.
+        assert_eq!(session.snapshot().cells[1].value.as_deref(), Some("2"));
+        assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("2"));
+        session.undo().unwrap();
+        assert!(session.snapshot().cells[2].value.is_none());
+        assert_eq!(session.snapshot().cells[1].value.as_deref(), Some("2"));
+        // Set two cells in a single transaction, then undo both at once.
+        session.apply_many(&[1,2], "value", "3").unwrap();
+        assert_eq!(session.snapshot().cells[1].value.as_deref(), Some("3"));
+        assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("3"));
+        let undone = session.undo().unwrap();
+        assert_eq!(undone.changes.len(), 2);
+        assert_eq!(session.snapshot().cells[1].value.as_deref(), Some("2"));
+        assert!(session.snapshot().cells[2].value.is_none());
+        session.redo().unwrap();
+        assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("3"));
+        session.apply_many(&[1,2], "corner", "5").unwrap();
+        assert_eq!(session.snapshot().cells[1].corner, vec!["5"]);
+        assert_eq!(session.snapshot().cells[2].corner, vec!["5"]);
+        session.apply_many(&[1,2], "corner", "5").unwrap();
+        assert!(session.snapshot().cells[1].corner.is_empty());
+        assert!(session.snapshot().cells[2].corner.is_empty());
     }
 
     #[test]
