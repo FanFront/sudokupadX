@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "FanFront/sodokupadAndroid/app/src/main/assets/offline",
-  "count": 46,
+  "count": 115,
   "items": [
     {
       "id": "digits-of-despair",
@@ -370,6 +370,623 @@
       "kind": "linked",
       "url": "https://sudokupad.app/vaz2rx345r",
       "file": "puzzles/super-linked-vaz2rx345r.scl"
+    },
+    {
+      "id": "k4995f3fx1",
+      "title": "交织的细胞",
+      "group": "k4995f3fx1",
+      "kind": "standalone",
+      "url": "https://sudokupad.app/k4995f3fx1?setting-outlinesonlines=0",
+      "file": "puzzles/new-k4995f3fx1.scl"
+    },
+    {
+      "id": "utmh5dybvf",
+      "title": "生命之树",
+      "group": "utmh5dybvf",
+      "kind": "standalone",
+      "url": "https://sudokupad.app/utmh5dybvf?setting-digitoutlines=0",
+      "file": "puzzles/new-utmh5dybvf.scl"
+    },
+    {
+      "id": "mfhh567b60",
+      "title": "形状之战",
+      "group": "mfhh567b60",
+      "kind": "standalone",
+      "url": "https://sudokupad.app/mfhh567b60",
+      "file": "puzzles/new-mfhh567b60.scl"
+    },
+    {
+      "id": "k7qc98e00u",
+      "title": "遥远国度的回忆",
+      "group": "k7qc98e00u",
+      "kind": "standalone",
+      "url": "https://sudokupad.app/k7qc98e00u?setting-nogrid",
+      "file": "puzzles/new-k7qc98e00u.scl"
+    },
+    {
+      "id": "aaw113rfzh",
+      "title": "交织 · 相连",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "k4995f3fx1",
+      "url": "https://sudokupad.app/aaw113rfzh?setting-digitoutlines=0",
+      "file": "puzzles/new-aaw113rfzh.scl"
+    },
+    {
+      "id": "wzyjchj6ss",
+      "title": "交织 · 茎",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "k4995f3fx1",
+      "url": "https://sudokupad.app/wzyjchj6ss?setting-digitoutlines=0",
+      "file": "puzzles/new-wzyjchj6ss.scl"
+    },
+    {
+      "id": "d2xwyazqf9",
+      "title": "交织 · 黑暗",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "k4995f3fx1",
+      "url": "https://sudokupad.app/d2xwyazqf9?setting-digitoutlines=0",
+      "file": "puzzles/new-d2xwyazqf9.scl"
+    },
+    {
+      "id": "z7qsv9k00p",
+      "title": "生命之树 · 支线 1",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "utmh5dybvf",
+      "url": "https://sudokupad.app/z7qsv9k00p?setting-digitoutlines=0&setting-nogrid=1",
+      "file": "puzzles/new-z7qsv9k00p.scl"
+    },
+    {
+      "id": "11xe5cvmg7",
+      "title": "生命之树 · 支线 2",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "utmh5dybvf",
+      "url": "https://sudokupad.app/11xe5cvmg7?setting-digitoutlines=0",
+      "file": "puzzles/new-11xe5cvmg7.scl"
+    },
+    {
+      "id": "4zusdo2z80",
+      "title": "生命之树 · 支线 3",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "utmh5dybvf",
+      "url": "https://sudokupad.app/4zusdo2z80?setting-digitoutlines=0",
+      "file": "puzzles/new-4zusdo2z80.scl"
+    },
+    {
+      "id": "sxa2lmgsa9",
+      "title": "圆环之城",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "mfhh567b60",
+      "url": "https://sudokupad.app/sxa2lmgsa9",
+      "file": "puzzles/new-sxa2lmgsa9.scl"
+    },
+    {
+      "id": "ngbyvop7o3",
+      "title": "钻石矿洞",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "mfhh567b60",
+      "url": "https://sudokupad.app/ngbyvop7o3",
+      "file": "puzzles/new-ngbyvop7o3.scl"
+    },
+    {
+      "id": "74mrv27me3",
+      "title": "圆圈与箭头",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "mfhh567b60",
+      "url": "https://sudokupad.app/74mrv27me3",
+      "file": "puzzles/new-74mrv27me3.scl"
+    },
+    {
+      "id": "c8qj3qrh28",
+      "title": "守卫任务",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "mfhh567b60",
+      "url": "https://sudokupad.app/c8qj3qrh28",
+      "file": "puzzles/new-c8qj3qrh28.scl"
+    },
+    {
+      "id": "mhyr83irby",
+      "title": "邮票",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "k7qc98e00u",
+      "url": "https://sudokupad.app/mhyr83irby?setting-nogrid",
+      "file": "puzzles/new-mhyr83irby.scl"
+    },
+    {
+      "id": "0ppo0tla6w",
+      "title": "家庭作业",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "k7qc98e00u",
+      "url": "https://sudokupad.app/0ppo0tla6w",
+      "file": "puzzles/new-0ppo0tla6w.scl"
+    },
+    {
+      "id": "4hykfvlpnv",
+      "title": "围棋",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "k7qc98e00u",
+      "url": "https://sudokupad.app/4hykfvlpnv",
+      "file": "puzzles/new-4hykfvlpnv.scl"
+    },
+    {
+      "id": "k58fj7zxpm",
+      "title": "纪念品",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "k7qc98e00u",
+      "url": "https://sudokupad.app/k58fj7zxpm?setting-nogrid",
+      "file": "puzzles/new-k58fj7zxpm.scl"
+    },
+    {
+      "id": "t5icydo5uv",
+      "title": "诗歌",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "k7qc98e00u",
+      "url": "https://sudokupad.app/t5icydo5uv",
+      "file": "puzzles/new-t5icydo5uv.scl"
+    },
+    {
+      "id": "vgwd2sewcb",
+      "title": "细胞",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "aaw113rfzh",
+      "url": "https://sudokupad.app/vgwd2sewcb?setting-digitoutlines=0",
+      "file": "puzzles/new-vgwd2sewcb.scl"
+    },
+    {
+      "id": "velqhose8v",
+      "title": "交织的细胞 · 支线 1",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "aaw113rfzh",
+      "url": "https://sudokupad.app/velqhose8v?setting-digitoutlines=0",
+      "file": "puzzles/new-velqhose8v.scl"
+    },
+    {
+      "id": "mwqksbnwkg",
+      "title": "交织的细胞 · 支线 2",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "aaw113rfzh",
+      "url": "https://sudokupad.app/mwqksbnwkg?setting-digitoutlines=0",
+      "file": "puzzles/new-mwqksbnwkg.scl"
+    },
+    {
+      "id": "afv1a86wyu",
+      "title": "纤细",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "wzyjchj6ss",
+      "url": "https://sudokupad.app/afv1a86wyu?setting-digitoutlines=0",
+      "file": "puzzles/new-afv1a86wyu.scl"
+    },
+    {
+      "id": "z6hl3kgo71",
+      "title": "一",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "wzyjchj6ss",
+      "url": "https://sudokupad.app/z6hl3kgo71?setting-digitoutlines=0",
+      "file": "puzzles/new-z6hl3kgo71.scl"
+    },
+    {
+      "id": "qu3r74uwax",
+      "title": "分明",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "d2xwyazqf9",
+      "url": "https://sudokupad.app/qu3r74uwax?setting-digitoutlines=0",
+      "file": "puzzles/new-qu3r74uwax.scl"
+    },
+    {
+      "id": "jf9e6dz872",
+      "title": "再一次",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "d2xwyazqf9",
+      "url": "https://sudokupad.app/jf9e6dz872?setting-digitoutlines=0",
+      "file": "puzzles/new-jf9e6dz872.scl"
+    },
+    {
+      "id": "t0pxonouyj",
+      "title": "交织的细胞 · 支线 3",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "d2xwyazqf9",
+      "url": "https://sudokupad.app/t0pxonouyj?setting-digitoutlines=0",
+      "file": "puzzles/new-t0pxonouyj.scl"
+    },
+    {
+      "id": "ou13tbgd6s",
+      "title": "生命之树 · 支线 4",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "z7qsv9k00p",
+      "url": "https://sudokupad.app/ou13tbgd6s?setting-digitoutlines=0",
+      "file": "puzzles/new-ou13tbgd6s.scl"
+    },
+    {
+      "id": "tqr6w94dc8",
+      "title": "纪念碑",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "z7qsv9k00p",
+      "url": "https://sudokupad.app/tqr6w94dc8?setting-digitoutlines=0",
+      "file": "puzzles/new-tqr6w94dc8.scl"
+    },
+    {
+      "id": "2zdlag4xh1",
+      "title": "生命之树 · 支线 5",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "z7qsv9k00p",
+      "url": "https://sudokupad.app/2zdlag4xh1?setting-digitoutlines=0",
+      "file": "puzzles/new-2zdlag4xh1.scl"
+    },
+    {
+      "id": "vfkdvae1s8",
+      "title": "树林",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "11xe5cvmg7",
+      "url": "https://sudokupad.app/vfkdvae1s8?setting-digitoutlines=0",
+      "file": "puzzles/new-vfkdvae1s8.scl"
+    },
+    {
+      "id": "bz1d323nx3",
+      "title": "湖泊",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "11xe5cvmg7",
+      "url": "https://sudokupad.app/bz1d323nx3?setting-digitoutlines=0",
+      "file": "puzzles/new-bz1d323nx3.scl"
+    },
+    {
+      "id": "3xltag99db",
+      "title": "猴面包树",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "11xe5cvmg7",
+      "url": "https://sudokupad.app/3xltag99db?setting-digitoutlines=0",
+      "file": "puzzles/new-3xltag99db.scl"
+    },
+    {
+      "id": "locvdyuyrh",
+      "title": "青蛙",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "4zusdo2z80",
+      "url": "https://sudokupad.app/locvdyuyrh?setting-digitoutlines=0",
+      "file": "puzzles/new-locvdyuyrh.scl"
+    },
+    {
+      "id": "rpasmxrt2q",
+      "title": "生命之树 · 支线 6",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "4zusdo2z80",
+      "url": "https://sudokupad.app/rpasmxrt2q?setting-digitoutlines=0",
+      "file": "puzzles/new-rpasmxrt2q.scl"
+    },
+    {
+      "id": "u164tr3aed",
+      "title": "曲线球",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "sxa2lmgsa9",
+      "url": "https://sudokupad.app/u164tr3aed",
+      "file": "puzzles/new-u164tr3aed.scl"
+    },
+    {
+      "id": "wy9zfy41pa",
+      "title": "发现差异",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "ngbyvop7o3",
+      "url": "https://sudokupad.app/wy9zfy41pa",
+      "file": "puzzles/new-wy9zfy41pa.scl"
+    },
+    {
+      "id": "017bto6z45",
+      "title": "靶场练习",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "74mrv27me3",
+      "url": "https://sudokupad.app/017bto6z45",
+      "file": "puzzles/new-017bto6z45.scl"
+    },
+    {
+      "id": "c0ortk7210",
+      "title": "沿着长矛",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "c8qj3qrh28",
+      "url": "https://sudokupad.app/c0ortk7210",
+      "file": "puzzles/new-c0ortk7210.scl"
+    },
+    {
+      "id": "d7w151rl1z",
+      "title": "旗帜",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "mhyr83irby",
+      "url": "https://sudokupad.app/d7w151rl1z?setting-nogrid",
+      "file": "puzzles/new-d7w151rl1z.scl"
+    },
+    {
+      "id": "8k0utjacrp",
+      "title": "书法",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "0ppo0tla6w",
+      "url": "https://sudokupad.app/8k0utjacrp",
+      "file": "puzzles/new-8k0utjacrp.scl"
+    },
+    {
+      "id": "j3qp69vm44",
+      "title": "战略",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "4hykfvlpnv",
+      "url": "https://sudokupad.app/j3qp69vm44",
+      "file": "puzzles/new-j3qp69vm44.scl"
+    },
+    {
+      "id": "gglxt0afpx",
+      "title": "印章",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "k58fj7zxpm",
+      "url": "https://sudokupad.app/gglxt0afpx?setting-nogrid",
+      "file": "puzzles/new-gglxt0afpx.scl"
+    },
+    {
+      "id": "diklunds4z",
+      "title": "一",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "velqhose8v",
+      "url": "https://sudokupad.app/diklunds4z?setting-digitoutlines=0",
+      "file": "puzzles/new-diklunds4z.scl"
+    },
+    {
+      "id": "12emzwuclg",
+      "title": "相连",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "velqhose8v",
+      "url": "https://sudokupad.app/12emzwuclg?setting-conflictchecker=0&setting-digitoutlines=0",
+      "file": "puzzles/new-12emzwuclg.scl"
+    },
+    {
+      "id": "9xmps9ans5",
+      "title": "？？？",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "mwqksbnwkg",
+      "url": "https://sudokupad.app/9xmps9ans5?setting-digitoutlines=0",
+      "file": "puzzles/new-9xmps9ans5.scl"
+    },
+    {
+      "id": "md70aqp30y",
+      "title": "交织的细胞 · 支线 4",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "t0pxonouyj",
+      "url": "https://sudokupad.app/md70aqp30y?setting-digitoutlines=0",
+      "file": "puzzles/new-md70aqp30y.scl"
+    },
+    {
+      "id": "r0j85pl40t",
+      "title": "纪念碑（放大）",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "tqr6w94dc8",
+      "url": "https://sudokupad.app/r0j85pl40t?setting-digitoutlines=0&setting-nogrid=1",
+      "file": "puzzles/new-r0j85pl40t.scl"
+    },
+    {
+      "id": "mdef8wu53g",
+      "title": "生命之树 · 支线 7",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "tqr6w94dc8",
+      "url": "https://sudokupad.app/mdef8wu53g?setting-digitoutlines=0&setting-nogrid=1",
+      "file": "puzzles/new-mdef8wu53g.scl"
+    },
+    {
+      "id": "dztbkdgio8",
+      "title": "溪流",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "bz1d323nx3",
+      "url": "https://sudokupad.app/dztbkdgio8?setting-digitoutlines=0",
+      "file": "puzzles/new-dztbkdgio8.scl"
+    },
+    {
+      "id": "fqi72y7mnn",
+      "title": "生命之树 · 支线 8",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "locvdyuyrh",
+      "url": "https://sudokupad.app/fqi72y7mnn?setting-digitoutlines=0",
+      "file": "puzzles/new-fqi72y7mnn.scl"
+    },
+    {
+      "id": "v0hjyng61f",
+      "title": "生命之树 · 支线 9",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "locvdyuyrh",
+      "url": "https://sudokupad.app/v0hjyng61f?setting-digitoutlines=0",
+      "file": "puzzles/new-v0hjyng61f.scl"
+    },
+    {
+      "id": "d3egy44ae1",
+      "title": "生命之树 · 支线 10",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "rpasmxrt2q",
+      "url": "https://sudokupad.app/d3egy44ae1?setting-digitoutlines=0",
+      "file": "puzzles/new-d3egy44ae1.scl"
+    },
+    {
+      "id": "5xssxd6lgm",
+      "title": "生命之树 · 支线 11",
+      "group": "utmh5dybvf",
+      "kind": "linked",
+      "parent": "rpasmxrt2q",
+      "url": "https://sudokupad.app/5xssxd6lgm?setting-digitoutlines=0",
+      "file": "puzzles/new-5xssxd6lgm.scl"
+    },
+    {
+      "id": "cktjx1o2nx",
+      "title": "围捕",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "u164tr3aed",
+      "url": "https://sudokupad.app/cktjx1o2nx",
+      "file": "puzzles/new-cktjx1o2nx.scl"
+    },
+    {
+      "id": "ag3ipm7kbh",
+      "title": "射箭",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "017bto6z45",
+      "url": "https://sudokupad.app/ag3ipm7kbh",
+      "file": "puzzles/new-ag3ipm7kbh.scl"
+    },
+    {
+      "id": "66ypvkjzh1",
+      "title": "抓住要点",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "c0ortk7210",
+      "url": "https://sudokupad.app/66ypvkjzh1",
+      "file": "puzzles/new-66ypvkjzh1.scl"
+    },
+    {
+      "id": "jsccrlmi02",
+      "title": "熟悉的字",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "d7w151rl1z",
+      "url": "https://sudokupad.app/jsccrlmi02",
+      "file": "puzzles/new-jsccrlmi02.scl"
+    },
+    {
+      "id": "zs07uoqizy",
+      "title": "练习",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "8k0utjacrp",
+      "url": "https://sudokupad.app/zs07uoqizy",
+      "file": "puzzles/new-zs07uoqizy.scl"
+    },
+    {
+      "id": "io5v0dfy9v",
+      "title": "笔顺",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "8k0utjacrp",
+      "url": "https://sudokupad.app/io5v0dfy9v",
+      "file": "puzzles/new-io5v0dfy9v.scl"
+    },
+    {
+      "id": "4iyd5ujmdo",
+      "title": "教程",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "j3qp69vm44",
+      "url": "https://sudokupad.app/4iyd5ujmdo?setting-nogrid",
+      "file": "puzzles/new-4iyd5ujmdo.scl"
+    },
+    {
+      "id": "q2iuup56zb",
+      "title": "半纸",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "gglxt0afpx",
+      "url": "https://sudokupad.app/q2iuup56zb?setting-nogrid",
+      "file": "puzzles/new-q2iuup56zb.scl"
+    },
+    {
+      "id": "mbvavupwl0",
+      "title": "旋转",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "md70aqp30y",
+      "url": "https://sudokupad.app/mbvavupwl0?setting-digitoutlines=0",
+      "file": "puzzles/new-mbvavupwl0.scl"
+    },
+    {
+      "id": "4ohoka3ejc",
+      "title": "缺失",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "md70aqp30y",
+      "url": "https://sudokupad.app/4ohoka3ejc?setting-digitoutlines=0",
+      "file": "puzzles/new-4ohoka3ejc.scl"
+    },
+    {
+      "id": "mct3cumq3f",
+      "title": "开端",
+      "group": "k4995f3fx1",
+      "kind": "linked",
+      "parent": "md70aqp30y",
+      "url": "https://sudokupad.app/mct3cumq3f?setting-digitoutlines=0",
+      "file": "puzzles/new-mct3cumq3f.scl"
+    },
+    {
+      "id": "lqg8n7s0vv",
+      "title": "上升之物",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "ag3ipm7kbh",
+      "url": "https://sudokupad.app/lqg8n7s0vv",
+      "file": "puzzles/new-lqg8n7s0vv.scl"
+    },
+    {
+      "id": "s29oiohiet",
+      "title": "罗马数字",
+      "group": "mfhh567b60",
+      "kind": "linked",
+      "parent": "66ypvkjzh1",
+      "url": "https://sudokupad.app/s29oiohiet",
+      "file": "puzzles/new-s29oiohiet.scl"
+    },
+    {
+      "id": "buekyq1ax3",
+      "title": "开始",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "jsccrlmi02",
+      "url": "https://sudokupad.app/buekyq1ax3",
+      "file": "puzzles/new-buekyq1ax3.scl"
+    },
+    {
+      "id": "eq5v9t3htw",
+      "title": "和纸",
+      "group": "k7qc98e00u",
+      "kind": "linked",
+      "parent": "q2iuup56zb",
+      "url": "https://sudokupad.app/eq5v9t3htw?setting-nogrid",
+      "file": "puzzles/new-eq5v9t3htw.scl"
     }
   ]
 }

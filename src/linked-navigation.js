@@ -24,8 +24,9 @@ export function linksAtCell(puzzle,progress,index,catalog,currentId=null) {
  * Its catalog group still identifies the correct bundled adventure map.
  */
 export function parentMain(entry,catalog) {
-  if(!entry || entry.kind==='main' || !Array.isArray(catalog))return null;
-  return catalog.find(item=>item.kind==='main'&&item.id===entry.group) || null;
+  if(!entry || ['main','standalone'].includes(entry.kind) || !Array.isArray(catalog))return null;
+  const direct=catalog.find(item=>item.id===entry.parent&&item.id!==entry.id);
+  return direct || catalog.find(item=>['main','standalone'].includes(item.kind)&&item.id===entry.group) || null;
 }
 
 export function returnDestination(entry,catalog,navigationStack=[]) {

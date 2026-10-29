@@ -8,7 +8,7 @@ fn all_bundled_scl_packages_decode() {
     let catalog=fs::read_to_string(root.join("catalog.json")).expect("catalog");
     let index:serde_json::Value=serde_json::from_str(&catalog).expect("catalog JSON");
     let entries=index["items"].as_array().expect("puzzle entries");
-    assert_eq!(entries.len(),46,"4 main, 20 Sudokuvania bosses, 22 Super linked");
+    assert_eq!(entries.len(),115,"4 old adventure maps, 42 old links, 4 new hubs, 65 new links");
     for item in entries {
         let path=item["file"].as_str().expect("file");
         assert!(path.starts_with("puzzles/") && path.ends_with(".scl"));
@@ -33,5 +33,5 @@ fn all_bundled_scl_packages_decode() {
     }
     let locale=fs::read_to_string(root.join("locale-zh.json")).expect("locales");
     let translations:serde_json::Value=serde_json::from_str(&locale).unwrap();
-    assert_eq!(translations.as_object().unwrap().len(),22);
+    assert_eq!(translations.as_object().unwrap().len(),91);
 }

@@ -43,7 +43,10 @@ export function getLinkedPuzzles(rules, catalog, group) {
   const links = rules.match(/https:\/\/sudokupad\.app\/[A-Za-z0-9_/-]+/g) || [];
   for (const url of links) {
     const slug = url.split('/').pop().toLowerCase();
-    const entry = catalog.find(e => e.url?.split('/').pop()?.toLowerCase() === slug);
+    const entry = catalog.find(e => {
+      try {return new URL(e.url).pathname.split('/').pop()?.toLowerCase()===slug;}
+      catch {return false;}
+    });
     // A visible sector rule is the source of truth, even for cross-game links.
     if (!entry || seen.has(entry.id)) continue;
     seen.add(entry.id);

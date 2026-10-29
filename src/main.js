@@ -148,7 +148,7 @@ function updateBack(){
   const destination=returnDestination(currentEntry,catalog,navigationStack);
   $('backButton').hidden=!destination;
   $('backButton').textContent=destination?.fromStack &&
-    catalog.find(entry=>entry.id===destination.id)?.kind!=='main'
+    !['main','standalone'].includes(catalog.find(entry=>entry.id===destination.id)?.kind)
       ?'返回上一谜题':'返回主谜题';
 }
 function renderSectorLinks(container,items) {
@@ -185,10 +185,10 @@ function updateSector() {
 }
 function renderLibrary(){
   const list=$('libraryList');list.replaceChildren();
-  for(const entry of catalog.filter(x=>x.kind==='main'||$('showAllPuzzles').checked)){
+  for(const entry of catalog.filter(x=>(x.kind==='main'||x.kind==='standalone')||$('showAllPuzzles').checked)){
     const btn=document.createElement('button');btn.type='button';btn.className='library-entry';
     const title=document.createElement('strong');title.textContent=entry.title;
-    const sub=document.createElement('small');sub.textContent=entry.kind==='main'?'冒险地图':entry.group+' · '+(entry.kind==='boss'?'首领谜题':'支线谜题');
+    const sub=document.createElement('small');sub.textContent=entry.kind==='main'?'冒险地图':entry.kind==='standalone'?'独立谜题':entry.group+' · '+(entry.kind==='boss'?'首领谜题':'支线谜题');
     btn.append(title,sub);
     btn.addEventListener('click',()=>openBundled(entry.id,false).catch(notify));
     list.appendChild(btn);
@@ -224,6 +224,7 @@ async function openBundled(id,push=false,backState=null){
         if(dict.ok) mainDictionary=await dict.json();
       } catch{}
     }
+    if(localeZh[id]?.author)result.puzzle.author=localeZh[id].author;
     // Display-only translations preserve Rust's puzzle constraints/solutions.
     result.puzzle.rules=translateDisplay(result.puzzle.rules);
     for(const sector of result.puzzle.sectors||[]){
@@ -294,7 +295,8 @@ async function openResult(result) {
   lastCompletion=Boolean(progress.solved);
   // Sudokuvania source URLs explicitly used setting-nogrid=1.
   // Super Sudokoid source URLs did not: retain their fine grid by default.
-  showGridLines=!['digits-of-despair','lineage-of-logic'].includes(currentEntry?.id);
+  showGridLines=!['digits-of-despair','lineage-of-logic'].includes(currentEntry?.id) &&
+    !(currentEntry?.url && new URL(currentEntry.url).searchParams.has('setting-nogrid'));
   $('gridButton').textContent=showGridLines?'隐藏格线':'显示格线';
   updateControls();
   fit();

@@ -10,6 +10,10 @@ const cases=[
   ['lineage-of-logic','50 × 50'],
   ['super-sudokoid-1','45 × 42'],
   ['super-sudokoid-2','36 × 45'],
+  ['k4995f3fx1','8 × 7'],
+  ['utmh5dybvf','9 × 9'],
+  ['mfhh567b60','9 × 9'],
+  ['k7qc98e00u','9 × 9'],
   ['boss-6cn54q09sv','9 × 9']
 ];
 await mkdir('artifacts/web',{recursive:true});

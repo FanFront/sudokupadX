@@ -85,3 +85,27 @@ test('main puzzles have no fabricated return and unknown entries cannot escape c
   assert.equal(parentMain({id:'external',kind:'boss',group:'not-bundled'},catalog),null);
   assert.equal(returnDestination(null,catalog,[]),null);
 });
+
+
+test('new four game hubs and nested links work offline',()=>{
+  for(const root of ['k4995f3fx1','utmh5dybvf','mfhh567b60','k7qc98e00u']){
+    const hub=catalog.find(x=>x.id===root);
+    assert.equal(hub?.kind,'standalone');
+    assert.match(hub.file,/^puzzles\/new-[a-z0-9]+\.scl$/);
+    assert.equal(returnDestination(hub,catalog,[]),null);
+    assert.ok(catalog.filter(x=>x.group===root&&x.kind==='linked').length>=3);
+  }
+  for(const url of [
+    'https://sudokupad.app/aaw113rfzh?setting-digitoutlines=0',
+    'https://sudokupad.app/z7qsv9k00p?setting-digitoutlines=0&setting-nogrid=1',
+    'https://sudokupad.app/sxa2lmgsa9',
+    'https://sudokupad.app/mhyr83irby?setting-nogrid'
+  ]){
+    const result=getLinkedPuzzles('Enter '+url,catalog);
+    assert.equal(result.length,1,url);
+    assert.ok(result[0].file.endsWith('.scl'));
+  }
+  const deep=catalog.find(x=>x.id==='buekyq1ax3');
+  assert.equal(parentMain(deep,catalog)?.id,'jsccrlmi02');
+  assert.equal(returnDestination(deep,catalog,[]).id,'jsccrlmi02');
+});
