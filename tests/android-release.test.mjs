@@ -41,3 +41,17 @@ test('version generation preserves application id in Tauri configuration',()=>{
   assert.equal(conf.identifier,'com.fanfront.sudokupadx');
   assert.equal(conf.bundle.android.versionCode,2_000_000);
 });
+
+test('CI verifies Android package metadata and distributes the real APK instead of a nested ZIP',()=>{
+  const workflow=fs.readFileSync(path.join(root,'.github/workflows/android.yml'),'utf8');
+  assert.ok(workflow.includes('name aapt | sort -V'));
+  assert.ok(workflow.includes('dump badging "$APK"'));
+  assert.ok(workflow.includes("package: name='com.fanfront.sudokupadx'"));
+  assert.ok(workflow.includes('launchable-activity:'));
+  assert.ok(workflow.includes('unzip -tq "$APK"'));
+  assert.ok(workflow.includes('path: installable/SudokuPadX-arm64.apk'));
+  assert.ok(workflow.includes('gh release upload "$TAG" "$APK_FILE" --clobber'));
+  assert.ok(workflow.includes('gh release create "$TAG" "$APK_FILE"'));
+  assert.ok(!workflow.includes('path: src-tauri/gen/android/app/build/outputs/apk/**/*release*.apk'));
+  assert.ok(!workflow.includes('echo "File: `'), 'backticks in double-quoted echo execute filenames as commands');
+});

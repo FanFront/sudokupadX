@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+permissions:
+  contents: write
 concurrency:
   group: sudokupadx-android-${{ github.ref }}
   cancel-in-progress: true
@@ -45,7 +47,7 @@ jobs:
         run: node scripts/android-release.mjs sign
       - name: Build optimized signed ARM64 release APK
         run: npx tauri android build --apk --target aarch64 --ci
-      - name: Verify signing certificate, APK size and version
+      - name: Verify APK signing, manifest, ABI, size and version
         shell: bash
         run: |
           set -euo pipefail
@@ -68,17 +70,56 @@ jobs:
           # Android minSdk=24 needs v2; v1, v3 and v4 can be absent.
           printf '%s\n' "$SIGNATURE_REPORT" | grep -Eq '^Verified using v2 scheme .*: true$'
           echo "APK signing certificate and v2 scheme verified"
+          # An APK can have a valid signature but still be unusable by an
+          # installer. Parse its package metadata and launcher as Android does.
+          AAPT="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name aapt | sort -V | tail -n1)"
+          test -x "$AAPT"
+          BADGING="$("$AAPT" dump badging "$APK")"
+          EXPECTED_CODE="$((2000000 + GITHUB_RUN_NUMBER))"
+          grep -F "package: name='com.fanfront.sudokupadx' versionCode='$EXPECTED_CODE'" <<< "$BADGING"
+          grep -Fx "sdkVersion:'24'" <<< "$BADGING"
+          grep -F "native-code: 'arm64-v8a'" <<< "$BADGING"
+          grep -E '^launchable-activity:' <<< "$BADGING"
+          unzip -tq "$APK" >/dev/null
+          echo "APK package manifest, launcher, ABI, and archive verified"
+          # Publish one plainly named APK at the artifact root (not nested
+          # under universal/release); Actions artifacts themselves are ZIPs.
+          mkdir -p installable
+          cp "$APK" installable/SudokuPadX-arm64.apk
+          cmp "$APK" installable/SudokuPadX-arm64.apk
           APK_BYTES="$(stat -c%s "$APK")"
           echo "Release APK: $APK ($(numfmt --to=iec "$APK_BYTES"))"
           {
             echo "### Signed release APK"
-            echo "File: `$(basename "$APK")`"
+            printf 'File: `%s`\n' 'SudokuPadX-arm64.apk'
             echo "Size: **$(numfmt --to=iec "$APK_BYTES")**"
-            echo "Version code: **$((2000000 + GITHUB_RUN_NUMBER))**"
-            echo "Certificate: `$ACTUAL`"
+            echo "Version code: **$EXPECTED_CODE**"
+            printf 'Certificate: `%s`\n' "$ACTUAL"
+            echo "Actions artifact downloads are ZIPs: extract the APK; never rename the ZIP to .apk."
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: SudokuPadX-Android-arm64-release-test-signed
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*release*.apk
+          # ZIP must be extracted; the actual .apk is now at its root.
+          name: SudokuPadX-APK-EXTRACT-ZIP
+          path: installable/SudokuPadX-arm64.apk
+          compression-level: 0
           if-no-files-found: error
+      - name: Publish directly installable APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APK_FILE="installable/SudokuPadX-arm64.apk"
+          TAG="android-test-latest"
+          # A stable release URL avoids mistaking a GitHub Actions ZIP for
+          # a raw APK. This intentionally stays a test-signed prerelease.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK_FILE" --clobber
+          else
+            gh release create "$TAG" "$APK_FILE" \
+              --target "$GITHUB_SHA" \
+              --title "SudokuPad X Android - latest test build" \
+              --notes "Test-signed ARM64 APK for Android 7.0+. Download the .apk asset directly, not the Actions artifact ZIP. The public test-signing key is not for production." \
+              --prerelease
+          fi
+          echo "Direct download: https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/SudokuPadX-arm64.apk" >> "$GITHUB_STEP_SUMMARY"

@@ -92,7 +92,9 @@ The [**Build compact signed Android APK**](https://github.com/FanFront/sudokupad
 - **Every CI build is signed with the exact same public testing certificate** in `android-signing/test-signing.p12`.
 - CI assigns monotonically increasing Android `versionCode = 2,000,000 + GITHUB_RUN_NUMBER`; installed saves and app data persist across later updates from this signing key.
 
-Download **`SudokuPadX-Android-arm64-release-test-signed`** from the artifacts on a *successful* workflow run. The workflow validates the APK signature and reports the actual APK size. Older workflow artifacts are debug builds and cannot be used as updates for this release-signing series.
+**Install the raw APK directly:** [SudokuPadX-arm64.apk (latest test build)](https://github.com/FanFront/sudokupadX/releases/download/android-test-latest/SudokuPadX-arm64.apk). The CI workflow checks the APK signature, package identity, version code, launcher, ARM64 ABI, and archive integrity before publishing it. This is a direct `.apk` asset, **not a ZIP**.
+
+**GitHub Actions artifacts are ZIPs**, even when they are called Android APK artifacts. If downloading from a workflow run instead of Releases, download `SudokuPadX-APK-EXTRACT-ZIP`, **extract** it, and install the `SudokuPadX-arm64.apk` inside. Never rename the downloaded `.zip` file to `.apk`: Android may report `packageinfo is null` when asked to install an archive rather than an APK. This is an ARM64 package for Android 7.0+; 32-bit-only devices are not supported.
 
 **First upgrade from the old APK:** Previous CI debug APKs were signed with a different, ephemeral Android debug certificate. The new stable certificate **cannot** upgrade an old debug install with the same package ID. You must **uninstall the previously signed debug APK once** before installing your first stable-signed release. Android removes the app's on-device data on uninstall, so back up any progress you need to keep. After this one transition, new stable-signed APKs can be installed over older ones without uninstalling.
 
