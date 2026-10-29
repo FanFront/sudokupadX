@@ -18,6 +18,9 @@ jobs:
     name: Build WASM and deploy review site
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      # Vite preview must use the same subdirectory base as the Pages build.
+      GITHUB_PAGES: 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
