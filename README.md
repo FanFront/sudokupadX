@@ -18,7 +18,7 @@ An offline index lets you **browse** puzzle entries without a connection; extern
 
 On Android, install the **APK file** from the link above (ARM64, Android 7.0+). GitHub Actions artifacts are ZIP archives: extract the APK rather than renaming the ZIP.
 
-In the app, open **游戏库 (Library)** to select a bundled game, search for puzzles, or manage offline downloads. Linked puzzles can be opened from their discovered regions, and you can return to the main map without losing your position.
+In the app, open **Library** to select a bundled game, search for puzzles, or manage offline downloads. Linked puzzles can be opened from their discovered regions, and you can return to the main map without losing your position.
 
 ## Development
 
