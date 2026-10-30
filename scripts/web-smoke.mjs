@@ -115,11 +115,20 @@ try{
   await page.locator('#closeLibrary').click();
   console.log('Bundled online index browser and offline-only filter passed.');
 
-  // End-to-end editing and Rust-native undo/redo on a deterministic demo board.
-  // The demo is intentionally hidden in compact phone layouts; the smoke
-  // test uses it only as a deterministic fixture, not as a UI affordance.
-  await page.locator('#demoButton').evaluate(button=>button.click());
-  await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('9 × 9'));
+  // A test-only imported board exercises editable cells without bundling or
+  // exposing an example puzzle in the app itself.
+  const fixture={
+    id:'sudokupadx-ui-smoke',
+    metadata:{title:'UI Smoke Fixture',rules:'Test imported-board editing.'},
+    cells:Array.from({length:9},()=>Array.from({length:9},()=>({}))),
+    regions:Array.from({length:9},(_,region)=>Array.from({length:9},(_,n)=>
+      [Math.floor(region/3)*3+Math.floor(n/3), (region%3)*3+n%3]))
+  };
+  await page.locator('#importButton').click();
+  await page.locator('#pasteInput').fill(JSON.stringify(fixture));
+  await page.locator('#confirmImport').click();
+  await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('9 × 9') &&
+    document.querySelector('#puzzleTitle')?.textContent?.includes('UI Smoke Fixture'),null,{timeout:60000});
   const canvas=page.locator('#boardCanvas');
   const bounds=await canvas.boundingBox();
   assert.ok(bounds && bounds.width>100 && bounds.height>100);
@@ -170,7 +179,16 @@ try{
   await page.waitForFunction(()=>document.querySelector('#checkpointDialog')?.open===false);
   assert.equal(await page.locator('#undoButton').isDisabled(),true,
     'Restoring a checkpoint should clear the previous undo stack');
-  await page.screenshot({path:'artifacts/web/demo-input.png'});
+  await page.screenshot({path:'artifacts/web/imported-input.png'});
+  await page.locator('#zoomIn').click();
+  const zoomBefore=await page.locator('#zoomLabel').textContent();
+  const selectedBefore=await page.locator('#selectionLabel').textContent();
+  assert.ok(!await page.locator('#demoButton').count(),'Example action must not ship');
+  await page.goto(root,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.querySelector('#puzzleTitle')?.textContent?.includes('UI Smoke Fixture'),null,{timeout:60000});
+  assert.equal(await page.locator('#zoomLabel').textContent(),zoomBefore,'Zoom should survive restart');
+  assert.equal(await page.locator('#selectionLabel').textContent(),selectedBefore,'Selected cell should survive restart');
+  console.log('Last imported puzzle, selection, and zoom restored after reload.');
   assert.deepEqual(errors,[]);
   console.log('Rust WASM input, undo and redo passed; screenshots in artifacts/web/');
 }finally{
