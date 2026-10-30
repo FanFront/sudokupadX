@@ -22,6 +22,14 @@ try{
   const page=await browser.newPage({viewport:{width:430,height:860},deviceScaleFactor:1});
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
+  // A cold launch must show Home, with no separate app toolbar above the board.
+  await page.goto(root,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.querySelector('#homeScreen')?.hidden===false &&
+    document.querySelector('#libraryList')?.children.length>0,null,{timeout:60000});
+  assert.equal(await page.locator('#gameScreen').isHidden(),true);
+  assert.equal(await page.locator('#homeContinueSection').isHidden(),true);
+  assert.equal(await page.locator('.topbar').count(),0);
+  await page.screenshot({path:'artifacts/web/android-home.png'});
   for(const [id,dimensions] of cases){
     const url=new URL(root);
     url.searchParams.set('puzzle',id);
@@ -46,6 +54,8 @@ try{
       return distinct;
     },null,{timeout:10000});
     await page.screenshot({path:`artifacts/web/${id}.png`});
+    assert.equal(await page.locator('#gameScreen').isVisible(),true);
+    assert.equal(await page.locator('#homeScreen').isHidden(),true);
     console.log('Rendered '+id+' ('+dimensions+')');
   }
 
@@ -88,6 +98,11 @@ try{
   await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('40 × 50'),null,{timeout:60000});
   assert.equal(await back.isHidden(),true,'Main map must not offer a stale back target');
 
+  // Go Home without destroying the parent puzzle, then choose a library item.
+  await page.locator('#homeButton').click();
+  assert.equal(await page.locator('#homeScreen').isVisible(),true);
+  assert.equal(await page.locator('#gameScreen').isHidden(),true);
+  assert.equal(await page.locator('#continueButton').isVisible(),true);
   // The spoiler-enabled library is another supported direct entry path.
   await page.locator('#libraryButton').click();
   await page.locator('#showAllPuzzles').check();
@@ -100,6 +115,7 @@ try{
   console.log('Direct linked-puzzle -> main-map return passed.');
 
   // The bundled index is usable without reaching the online JSON provider.
+  await page.locator('#homeButton').click();
   await page.locator('#libraryButton').click();
   await page.locator('#onlineLibraryTab').click();
   await page.locator('#onlineIndexList .online-entry').first().waitFor({timeout:15000});
@@ -131,6 +147,16 @@ try{
     document.querySelector('#puzzleTitle')?.textContent?.includes('UI Smoke Fixture'),null,{timeout:60000});
   const canvas=page.locator('#boardCanvas');
   const bounds=await canvas.boundingBox();
+  // Mobile buttons are a T9 pad with modes on its right, not stacked toolbars.
+  const keyOne=await page.locator('#keypad [data-symbol="1"]').boundingBox();
+  const keyTwo=await page.locator('#keypad [data-symbol="2"]').boundingBox();
+  const keyFour=await page.locator('#keypad [data-symbol="4"]').boundingBox();
+  const modeRail=await page.locator('#modeBar').boundingBox();
+  assert.ok(keyOne && keyTwo && keyFour && modeRail);
+  assert.ok(keyTwo.x>keyOne.x && Math.abs(keyOne.y-keyTwo.y)<2,'keypad must have columns');
+  assert.ok(keyFour.y>keyOne.y,'keypad must have rows');
+  assert.ok(modeRail.x>keyTwo.x,'mode rail must be beside the keypad');
+  assert.ok(bounds.height>200,'board must retain substantial vertical room on Android-sized screens');
   assert.ok(bounds && bounds.width>100 && bounds.height>100);
   await canvas.click({position:{x:bounds.width/2,y:bounds.height/2}});
   const selection=await page.locator('#selectionLabel').textContent();
@@ -157,11 +183,16 @@ try{
   assert.equal(await page.locator('#checkDialog').isHidden(),true);
   // Emulate an Android WebView that does not report the camera-cutout inset.
   await page.evaluate(()=>document.documentElement.classList.add('android-native'));
-  const brand=await page.locator('.brand').boundingBox();
-  assert.ok(brand && brand.y>=40,'Toolbar must sit below the camera/status-bar safe area');
+  await page.locator('#homeButton').click();
+  const brand=await page.locator('.home-hero .brand').boundingBox();
+  assert.ok(brand && brand.y>=40,'Home must sit below the camera/status-bar safe area');
+  await page.locator('#continueButton').click();
+  const boardHeader=await page.locator('.board-heading').boundingBox();
+  assert.ok(boardHeader && boardHeader.y>=40,'Board header must sit below the camera/status-bar safe area');
   await page.evaluate(()=>document.documentElement.classList.remove('android-native'));
 
   // A checkpoint roundtrip must restore the actual Rust/WASM board state.
+  await page.locator('#homeButton').click();
   await page.locator('#checkpointButton').click();
   await page.locator('#exportCheckpoint').click();
   const savedText=await page.locator('#checkpointText').inputValue();
@@ -171,9 +202,11 @@ try{
   assert.equal(checkpoint.cols,9);
   assert.equal(checkpoint.cells[40].value,'1');
   await page.locator('#closeCheckpoint').click();
+  await page.locator('#continueButton').click();
   await page.locator('#eraseButton').click();
   await page.waitForFunction(()=>!document.querySelector('#undoButton').disabled);
   page.once('dialog',dialog=>dialog.accept());
+  await page.locator('#homeButton').click();
   await page.locator('#checkpointButton').click();
   await page.locator('#importCheckpoint').click();
   await page.waitForFunction(()=>document.querySelector('#checkpointDialog')?.open===false);
@@ -181,10 +214,14 @@ try{
     'Restoring a checkpoint should clear the previous undo stack');
   await page.screenshot({path:'artifacts/web/imported-input.png'});
   await page.locator('#zoomIn').click();
+  await page.waitForFunction(()=>document.querySelector('#saveLabel')?.textContent==='已保存到本机',null,{timeout:10000});
   const zoomBefore=await page.locator('#zoomLabel').textContent();
   const selectedBefore=await page.locator('#selectionLabel').textContent();
   assert.ok(!await page.locator('#demoButton').count(),'Example action must not ship');
   await page.goto(root,{waitUntil:'domcontentloaded'});
+  await page.locator('#continueButton').waitFor({state:'visible',timeout:60000});
+  assert.equal(await page.locator('#gameScreen').isHidden(),true);
+  await page.locator('#continueButton').click();
   await page.waitForFunction(()=>document.querySelector('#puzzleTitle')?.textContent?.includes('UI Smoke Fixture'),null,{timeout:60000});
   assert.equal(await page.locator('#zoomLabel').textContent(),zoomBefore,'Zoom should survive restart');
   assert.equal(await page.locator('#selectionLabel').textContent(),selectedBefore,'Selected cell should survive restart');

@@ -8,21 +8,42 @@
 </head>
 <body>
   <div id="app">
-    <header class="topbar">
-      <div class="brand" aria-label="SudokuPad X"><span class="brand-mark">X</span><div><strong>SudokuPad X</strong><small>原生谜题实验室</small></div></div>
-      <nav class="top-actions" aria-label="应用操作">
-        <span class="runtime-badge" id="runtimeBadge">预览</span>
-        <button class="subtle-btn icon-button" id="backButton" type="button" title="返回主谜题" aria-label="返回主谜题" hidden><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
-        <button class="subtle-btn icon-button" id="libraryButton" type="button" title="谜题库" aria-label="打开谜题库"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><path d="m18 5 3 14"/></svg></button>
-        <button class="icon-button" id="checkpointButton" type="button" title="存档导入与导出" aria-label="存档导入与导出"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 3-4 4 4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg></button>
-        <button class="primary-btn icon-button" id="importButton" type="button" title="导入 SCL / JSON 谜题" aria-label="导入 SCL / JSON 谜题"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M12 18v-8m-3 3 3-3 3 3"/></svg></button>
-      </nav>
-    </header>
-    <main class="workspace">
+    <section id="homeScreen" class="home-screen" aria-label="SudokuPad X 首页">
+      <div class="home-content">
+        <header class="home-hero">
+          <div class="brand"><span class="brand-mark">X</span><div><strong>SudokuPad X</strong><small>冒险数独 · 随时继续</small></div></div>
+          <span class="runtime-badge" id="runtimeBadge">预览</span>
+        </header>
+        <section id="homeContinueSection" class="home-continue" aria-label="继续上次谜题" hidden>
+          <div class="home-continue-copy">
+            <span class="home-eyebrow">继续上次游戏</span>
+            <strong id="homePuzzleTitle">上次玩的谜题</strong>
+            <span id="homePuzzleMeta">进度和棋盘位置已保存</span>
+          </div>
+          <button id="continueButton" class="primary-btn" type="button">继续游戏 →</button>
+        </section>
+        <div class="home-section-title"><h1>选择要做的事</h1><p>工具收在首页，解题时专注棋盘。</p></div>
+        <div class="home-menu" aria-label="首页功能">
+          <button id="libraryButton" class="home-action" type="button" aria-label="打开谜题库">
+            <span class="home-action-icon" aria-hidden="true">▦</span><span><strong>谜题库</strong><small>冒险地图 · 在线探索 · 离线下载</small></span><span class="home-chevron" aria-hidden="true">›</span>
+          </button>
+          <button id="importButton" class="home-action" type="button" aria-label="导入谜题">
+            <span class="home-action-icon" aria-hidden="true">＋</span><span><strong>导入谜题</strong><small>SudokuPad SCL / JSON · Penpa+</small></span><span class="home-chevron" aria-hidden="true">›</span>
+          </button>
+          <button id="checkpointButton" class="home-action" type="button" aria-label="存档导入和导出">
+            <span class="home-action-icon" aria-hidden="true">⇄</span><span><strong>存档导入 / 导出</strong><small>保存和迁移解题进度</small></span><span class="home-chevron" aria-hidden="true">›</span>
+          </button>
+        </div>
+        <p class="home-footnote">解题进度自动保存在本机。返回首页不会重置当前棋盘。</p>
+      </div>
+    </section>
+    <main id="gameScreen" class="workspace" aria-label="谜题游玩" hidden>
       <section class="board-panel" aria-label="Puzzle board">
         <div class="board-heading">
           <div class="puzzle-heading"><h1 id="puzzleTitle">Loading…</h1><p id="puzzleAuthor">SudokuPad X</p></div>
           <div class="board-tools" role="toolbar" aria-label="棋盘操作">
+            <button id="homeButton" class="icon-button" type="button" title="返回首页" aria-label="返回首页"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9"/><path d="M9 21v-7h6v7"/></svg></button>
+            <button class="subtle-btn icon-button" id="backButton" type="button" title="返回主谜题" aria-label="返回主谜题" hidden><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
             <button id="linkedPuzzleButton" class="icon-button linked-puzzle-entry" type="button" title="进入关联谜题" aria-label="进入关联谜题" hidden><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span id="linkedPuzzleCount" class="linked-puzzle-count" aria-hidden="true" hidden></span></button>
             <button id="rulesButton" class="icon-button" type="button" title="查看谜题规则" aria-label="查看谜题规则"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 7v14"/><path d="M3 18V5a2 2 0 0 1 2-2h3a4 4 0 0 1 4 4 4 4 0 0 1 4-4h3a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2h-3a4 4 0 0 0-4 4 4 4 0 0 0-4-4H5a2 2 0 0 0-2 2Z"/></svg></button>
             <button id="gridButton" class="icon-button" type="button" title="隐藏格线" aria-label="隐藏格线" aria-pressed="true"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></button>
@@ -40,42 +61,48 @@
         <div class="board-footer"><span id="boardMeta">9 × 9</span><span id="saveLabel">本地自动保存</span></div>
       </section>
       <aside class="controls" aria-label="Puzzle controls">
-        <div class="control-heading"><div><strong>输入控制台</strong><small>单指滑选多格 · 双指移动缩放</small></div><button id="alphabetButton" class="switch-button" type="button" aria-pressed="false">ABC 字母</button></div>
-        <div id="modeBar" class="mode-bar" role="group" aria-label="Input mode">
-          <button data-mode="value" class="active" type="button">大数字</button>
-          <button data-mode="corner" type="button">角标</button>
-          <button data-mode="center" type="button">中心</button>
-          <button data-mode="color" type="button">颜色</button>
-          <button data-mode="pen" type="button">画线</button>
-        </div>
-        <div class="pad-title"><span id="padTitle">数字输入</span><button id="letterPage" type="button" hidden>下一组</button></div>
-        <div class="keypad" id="keypad" role="group" aria-label="Number and letter pad"></div>
-        <div class="palette" id="palette" aria-label="Color palette" hidden>
-          <button data-color="#f8cd75" style="--swatch:#f8cd75" type="button" aria-label="Yellow"></button>
-          <button data-color="#a9d9a1" style="--swatch:#a9d9a1" type="button" aria-label="Green"></button>
-          <button data-color="#9fcbff" style="--swatch:#9fcbff" type="button" aria-label="Blue"></button>
-          <button data-color="#e9b0d6" style="--swatch:#e9b0d6" type="button" aria-label="Pink"></button>
-          <button data-color="#bfb5fa" style="--swatch:#bfb5fa" type="button" aria-label="Purple"></button>
-        </div>
-        <div id="penTools" class="pen-tools" aria-label="画线工具" hidden>
-          <div class="pen-grid" role="group" aria-label="画线位置">
-            <button type="button" data-pen-grid="center" aria-pressed="true">格心连线</button>
-            <button type="button" data-pen-grid="edge" aria-pressed="false">网格边线</button>
+        <div class="control-heading"><strong>输入控制台</strong><small>单指选格 · 双指缩放</small></div>
+        <div class="play-deck">
+          <div class="pad-input">
+            <div class="pad-title"><span id="padTitle">数字输入</span></div>
+            <div class="keypad" id="keypad" role="group" aria-label="Number and letter pad"></div>
+            <div class="palette" id="palette" aria-label="Color palette" hidden>
+              <button data-color="#f8cd75" style="--swatch:#f8cd75" type="button" aria-label="Yellow"></button>
+              <button data-color="#a9d9a1" style="--swatch:#a9d9a1" type="button" aria-label="Green"></button>
+              <button data-color="#9fcbff" style="--swatch:#9fcbff" type="button" aria-label="Blue"></button>
+              <button data-color="#e9b0d6" style="--swatch:#e9b0d6" type="button" aria-label="Pink"></button>
+              <button data-color="#bfb5fa" style="--swatch:#bfb5fa" type="button" aria-label="Purple"></button>
+            </div>
+            <div id="penTools" class="pen-tools" aria-label="画线工具" hidden>
+              <div class="pen-grid" role="group" aria-label="画线位置">
+                <button type="button" data-pen-grid="center" aria-pressed="true">格心连线</button>
+                <button type="button" data-pen-grid="edge" aria-pressed="false">网格边线</button>
+              </div>
+              <div class="pen-colors" role="group" aria-label="线条颜色">
+                <button type="button" data-pen-color="#34495e" style="--pen-swatch:#34495e" aria-label="深灰线" aria-pressed="true"></button>
+                <button type="button" data-pen-color="#d45867" style="--pen-swatch:#d45867" aria-label="红色线" aria-pressed="false"></button>
+                <button type="button" data-pen-color="#2486b3" style="--pen-swatch:#2486b3" aria-label="蓝色线" aria-pressed="false"></button>
+                <button type="button" data-pen-color="#348b57" style="--pen-swatch:#348b57" aria-label="绿色线" aria-pressed="false"></button>
+                <button type="button" data-pen-color="#b77726" style="--pen-swatch:#b77726" aria-label="橙色线" aria-pressed="false"></button>
+              </div>
+              <small>拖动画线 · 点按标记○/× · 双指缩放</small>
+            </div>
           </div>
-          <div class="pen-colors" role="group" aria-label="线条颜色">
-            <button type="button" data-pen-color="#34495e" style="--pen-swatch:#34495e" aria-label="深灰线" aria-pressed="true"></button>
-            <button type="button" data-pen-color="#d45867" style="--pen-swatch:#d45867" aria-label="红色线" aria-pressed="false"></button>
-            <button type="button" data-pen-color="#2486b3" style="--pen-swatch:#2486b3" aria-label="蓝色线" aria-pressed="false"></button>
-            <button type="button" data-pen-color="#348b57" style="--pen-swatch:#348b57" aria-label="绿色线" aria-pressed="false"></button>
-            <button type="button" data-pen-color="#b77726" style="--pen-swatch:#b77726" aria-label="橙色线" aria-pressed="false"></button>
+          <div id="modeBar" class="mode-bar" role="group" aria-label="Input mode">
+            <button data-mode="value" class="active" type="button">数字</button>
+            <button data-mode="corner" type="button">角标</button>
+            <button data-mode="center" type="button">中心</button>
+            <button data-mode="color" type="button">颜色</button>
+            <button data-mode="pen" type="button">画线</button>
           </div>
-          <small>拖动画线（包括斜线）· 点格心：○→×→清除 · 点格线：×→○→清除 · 双指移动缩放</small>
         </div>
         <div class="action-bar">
-          <button id="eraseButton" type="button">⌫ 清除</button>
-          <button id="undoButton" type="button">↶ 撤销</button>
-          <button id="redoButton" type="button">↷ 重做</button>
-          <button id="checkButton" type="button">✓ 检查</button>
+          <button id="alphabetButton" class="switch-button" type="button" aria-pressed="false" aria-label="切换到字母输入">ABC</button>
+          <button id="letterPage" type="button" aria-label="切换字母页" hidden>下一组</button>
+          <button id="eraseButton" type="button" aria-label="清除">⌫</button>
+          <button id="undoButton" type="button" aria-label="撤销">↶</button>
+          <button id="redoButton" type="button" aria-label="重做">↷</button>
+          <button id="checkButton" type="button" aria-label="检查">✓</button>
         </div>
         <div class="detail-panel">
           <div class="detail-heading"><span id="sectorHeading">谜题规则</span><button id="moreRules" type="button">展开</button></div>
