@@ -141,7 +141,9 @@ function save() {
   clearTimeout(saveTimer);
   try {
     localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells,penLines,penMarks}));
-    const view=captureView(camera,frame.clientWidth,frame.clientHeight,selectedCells,showGridLines);
+    // Home hides the board; retain its last measured dimensions when saving there.
+    const view=captureView(camera,frame.clientWidth||frameSize.width,
+      frame.clientHeight||frameSize.height,selectedCells,showGridLines);
     const resume=serializeResume(activeSource,view,navigationStack);
     if(resume) localStorage.setItem(RESUME_KEY,resume);
     $('saveLabel').textContent = '已保存到本机';
