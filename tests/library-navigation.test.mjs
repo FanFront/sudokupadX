@@ -11,12 +11,12 @@ test('library exposes three mutually exclusive Logic Masters screens',()=>{
     'lmdSearchResults','lmdSavedResults','lmdResults','lmdDiscover','lmdSaved','lmdBack']) {
     assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
   }
-  const ids = [...html.matchAll(/\\bid="([^"]+)"/g)].map(x=>x[1]);
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);
   assert.equal(ids.length,new Set(ids).size,'HTML ids must be unique');
-  assert.match(ui,/showLmdView\\('saved'\\)/);
-  assert.match(ui,/showLmdView\\('detail'\\)/);
-  assert.match(ui,/renderLmdEntries\\(\\$\\('lmdSavedResults'\\)/);
-  assert.match(ui,/renderLmdEntries\\(\\$\\('lmdResults'\\), lmdFound/);
+  assert.match(ui,/showLmdView\('saved'\)/);
+  assert.match(ui,/showLmdView\('detail'\)/);
+  assert.match(ui,/renderLmdEntries\(\$\('lmdSavedResults'\)/);
+  assert.match(ui,/renderLmdEntries\(\$\('lmdResults'\), lmdFound/);
 });
 
 test('external original URLs only accept HTTPS',()=>{
