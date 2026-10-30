@@ -6,6 +6,7 @@ import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLin
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
+import {PEN_COLORS,normalizePenLines,penNodeAt,tracePenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines} from './pen-lines.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
 import {setupOnlineLibrary} from './online-ui.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
@@ -27,6 +28,10 @@ let progress = null;
 let selected = -1;
 let selectedCells = [];
 let mode = 'value';
+let penLines = [];
+let penColor = PEN_COLORS[0];
+let penGrid = 'center';
+let penErase = false;
 let alphabet = false;
 let letterPage = 0;
 let camera = {x:0,y:0,scale:1};
@@ -107,7 +112,7 @@ function save() {
   if (!puzzle || !progress) return;
   clearTimeout(saveTimer);
   try {
-    localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells}));
+    localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells,penLines}));
     const view=captureView(camera,frame.clientWidth,frame.clientHeight,selectedCells,showGridLines);
     const resume=serializeResume(activeSource,view,navigationStack);
     if(resume) localStorage.setItem(RESUME_KEY,resume);
@@ -144,6 +149,8 @@ async function restoreSaved() {
   if (!stored || stored.version!==1 || !Array.isArray(stored.cells) || stored.cells.length!==puzzle.cells.length) return;
   try {progress = await call('restore_progress',{cells:stored.cells});}
   catch (error) {notify('存档未载入: '+String(error));}
+  try {penLines=normalizePenLines(stored.penLines??[],puzzle.rows,puzzle.cols);}
+  catch {penLines=[];notify('画线存档无效，已保留数字进度');}
 }
 function toast(message) {
   const el = $('toast');
@@ -335,7 +342,7 @@ function updateInfo() {
 async function openResult(result) {
   puzzle=result.puzzle;
   progress=result.progress;
-  undoStack=[];redoStack=[];
+  undoStack=[];redoStack=[];penLines=[];
   selected=-1;selectedCells=[];
   gesture=null;pointers.clear();
   buildRegions();
@@ -411,10 +418,23 @@ async function openIndexedPuzzle(entry,input,offline,restoredView = null,resumin
 function updateControls() {
   $('alphabetButton').setAttribute('aria-pressed',String(alphabet));
   $('alphabetButton').textContent=alphabet?'123 数字':'ABC 字母';
-  $('letterPage').hidden=!alphabet;
+  $('alphabetButton').disabled=mode==='pen';
+  $('letterPage').hidden=!alphabet||mode==='pen';
   $('letterPage').textContent='字母 '+(letterPage+1)+'/3';
-  $('padTitle').textContent=alphabet?'字母输入 · '+(['A–I','J–R','S–Z'][letterPage]):'数字输入';
+  $('padTitle').textContent=mode==='pen'?'画线工具':alphabet?'字母输入 · '+(['A–I','J–R','S–Z'][letterPage]):'数字输入';
   $('palette').hidden=mode!=='color';
+  $('penTools').hidden=mode!=='pen';
+  $('keypad').hidden=mode==='pen';
+  $('eraseButton').textContent=mode==='pen'?(penErase?'✎ 绘线':'⌫ 擦线'):'⌫ 清除';
+  $('eraseButton').setAttribute('aria-pressed',String(mode==='pen'&&penErase));
+  document.querySelectorAll('[data-pen-color]').forEach(el=>{
+    el.setAttribute('aria-pressed',String(el.dataset.penColor===penColor));
+  });
+  document.querySelectorAll('[data-pen-grid]').forEach(el=>{
+    el.setAttribute('aria-pressed',String(el.dataset.penGrid===penGrid));
+  });
+  board.classList.toggle('pen-active',mode==='pen');
+  board.setAttribute('aria-label',mode==='pen'?'棋盘：单指画线，双指平移缩放':'棋盘：单指滑选格子，双指平移缩放');
   document.querySelectorAll('[data-mode]').forEach(el=>{
     el.classList.toggle('active',el.dataset.mode===mode);
     el.setAttribute('aria-pressed',String(el.dataset.mode===mode));
@@ -425,15 +445,19 @@ function updateControls() {
   for (const symbol of keys) {
     const btn=document.createElement('button');
     btn.type='button';btn.textContent=symbol;btn.dataset.symbol=symbol;
-    btn.disabled=mode==='color';
+    btn.disabled=mode==='color'||mode==='pen';
     pad.appendChild(btn);
   }
-  $('undoButton').disabled=!progress?.canUndo;
-  $('redoButton').disabled=!progress?.canRedo;
+  $('undoButton').disabled=undoStack.length===0;
+  $('redoButton').disabled=redoStack.length===0;
   $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
   updateSelection();
 }
 function updateSelection() {
+  if(mode==='pen'){
+    $('selectionLabel').textContent=penErase?'擦线模式 · 单指擦除':'画线模式 · 单指描线';
+    return;
+  }
   if (!puzzle||selected<0) {
     $('selectionLabel').textContent='选择一个格子';
     if(puzzle)updateSector();
@@ -560,10 +584,6 @@ function draw() {
   drawPathMarks(ctx,puzzle.overlays);
   drawDecorations(ctx,puzzle.overlays,clip);
   drawPuzzleLines(ctx,puzzle.lines,clip,'overlay');
-  for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
-    const idx=r*puzzle.cols+c;
-    drawCellInk(idx,c*CELL,r*CELL,false);
-  }
   // Source-authored cell-grids paths are the canonical adventure walls.
   // Do not add speculative rectangles around story metadata when they exist.
   const authoredBorders=(puzzle.lines||[]).some(line=>line?.target==='cell-grids');
@@ -572,11 +592,12 @@ function draw() {
   // Keep deliberate scene outlines visible through the fog without exposing
   // hidden clues. They are independent of the optional fine grid lines.
   if(authoredBorders)drawPuzzleLines(ctx,puzzle.lines,clip,'grid');
-  // Restore *only the player's* entries above the opaque fog overlay.
-  // Never reveal hidden givens, original circle/arrow artwork or other clues.
+  // Solver-drawn ink is visible in fog, but never exposes hidden clues.
+  // Paint digits last so lines cannot cover givens or pencil marks.
+  drawPenLines(ctx,penLines,CELL,clip);
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c;
-    if(!isVisible(progress,idx))drawCellInk(idx,c*CELL,r*CELL,true);
+    drawCellInk(idx,c*CELL,r*CELL,!isVisible(progress,idx));
   }
   for(const index of selectedCells){
     const x=(index%puzzle.cols)*CELL,y=Math.floor(index/puzzle.cols)*CELL;
@@ -616,10 +637,14 @@ async function edit(action,symbol='') {
   if(!indices.length){toast(selectedCells.length?'提示数字不可修改':'请先选择格子');return;}
   pending=true;
   try {
+    const before=indices.map(index=>JSON.stringify(progress.cells[index]));
     const change=indices.length===1
       ?await call('update_cell',{index:indices[0],mode:action,symbol})
       :await call('update_cells',{indices,mode:action,symbol});
     applyChange(change);
+    if(indices.some((index,i)=>JSON.stringify(progress.cells[index])!==before[i])){
+      undoStack.push({kind:'cell'});redoStack=[];
+    }
     updateControls();scheduleSave();requestDraw();
     showCompletionIfNew();
   } catch(error){notify(error);}
@@ -627,14 +652,21 @@ async function edit(action,symbol='') {
 }
 async function history(direction) {
   if(pending||!puzzle)return;
+  const from=direction==='undo'?undoStack:redoStack;
+  const to=direction==='undo'?redoStack:undoStack;
+  const record=from.at(-1);
+  if(!record)return;
   pending=true;
   try {
-    const change=await call(direction);
-    applyChange(change);
-    if(selectedCells.length<=1&&canSelectCell(puzzle,change.index))
-      setSelection([change.index]);
-    // setSelection is a no-op when the active cell stays the same. Undo/redo
-    // still changed the engine's history flags and visible cell contents.
+    if(record.kind==='pen'){
+      penLines=direction==='undo'?record.before:record.after;
+    }else{
+      const change=await call(direction);
+      applyChange(change);
+      if(selectedCells.length<=1&&canSelectCell(puzzle,change.index))
+        setSelection([change.index]);
+    }
+    from.pop();to.push(record);
     updateControls();
     requestDraw();
     scheduleSave();
@@ -676,10 +708,19 @@ board.addEventListener('pointerdown',event=>{
   if(pointers.size===1){
     const panMouse=event.pointerType==='mouse' &&
       (event.button===1||event.button===2||event.shiftKey||event.altKey);
-    const oldSelection=[...selectedCells];
-    gesture={kind:panMouse?'mouse-pan':'select',last:p,moved:false,oldSelection};
-    if(!panMouse)select(gridIndex(p.x,p.y));
+    if(!panMouse&&mode==='pen'){
+      gesture={kind:'pen',last:p,node:penNodeAt(p,camera,CELL,puzzle,penGrid),
+        stroke:createPenStroke(penLines,penColor,penErase)};
+    }else{
+      const oldSelection=[...selectedCells];
+      gesture={kind:panMouse?'mouse-pan':'select',last:p,moved:false,oldSelection};
+      if(!panMouse)select(gridIndex(p.x,p.y));
+    }
   }else if(pointers.size===2){
+    if(gesture?.kind==='pen'){
+      penLines=gesture.stroke.before;
+      requestDraw();
+    }
     if(gesture?.kind==='select'&&!gesture.moved)setSelection(gesture.oldSelection);
     const [a,b]=[...pointers.values()];
     gesture={kind:'transform',lastCenter:pointerCenter(a,b),lastDistance:pointerDistance(a,b)};
@@ -707,10 +748,29 @@ board.addEventListener('pointermove',event=>{
     if(Math.hypot(p.x-gesture.last.x,p.y-gesture.last.y)>0.5)gesture.moved=true;
     extendSelection(dragCellIndices(previous,p,camera,puzzle));
     gesture.last=p;
+  }else if(pointers.size===1&&gesture.kind==='pen'){
+    let last=gesture.node,changed=false;
+    for(const next of tracePenNodes(previous,p,camera,CELL,puzzle,penGrid)){
+      if(last&&next&&applyPenStep(gesture.stroke,last,next))changed=true;
+      last=next;
+    }
+    gesture.node=last;
+    gesture.last=p;
+    if(changed){penLines=penStrokeLines(gesture.stroke);requestDraw();}
   }
 });
 function endPointer(event){
   if(!pointers.has(event.pointerId))return;
+  if(pointers.size===1&&gesture?.kind==='pen'){
+    if(event.type==='pointercancel')penLines=gesture.stroke.before;
+    else if(gesture.stroke.changed){
+      penLines=penStrokeLines(gesture.stroke);
+      undoStack.push({kind:'pen',before:gesture.stroke.before,after:penLines});
+      redoStack=[];
+      updateControls();scheduleSave();
+    }
+    requestDraw();
+  }
   pointers.delete(event.pointerId);
   if(pointers.size===1)gesture={kind:'ignore'};
   else if(pointers.size===0)gesture=null;
@@ -738,6 +798,12 @@ $('modeBar').addEventListener('click',event=>{
   const button=event.target.closest('button[data-mode]');
   if(button){mode=button.dataset.mode;updateControls();}
 });
+$('penTools').addEventListener('click',event=>{
+  const swatch=event.target.closest('button[data-pen-color]');
+  const grid=event.target.closest('button[data-pen-grid]');
+  if(swatch){penColor=swatch.dataset.penColor;penErase=false;updateControls();}
+  if(grid){penGrid=grid.dataset.penGrid;updateControls();}
+});
 $('keypad').addEventListener('click',event=>{
   const button=event.target.closest('button[data-symbol]');
   if(button&&!button.disabled)edit(mode,button.dataset.symbol);
@@ -746,7 +812,10 @@ $('palette').addEventListener('click',event=>{
   const button=event.target.closest('button[data-color]');
   if(button)edit('color',button.dataset.color);
 });
-$('eraseButton').addEventListener('click',()=>edit('erase'));
+$('eraseButton').addEventListener('click',()=>{
+  if(mode==='pen'){penErase=!penErase;updateControls();}
+  else edit('erase');
+});
 $('undoButton').addEventListener('click',()=>history('undo'));
 $('redoButton').addEventListener('click',()=>history('redo'));
 $('checkButton').addEventListener('click',async()=>{
@@ -833,7 +902,7 @@ $('exportCheckpoint').addEventListener('click',()=>{
   try{
     if(!puzzle||!progress)throw Error('请先打开一道谜题');
     save();
-    const data=createCheckpoint(puzzle,currentEntry,progress);
+    const data=createCheckpoint(puzzle,currentEntry,progress,penLines);
     const contents=JSON.stringify(data);
     $('checkpointText').value=contents;
     $('checkpointFile').value='';
@@ -851,7 +920,7 @@ $('exportCheckpoint').addEventListener('click',()=>{
 $('copyCheckpoint').addEventListener('click',async()=>{
   try{
     if(!$('checkpointText').value.trim()&&puzzle)
-      $('checkpointText').value=JSON.stringify(createCheckpoint(puzzle,currentEntry,progress));
+      $('checkpointText').value=JSON.stringify(createCheckpoint(puzzle,currentEntry,progress,penLines));
     const text=$('checkpointText').value.trim();
     if(!text)throw Error('没有可复制的存档');
     if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
@@ -886,6 +955,8 @@ $('importCheckpoint').addEventListener('click',async()=>{
     // cells and given-cell edits without mutating the current session.
     save();
     progress=await call('restore_progress',{cells});
+    penLines=cp.penLines;
+    undoStack=[];redoStack=[];
     refreshConflicts();
     save();lastCompletion=Boolean(progress.solved);
     selected=-1;selectedCells=[];updateControls();requestDraw();
@@ -903,11 +974,16 @@ document.addEventListener('keydown',event=>{
   if((event.ctrlKey||event.metaKey)&&(event.key.toLowerCase()==='z'||event.key.toLowerCase()==='y')){
     event.preventDefault();history(event.shiftKey||event.key.toLowerCase()==='y'?'redo':'undo');return;
   }
-  if(event.key==='Backspace'||event.key==='Delete'){event.preventDefault();edit('erase');return;}
+  if(event.key==='Backspace'||event.key==='Delete'){
+    event.preventDefault();
+    if(mode==='pen'){penErase=!penErase;updateControls();}
+    else edit('erase');
+    return;
+  }
   const k=event.key.toUpperCase();
   if(k.length===1&&validSymbol(k)){
     event.preventDefault();
-    if(mode!=='color')edit(mode,k);
+    if(mode!=='color'&&mode!=='pen')edit(mode,k);
     return;
   }
   const delta={ArrowUp:-puzzle?.cols,ArrowDown:puzzle?.cols,ArrowLeft:-1,ArrowRight:1}[event.key];
