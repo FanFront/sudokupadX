@@ -139,14 +139,16 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .lmd-sort-control{display:flex;align-items:center;gap:7px;font-size:12px;color:#bdd7e4;white-space:nowrap}
 .lmd-sort-control select{min-height:38px;max-width:155px;padding:0 27px 0 10px;border:1px solid #456b80;border-radius:8px;background:#142c40;color:#e9f6ff;font:inherit}
 .lmd-sort-control select:disabled{opacity:.55}
-.lmd-rating{flex-shrink:0;font-size:11px;font-weight:650;color:#f4dfad;background:#3d3024;border:1px solid #695236;border-radius:12px;padding:3px 7px;white-space:nowrap}
+.lmd-rating{color:#f4dfad}
 .lmd-pages{display:flex;align-items:center;justify-content:center;gap:12px}
 #lmdPageLabel{font-size:12px;color:#aac7d8}
 .lmd-result-button{width:100%;display:flex;flex-direction:column;align-items:stretch;
- text-align:left;padding:11px 12px;gap:5px;background:#18374e;border:1px solid #426a7f;
+ text-align:left;padding:10px 12px;gap:4px;background:#18374e;border:1px solid #426a7f;
  border-radius:10px;color:#ecf7fd}
-.lmd-result-button strong{font-size:13px;line-height:1.4}
-.lmd-result-button small{font-size:11px;color:#a7cbd9}
+.lmd-result-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+ overflow:hidden;overflow-wrap:anywhere;font-size:13px;line-height:1.4}
+.lmd-result-meta{display:flex;align-items:center;gap:12px;min-width:0;
+ white-space:nowrap;font-size:11px;color:#a7cbd9}
 .lmd-selected{border-top:1px solid #446578;padding:10px 0 4px;display:flex;flex-direction:column;gap:7px}
 .lmd-selected>strong{font-size:14px}
 .lmd-selected p{font-size:12px;color:#a9c9d6;margin:0}
@@ -219,9 +221,7 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .lmd-detail-toolbar button{min-height:40px;padding:0 12px;background:#1b3a51}
 #lmdSelectedTitle{font-size:16px;overflow-wrap:anywhere}
 #lmdStatus{font-size:12px}
-.lmd-result-heading{display:flex;justify-content:space-between;align-items:baseline;gap:7px;flex-wrap:wrap;min-width:0}
-.lmd-result-heading strong{min-width:0;flex:1 1 180px}
-.lmd-difficulty{flex-shrink:0;font-size:11px;color:#c5dded;background:#193248;border:1px solid #385970;border-radius:12px;padding:3px 7px;white-space:nowrap}
+.lmd-difficulty{color:#c5dded}
 .lmd-detail-meta{font-size:12px;color:#b9d4df;line-height:1.4;margin:0}
 .lmd-detail-meta:empty{display:none}
 .lmd-detail-content{display:flex;flex:1;min-height:0;flex-direction:column;gap:12px;overflow-y:auto;overscroll-behavior:contain;padding:2px 3px 9px}
