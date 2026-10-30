@@ -109,7 +109,7 @@ test('taps choose cell centers, edge midpoints or grid intersections',()=>{
   assert.deepEqual(penMarkAt({x:52,y:26},camera,52,puzzle),[2,1]);
   assert.deepEqual(penMarkAt({x:26,y:52},camera,52,puzzle),[1,2]);
   assert.deepEqual(penMarkAt({x:52,y:52},camera,52,puzzle),[2,2]);
-  assert.deepEqual(penMarkAt({x:99,y:200},{x:47,y:96,scale:2},52,puzzle),[1,1]);
+  assert.deepEqual(penMarkAt({x:99,y:148},{x:47,y:96,scale:2},52,puzzle),[1,1]);
   assert.equal(penMarkAt({x:500,y:500},camera,52,puzzle),null);
 });
 
