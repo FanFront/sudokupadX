@@ -1,4 +1,5 @@
 import {puzzleIdFromUrl} from './online-library.js';
+import {parsePenpaUrl} from './penpa-import.js';
 
 export const RESUME_KEY = 'sudokupadx:last-session:v1';
 const MAX_STACK = 32;
@@ -49,7 +50,7 @@ export function cachedSource(key, entry = null) {
   if (entry === null) return {type:'imported',key};
   if (typeof entry.id !== 'string' || !entry.id || entry.id.length > 256 ||
       typeof entry.title !== 'string' || !entry.title ||
-      !puzzleIdFromUrl(entry.puzzleUrl)) return null;
+      !(puzzleIdFromUrl(entry.puzzleUrl) || parsePenpaUrl(entry.puzzleUrl))) return null;
   return {
     type:'online', key,
     entry:{
