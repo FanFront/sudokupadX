@@ -5,8 +5,9 @@ import {
 } from './online-library.js';
 import {invoke} from '@tauri-apps/api/core';
 import {installLmdImageViewer} from './lmd-image-viewer.js';
+import {parsePenpaUrl} from './penpa-import.js';
 import {
-  logicMastersReference, parseLogicMastersPage, directSudokuPadEntry,
+  logicMastersReference, parseLogicMastersPage, directPuzzleEntry,
   logicMastersSearchUrl, parseLogicMastersSearch, parseLogicMastersDetails,
   logicMastersDifficultyLabel, LOGIC_MASTERS_SORTS
 } from './logic-masters.js';
@@ -253,7 +254,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   }
 
   // Logic Masters pages are usually HTML with an image, not a puzzle file.
-  // Import only an actual SudokuPad link published by the setter.
+  // Import a SudokuPad or Penpa+ link actually published by the setter.
   let lmdFound = [];
   const lmdStatus = message => { $('lmdStatus').textContent = message; };
   function renderLmdEntries(list, entries, emptyMessage) {
@@ -325,13 +326,13 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     renderLmdEntries($('lmdSavedResults'), downloaded,
       '还没有离线谜题。在「探索题库」中选择题目并点击「下载离线」。');
     renderLmdEntries($('lmdResults'), lmdFound,
-      '此题尚无可导入的 SudokuPad 链接。可返回列表选择其他谜题。');
+      '此题尚无可导入的 SudokuPad / Penpa+ 链接。可返回列表选择其他谜题。');
   }
   async function resolveLmdReference() {
     const input = $('lmdReference').value.trim();
-    if (/^https:\/\/(?:www\.)?sudokupad\.app\//i.test(input)) {
-      lmdFound = [directSudokuPadEntry(input)];
-      lmdStatus('已识别 SudokuPad 直链，可在线打开或下载离线。');
+    if ((/^https:\/\/(?:www\.)?sudokupad\.app\//i.test(input) || parsePenpaUrl(input))) {
+      lmdFound = [directPuzzleEntry(input)];
+      lmdStatus('已识别 SudokuPad / Penpa+ 直链，可在线打开或下载离线。');
       renderLmd();
       return;
     }
@@ -345,14 +346,14 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
       $('lmdSelectedTitle').textContent = lmdDetails.title;
     renderLmdDetailInfo();
     lmdStatus(lmdFound.length ?
-      '从 Logic Masters ' + ref.id + ' 找到 ' + lmdFound.length + ' 个 SudokuPad 链接。':
-      '这个页面未提供可导入的 SudokuPad 链接；如有作者图片，可在下方直接查看（暂不能转成可玩棋盘）。');
+      '从 Logic Masters ' + ref.id + ' 找到 ' + lmdFound.length + ' 个 SudokuPad / Penpa+ 链接。':
+      '这个页面未提供可导入的 SudokuPad / Penpa+ 链接；如有作者图片，可在下方直接查看（暂不能转成可玩棋盘）。');
     renderLmd();
   }
   async function resolveLmdPasted() {
     const input = $('lmdPasted').value.trim();
-    if (/^https:\/\/(?:www\.)?sudokupad\.app\//i.test(input)) {
-      lmdFound = [directSudokuPadEntry(input)];
+    if ((/^https:\/\/(?:www\.)?sudokupad\.app\//i.test(input) || parsePenpaUrl(input))) {
+      lmdFound = [directPuzzleEntry(input)];
     } else {
       const ref = logicMastersReference($('lmdReference').value);
       lmdFound = parseLogicMastersPage(input,ref);
@@ -362,8 +363,8 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     }
     renderLmdDetailInfo();
     lmdStatus(lmdFound.length ?
-      '从粘贴内容提取到 ' + lmdFound.length + ' 道可加载的 SudokuPad 谜题。':
-      '粘贴内容没有可导入的 SudokuPad 链接；作者图片可直接查看，但暂不能转换为可玩棋盘。');
+      '从粘贴内容提取到 ' + lmdFound.length + ' 道可加载的 SudokuPad / Penpa+ 谜题。':
+      '粘贴内容没有可导入的 SudokuPad / Penpa+ 链接；作者图片可直接查看，但暂不能转换为可玩棋盘。');
     renderLmd();
   }
   async function lmdAction(action) {
