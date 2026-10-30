@@ -34,8 +34,9 @@ test('fog hides authored puzzle art but player-written values and notes stay on 
   const userMarks=position('drawPenMarks(ctx,penMarks,CELL,clip);');
   const selection=position('for(const index of selectedCells){');
   assert.ok(fog<borders&&borders<userLines,'authored artwork stays behind fog while solver strokes stay on top');
-  assert.ok(userLines<visibleInk&&visibleInk<userMarks,'user lines remain below digits while tap circles/X are above digits');
-  assert.ok(userMarks<selection,'selection outlines remain above player marks');
+  assert.ok(userLines<userMarks&&userMarks<visibleInk,
+    'lines, circles and crosses must all be behind givens, player digits and pencil notes');
+  assert.ok(visibleInk<selection,'selection outlines remain above player ink');
   assert.ok(draw.includes('!isVisible(progress,idx)'),
     'visibility-aware ink renderer must not expose hidden givens');
 });
