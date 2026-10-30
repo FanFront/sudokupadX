@@ -597,7 +597,8 @@ impl Session {
     }
 }
 
-pub const DEMO: &str = r#"{
+#[cfg(test)]
+const DEMO: &str = r#"{
   "id":"sudokupadx-demo-v1",
   "metadata":{"title":"First Steps · 初始练习","author":"SudokuPad X","rules":"Fill each row, column and 3×3 region with digits 1–9.\n每行、每列、每个 3×3 宫填入 1–9。"},
   "cells":[

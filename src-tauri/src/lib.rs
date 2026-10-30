@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::sync::Mutex;
-use sudokupadx_core::{EditResult, InputCell, ProgressCheck, Puzzle, Session, Snapshot, DEMO};
+use sudokupadx_core::{EditResult, InputCell, ProgressCheck, Puzzle, Session, Snapshot};
 use tauri::State;
 
 #[derive(Default)]
@@ -18,13 +18,6 @@ struct OpenResponse {
 fn lock<'a>(state: &'a AppState) -> Result<std::sync::MutexGuard<'a, Option<Session>>, String> {
     state.session.lock().map_err(|_| "Puzzle engine lock failed.".to_owned())
 }
-fn open(input: &str, state: &AppState) -> Result<OpenResponse, String> {
-    let puzzle = sudokupadx_core::load(input)?;
-    let session = Session::new(puzzle.clone());
-    let result = OpenResponse { puzzle, progress: session.snapshot() };
-    *lock(state)? = Some(session);
-    Ok(result)
-}
 fn with_session<T>(
     state: &AppState,
     action: impl FnOnce(&mut Session) -> Result<T, String>,
@@ -34,10 +27,6 @@ fn with_session<T>(
     action(current)
 }
 
-#[tauri::command]
-fn load_demo(state: State<'_, AppState>) -> Result<OpenResponse, String> {
-    open(DEMO, &state)
-}
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct LocalizedMetadata {
@@ -188,7 +177,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            load_demo, open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress, fetch_logic_masters_page, search_logic_masters
+            open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress, fetch_logic_masters_page, search_logic_masters
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");

@@ -23,9 +23,6 @@ export async function invokeBrowser(command, args = {}) {
   const engine = await browserEngine();
   let payload;
   switch (command) {
-    case 'load_demo':
-      payload = engine.load_demo();
-      break;
     case 'open_puzzle':
       payload = engine.open_puzzle(args.input, JSON.stringify(args.localization ?? null));
       break;

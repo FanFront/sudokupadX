@@ -108,10 +108,10 @@ function db() {
   if (!databasePromise) {
     databasePromise = new Promise((resolve, reject) => {
       if (typeof indexedDB === 'undefined') { reject(Error('本机不支持 IndexedDB 离线存储')); return; }
-      const request = indexedDB.open(DB_NAME, 1);
+      const request = indexedDB.open(DB_NAME, 2);
       request.onupgradeneeded = () => {
         const database = request.result;
-        for (const name of ['meta','puzzles','saved'])
+        for (const name of ['meta','puzzles','saved','resume'])
           if (!database.objectStoreNames.contains(name))
             database.createObjectStore(name, {keyPath:'id'});
       };
@@ -168,5 +168,24 @@ export function removeOfflinePuzzle(id) {
   return transaction(['puzzles','saved'], 'readwrite', tx => {
     tx.objectStore('puzzles').delete(id);
     tx.objectStore('saved').delete(id);
+  });
+}
+
+/** Autosaved imported/online puzzle definition, separate from explicit downloads.
+ * IndexedDB avoids localStorage size limits and doesn't pollute My Downloads.
+ */
+export function saveResumePuzzle(key, input) {
+  if (typeof key !== 'string' || !key || key.length > 1024 ||
+      typeof input !== 'string' || !input.length || input.length > MAX_ONLINE_PUZZLE)
+    throw Error('无法保存当前谜题的离线恢复数据');
+  return transaction(['resume'], 'readwrite', tx => {
+    tx.objectStore('resume').put({id:'current',key,input});
+  });
+}
+export function readResumePuzzle(key) {
+  if (typeof key !== 'string' || !key || key.length > 1024) return Promise.resolve(null);
+  return transaction(['resume'], 'readonly', (tx, done) => {
+    tx.objectStore('resume').get('current').onsuccess = e =>
+      done(e.target.result?.key === key ? e.target.result.input : null);
   });
 }

@@ -1,7 +1,7 @@
 //! Browser entry point. All puzzle parsing, fog, editing and save validation
 //! uses the exact same Rust engine as the Android/Tauri application.
 use serde_json::{json, Value};
-use sudokupadx_core::{self as core, InputCell, Session, DEMO};
+use sudokupadx_core::{self as core, InputCell, Session};
 use wasm_bindgen::prelude::*;
 
 fn js_error(error: impl std::fmt::Display) -> JsValue {
@@ -44,10 +44,6 @@ impl WasmPuzzleEngine {
         let response = to_json(&json!({"puzzle": puzzle, "progress": session.snapshot()}))?;
         self.session = Some(session);
         Ok(response)
-    }
-
-    pub fn load_demo(&mut self) -> Result<String, JsValue> {
-        self.open_puzzle(DEMO, "null")
     }
 
     pub fn update_cell(&mut self, index: usize, mode: &str, symbol: &str) -> Result<String, JsValue> {
