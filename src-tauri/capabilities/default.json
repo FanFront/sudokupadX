@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "UI may invoke SudokuPad X core commands.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "opener:default"]
 }
