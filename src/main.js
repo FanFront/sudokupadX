@@ -8,6 +8,8 @@ import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
 import {setupOnlineLibrary} from './online-ui.js';
+import {readResumePuzzle,saveResumePuzzle} from './online-library.js';
+import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
 import {bilingualTitle,displayBilingual} from './bilingual.js';
 import './style.css';
 
@@ -41,6 +43,8 @@ let currentEntry = null, navigationStack = [], matchingSectors = [], sectorCurso
 let activeLinkedPuzzles = [];
 let lastCompletion = false;
 let showGridLines = true;
+let activeSource = null;
+let frameSize = {width:0,height:0};
 const board = $('boardCanvas');
 const frame = $('boardFrame');
 const ctx = board.getContext('2d', {alpha:false});
@@ -101,13 +105,23 @@ function saveKey() {return puzzle ? 'sudokupadx:v1:'+puzzle.key : '';}
 function save() {
   if (!puzzle || !progress) return;
   clearTimeout(saveTimer);
-  try {localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells}));} catch {}
-  $('saveLabel').textContent = '已保存到本机';
+  try {
+    localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells}));
+    const view=captureView(camera,frame.clientWidth,frame.clientHeight,selectedCells,showGridLines);
+    const resume=serializeResume(activeSource,view,navigationStack);
+    if(resume) localStorage.setItem(RESUME_KEY,resume);
+    $('saveLabel').textContent = '已保存到本机';
+  } catch {
+    $('saveLabel').textContent = '本机保存失败';
+  }
 }
 function scheduleSave() {
   clearTimeout(saveTimer);
   $('saveLabel').textContent = '待保存';
   saveTimer=setTimeout(save,350);
+}
+function scheduleViewSave() {
+  if (!pending && activeSource) scheduleSave();
 }
 document.addEventListener('visibilitychange',()=>{
   if (document.visibilityState==='hidden') save();
@@ -237,7 +251,8 @@ async function openBundled(id,push=false,backState=null){
   const entry=catalog.find(e=>e.id===id);
   if(!entry)throw Error('未找到已打包谜题: '+id);
   if(currentEntry && push){
-    save();navigationStack.push({id:currentEntry.id,camera:{...camera},selected,selectedCells:[...selectedCells]});
+    save();navigationStack.push({id:currentEntry.id,
+      view:captureView(camera,frame.clientWidth,frame.clientHeight,selectedCells,showGridLines)});
   }else if(!backState && !push) {
     if(puzzle)save();navigationStack=[];
   }
@@ -267,13 +282,10 @@ async function openBundled(id,push=false,backState=null){
       for(const mark of result.puzzle[kind]||[])
         if(mark&&typeof mark.text==='string')mark.text=translateDisplay(mark.text);
     await openResult(result);
-    if(backState){
-      camera={...backState.camera};
-      $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
-      setSelection(backState.selectedCells?.length?backState.selectedCells:[backState.selected]);
-      requestDraw();
-    }
+    activeSource=bundledSource(id);
+    if(backState?.view) applyStoredView(backState.view);
     updateBack();
+    save();
     if($('rulesDialog').open)$('rulesDialog').close();
     if($('libraryDialog').open)$('libraryDialog').close();
     toast('已载入离线谜题');
@@ -292,6 +304,7 @@ async function goBack(){
   await openBundled(destination.id,false,destination.backState);
   if(destination.fromStack)navigationStack.pop();
   updateBack();
+  save();
 }
 
 function updateInfo() {
@@ -343,23 +356,38 @@ async function openResult(result) {
   updateSector();
   requestDraw();
 }
-async function openInput(input) {
+async function cacheActivePuzzle(input, entry = null) {
+  try {
+    await saveResumePuzzle(puzzle.key,input);
+    activeSource=cachedSource(puzzle.key,entry);
+    if(!activeSource) throw Error('缺少有效的谜题恢复信息');
+  } catch(error) {
+    activeSource=null;
+    try {localStorage.removeItem(RESUME_KEY);} catch {}
+    notify('自动恢复题面保存失败：'+String(error?.message || error));
+  }
+}
+async function openInput(input, restoredView = null, resuming = false) {
   if (pending) return;
   if (!input || input.length>MAX_IMPORT) throw new Error('请选择小于 8 MiB 的谜题文件');
+  if(puzzle)save();
   pending=true;
   try {
     const result=await call('open_puzzle',{input,localization:null});
     currentEntry=null;navigationStack=[];mainDictionary={};
     await openResult(result);
+    await cacheActivePuzzle(input);
+    if(restoredView)applyStoredView(restoredView);
     updateBack();
-    $('importDialog').close();
+    save();
+    if($('importDialog').open)$('importDialog').close();
     $('pasteInput').value='';
     $('filePicker').value='';
-    toast('谜题已导入');
+    if(!resuming)toast('谜题已导入');
   } finally {pending=false;}
 }
 
-async function openIndexedPuzzle(entry,input,offline) {
+async function openIndexedPuzzle(entry,input,offline,restoredView = null,resuming = false) {
   if (pending) throw Error('请先等待当前谜题加载结束');
   pending=true;
   try {
@@ -370,8 +398,11 @@ async function openIndexedPuzzle(entry,input,offline) {
       group:entry.sourceName,url:entry.puzzleUrl,sourceUrl:entry.sourceUrl || null};
     navigationStack=[];mainDictionary={};
     await openResult(result);
+    await cacheActivePuzzle(input,entry);
+    if(restoredView)applyStoredView(restoredView);
     updateBack();
-    toast(offline?'已打开离线下载的谜题':'已打开在线谜题');
+    save();
+    if(!resuming)toast(offline?'已打开离线下载的谜题':'已打开在线谜题');
   } finally {pending=false;}
 }
 
@@ -421,6 +452,17 @@ function requestDraw() {
 }
 function resizeCanvas() {
   const bounds=frame.getBoundingClientRect();
+  const width=frame.clientWidth,height=frame.clientHeight;
+  if(puzzle && activeSource && width>0 && height>0 &&
+      frameSize.width>0 && frameSize.height>0 &&
+      (width!==frameSize.width || height!==frameSize.height)){
+    const before=captureView(camera,frameSize.width,frameSize.height,selectedCells,showGridLines);
+    const adjusted=restoreView(before,width,height,puzzle.cells.length);
+    if(adjusted) camera=adjusted.camera;
+    $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
+    scheduleViewSave();
+  }
+  if(width>0 && height>0)frameSize={width,height};
   const dpr=Math.min(window.devicePixelRatio||1,2);
   const w=Math.max(1,Math.round(bounds.width*dpr)),h=Math.max(1,Math.round(bounds.height*dpr));
   if(board.width!==w||board.height!==h){board.width=w;board.height=h;}
@@ -434,6 +476,7 @@ function fit() {
   camera.y=(h-puzzle.rows*CELL*camera.scale)/2;
   updateControls();
   requestDraw();
+  scheduleViewSave();
 }
 function setZoom(newScale,anchorX=frame.clientWidth/2,anchorY=frame.clientHeight/2) {
   const next=Math.max(.065,Math.min(5,newScale));
@@ -443,6 +486,21 @@ function setZoom(newScale,anchorX=frame.clientWidth/2,anchorY=frame.clientHeight
   camera.scale=next;
   $('zoomLabel').textContent=Math.round(next*100)+'%';
   requestDraw();
+  scheduleViewSave();
+}
+function applyStoredView(view){
+  if(!puzzle)return false;
+  const restored=restoreView(view,frame.clientWidth,frame.clientHeight,puzzle.cells.length);
+  if(!restored)return false;
+  camera=restored.camera;
+  if(restored.gridLines!==null){
+    showGridLines=restored.gridLines;
+    updateGridButton();
+  }
+  setSelection(restored.selectedCells);
+  $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
+  requestDraw();
+  return true;
 }
 function gridIndex(x,y) {
   if(!puzzle) return -1;
@@ -589,6 +647,7 @@ function setSelection(indices) {
   if(next!==selected)sectorCursor=0;
   selectedCells=valid;selected=next;
   updateSelection();requestDraw();
+  scheduleViewSave();
   board.focus({preventScroll:true});
 }
 function select(index) {setSelection(index<0?[]:[index]);}
@@ -638,9 +697,10 @@ board.addEventListener('pointermove',event=>{
       setZoom(camera.scale*distance/gesture.lastDistance,center.x,center.y);
     else requestDraw();
     gesture.lastCenter=center;gesture.lastDistance=distance;
+    scheduleViewSave();
   }else if(pointers.size===1&&gesture.kind==='mouse-pan'){
     camera.x+=p.x-previous.x;camera.y+=p.y-previous.y;
-    gesture.last=p;requestDraw();
+    gesture.last=p;requestDraw();scheduleViewSave();
   }else if(pointers.size===1&&gesture.kind==='select'){
     if(Math.hypot(p.x-gesture.last.x,p.y-gesture.last.y)>0.5)gesture.moved=true;
     extendSelection(dragCellIndices(previous,p,camera,puzzle));
@@ -652,6 +712,7 @@ function endPointer(event){
   pointers.delete(event.pointerId);
   if(pointers.size===1)gesture={kind:'ignore'};
   else if(pointers.size===0)gesture=null;
+  scheduleViewSave();
 }
 board.addEventListener('pointerup',endPointer);
 board.addEventListener('pointercancel',endPointer);
@@ -665,6 +726,7 @@ $('gridButton').addEventListener('click',()=>{
   showGridLines=!showGridLines;
   updateGridButton();
   requestDraw();
+  scheduleViewSave();
 });
 $('zoomIn').addEventListener('click',()=>setZoom(camera.scale*1.25));
 $('zoomOut').addEventListener('click',()=>setZoom(camera.scale/1.25));
@@ -818,14 +880,6 @@ $('importCheckpoint').addEventListener('click',async()=>{
     toast('存档导入成功 · '+cells.filter(c=>c.value||c.corner.length||c.center.length||c.color).length+' 格已恢复');
   }catch(error){errorLabel.textContent=String(error.message||error);}
 });
-$('demoButton').addEventListener('click',async()=>{
-  if(pending)return;
-  try{
-    if(puzzle)save();
-    currentEntry=null;navigationStack=[];mainDictionary={};
-    await openResult(await call('load_demo'));updateBack();toast('示例已打开');
-  }catch(error){notify(error);}
-});
 document.addEventListener('keydown',event=>{
   const active=document.activeElement;
   if(active?.matches('input,textarea')||$('importDialog').open||$('rulesDialog').open||
@@ -863,15 +917,44 @@ if(!native && import.meta.env.PROD && location.protocol==='https:' &&
   });
 }
 (async()=>{
-  try{
+  try {
     await loadCatalog();
-    // A shareable URL selects any bundled puzzle, e.g. ?puzzle=super-sudokoid-2.
-    // Unrecognized puzzle IDs safely fall back to the first adventure map.
+    // Explicit share links take priority; otherwise resume the exact last
+    // puzzle, including linked-puzzle navigation and board camera position.
     const requested=new URLSearchParams(location.search).get('puzzle');
-    const entry=catalog.find(item=>item.id===requested);
-    await openBundled(entry?.id || 'digits-of-despair');
+    const explicit=catalog.find(item=>item.id===requested);
+    if(explicit){
+      await openBundled(explicit.id);
+      return;
+    }
+    let resumed=false;
+    let record=null;
+    try {record=parseResume(localStorage.getItem(RESUME_KEY));} catch {}
+    if(record){
+      try {
+        if(record.source.type==='bundled'){
+          if(!catalog.some(entry=>entry.id===record.source.id))throw Error('内置谜题已不存在');
+          await openBundled(record.source.id,false,{view:record.view});
+        }else{
+          const input=await readResumePuzzle(record.source.key);
+          if(!input)throw Error('本机已缓存的谜题资源不存在');
+          if(record.source.type==='online')
+            await openIndexedPuzzle(record.source.entry,input,true,record.view,true);
+          else
+            await openInput(input,record.view,true);
+        }
+        navigationStack=record.stack.filter(item=>catalog.some(entry=>entry.id===item.id));
+        updateBack();
+        save();
+        resumed=true;
+      }catch(error){
+        notify('上次谜题恢复失败，改为打开内置地图：'+String(error?.message||error));
+        try {localStorage.removeItem(RESUME_KEY);} catch {}
+      }
+    }
+    if(!resumed)await openBundled('digits-of-despair');
   }catch(error){
-    notify('内置谜题加载失败: '+String(error));
-    try{await openResult(await call('load_demo'));}catch(e){notify(e);}
+    notify('内置谜题加载失败：'+String(error?.message||error));
+    // There is intentionally no demo puzzle fallback; library/import remain accessible.
   }
 })();
