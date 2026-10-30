@@ -51,9 +51,25 @@ test('pen strokes round-trip through checkpoints without changing the Android v1
   const cp=createCheckpoint(puzzle,entry,state,penLines);
   assert.equal(cp.version,1);
   assert.deepEqual(inspectCheckpoint(JSON.stringify(cp)).penLines,penLines);
+  assert.deepEqual(inspectCheckpoint(JSON.stringify(cp)).penMarks,[]);
   const old={...cp};delete old.penLines;
   assert.deepEqual(inspectCheckpoint(JSON.stringify(old)).penLines,[]);
+  assert.deepEqual(inspectCheckpoint(JSON.stringify(old)).penMarks,[]);
   assert.throws(()=>inspectCheckpoint(JSON.stringify({
     ...cp,penLines:[{a:[1,1],b:[5,1],color:'#2486b3'}]
   })),/pen line/i);
+});
+
+test('circle and X pen marks round-trip in checkpoint v1 with old saves compatible',()=>{
+  const state={cells:Array.from({length:4},empty)};
+  const marks=[
+    {at:[1,1],type:'circle',color:'#2486b3'},
+    {at:[2,1],type:'cross',color:'#d45867'},
+    {at:[2,2],type:'cross',color:'#34495e'}
+  ];
+  const cp=createCheckpoint(puzzle,entry,state,[],marks);
+  assert.equal(cp.version,1);
+  assert.deepEqual(inspectCheckpoint(JSON.stringify(cp)).penMarks,marks);
+  const invalid={...cp,penMarks:[{at:[30,2],type:'cross',color:'#2486b3'}]};
+  assert.throws(()=>inspectCheckpoint(JSON.stringify(invalid)),/pen mark/i);
 });
