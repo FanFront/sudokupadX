@@ -214,6 +214,7 @@ try{
     'Restoring a checkpoint should clear the previous undo stack');
   await page.screenshot({path:'artifacts/web/imported-input.png'});
   await page.locator('#zoomIn').click();
+  await page.waitForFunction(()=>document.querySelector('#saveLabel')?.textContent==='已保存到本机',null,{timeout:10000});
   const zoomBefore=await page.locator('#zoomLabel').textContent();
   const selectedBefore=await page.locator('#selectionLabel').textContent();
   assert.ok(!await page.locator('#demoButton').count(),'Example action must not ship');
