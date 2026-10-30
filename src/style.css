@@ -136,6 +136,10 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .lmd-browse-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .lmd-browse-actions button,.lmd-pages button{padding:0 10px;min-height:34px;font-size:12px}
 #lmdSearchStatus{flex:1 1 180px;color:#a9c9d6;font-size:11px;line-height:1.4}
+.lmd-sort-control{display:flex;align-items:center;gap:7px;font-size:12px;color:#bdd7e4;white-space:nowrap}
+.lmd-sort-control select{min-height:38px;max-width:155px;padding:0 27px 0 10px;border:1px solid #456b80;border-radius:8px;background:#142c40;color:#e9f6ff;font:inherit}
+.lmd-sort-control select:disabled{opacity:.55}
+.lmd-rating{flex-shrink:0;font-size:11px;font-weight:650;color:#f4dfad;background:#3d3024;border:1px solid #695236;border-radius:12px;padding:3px 7px;white-space:nowrap}
 .lmd-pages{display:flex;align-items:center;justify-content:center;gap:12px}
 #lmdPageLabel{font-size:12px;color:#aac7d8}
 .lmd-result-button{width:100%;display:flex;flex-direction:column;align-items:stretch;

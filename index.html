@@ -153,6 +153,13 @@
             <button id="lmdSearchButton" type="submit" class="primary-btn">搜索</button>
           </form>
           <div class="lmd-browse-actions">
+            <label class="lmd-sort-control" for="lmdSort">排序
+              <select id="lmdSort" aria-label="Logic Masters 排序方式">
+                <option value="neu">最新发布</option>
+                <option value="schoen">评分最高</option>
+                <option value="leicht">难度最低</option>
+              </select>
+            </label>
             <button id="lmdLatest" type="button">最新题目</button>
             <span id="lmdSearchStatus" role="status" aria-live="polite">进入后显示最新题目；也可输入关键词搜索。</span>
           </div>

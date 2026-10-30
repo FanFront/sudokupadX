@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   logicMastersReference,parseLogicMastersPage,directSudokuPadEntry,
   logicMastersSearchUrl,parseLogicMastersSearch,parseLogicMastersDetails,
-  logicMastersDifficultyLabel
+  logicMastersDifficultyLabel, LOGIC_MASTERS_SORTS
 } from '../src/logic-masters.js';
 
 test('Logic Masters IDs and official HTTPS links resolve to canonical page',()=>{
@@ -52,6 +52,16 @@ test('live portal keyword searches use the public advanced-search parameters',()
   assert.equal(uri.searchParams.get('sktext'),'x');
   assert.equal(uri.searchParams.get('suchtext'),'German Whispers');
   assert.equal(uri.searchParams.get('start'),'20');
+  assert.equal(uri.searchParams.get('sort'),'neu');
+  assert.deepEqual(LOGIC_MASTERS_SORTS.map(x=>x.value),['neu','schoen','leicht']);
+  for (const sort of ['schoen','leicht']) {
+    const search = new URL(logicMastersSearchUrl('German Whispers',40,sort));
+    assert.equal(search.searchParams.get('sort'),sort);
+    assert.equal(search.searchParams.get('start'),'40');
+    assert.equal(search.searchParams.get('suchtext'),'German Whispers');
+  }
+  for (const sort of ['', 'unknown', 'neu&start=20'])
+    assert.throws(()=>logicMastersSearchUrl('',0,sort),/排序/);
   assert.equal(new URL(logicMastersSearchUrl('')).searchParams.has('suchtext'),false);
   for(const start of [-1,15,20020,1.2])
     assert.throws(()=>logicMastersSearchUrl('test',start),/页码/);
@@ -92,6 +102,19 @@ test('search results include per-row difficulty and estimated flag',()=>{
   assert.match(logicMastersDifficultyLabel(3,true),/中等.*作者预估/);
   assert.equal(logicMastersDifficultyLabel(null),'');
 });
+test('search listing includes official beauty ratings, not unrated entries',()=>{
+  const html = '<table>' +
+    '<tr><td><a href="../Raetsel/zeigen.php?id=000ABC">Rated</a> by Alice</td>' +
+    '<td><img alt="mittelschweres Rätsel"> 93&nbsp;%</td></tr>' +
+    '<tr><td><a href="../Raetsel/zeigen.php?id=000DEF">Unrated</a> by Bob</td>' +
+    '<td><img alt="Vom Rätselautor geschätzt: leichtes Rätsel"> N/A </td></tr>' +
+    '<tr><td><a href="../Raetsel/zeigen.php?id=000GHI">Perfect</a></td>' +
+    '<td><img alt="schweres Rätsel"> 100 %</td></tr></table>';
+  const {items} = parseLogicMastersSearch(html);
+  assert.deepEqual(items.map(item=>item.ratingPercent),[93,null,100]);
+  assert.equal(items[0].difficulty,3);
+  assert.equal(items[1].difficultyEstimated,true);
+});
 test('difficulty does not leak from the next result row',()=>{
   const html = '<table><tr><td><a href="../Raetsel/zeigen.php?id=000ABC">No rating</a></td></tr>' +
     '<tr><td><a href="../Raetsel/zeigen.php?id=000DEF">Easy</a></td>' +
@@ -118,6 +141,16 @@ test('details retain readable original rules without portal chrome or unsafe mar
   }]);
   assert.equal(detail.difficulty,2);
   assert.equal(detail.difficultyEstimated,true);
+  assert.equal(detail.ratingPercent,null);
+});
+test('detail metadata reads the beauty percentage separately from difficulty',()=>{
+  const html = '<h2>Rated puzzle</h2><p>Rules</p><p>Solution code: Row 1</p>' +
+    '<table><tr><th>Difficulty:</th><td><img alt="schweres Rätsel"></td></tr>' +
+    '<tr><th>Rating:</th><td>97&nbsp;%</td></tr></table>';
+  const detail = parseLogicMastersDetails(html);
+  assert.equal(detail.difficulty,4);
+  assert.equal(detail.ratingPercent,97);
+  assert.equal(parseLogicMastersDetails(html.replace('97&nbsp;%','N/A')).ratingPercent,null);
 });
 test('missing description marker never displays the whole LMD website',()=>{
   const detail=parseLogicMastersDetails('<h2>Image only</h2><p>Menu and comments</p>');

@@ -19,6 +19,13 @@ test('library exposes three mutually exclusive Logic Masters screens',()=>{
   assert.match(ui,/renderLmdEntries\(\$\('lmdResults'\), lmdFound/);
 });
 
+test('Logic Masters search has a sort selector and passes it to native search and paging',()=>{
+  assert.match(html,/id="lmdSort"/);
+  for (const sort of ['neu','schoen','leicht']) assert.match(html,new RegExp('value="'+sort+'"'));
+  assert.match(ui,/\{query:keyword,start:offset,sort\}/);
+  assert.match(ui,/searchLmd\(lmdCurrentQuery,lmdOffset\+20,lmdCurrentSort\)/);
+  assert.match(ui,/ratingPercent/);
+});
 test('external original URLs only accept HTTPS',()=>{
   assert.equal(externalSourceUrl('https://sudokupad.app/abc123'),'https://sudokupad.app/abc123');
   assert.equal(externalSourceUrl('https://logic-masters.de/Raetselportal/'),'https://logic-masters.de/Raetselportal/');

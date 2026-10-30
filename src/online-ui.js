@@ -8,7 +8,7 @@ import {installLmdImageViewer} from './lmd-image-viewer.js';
 import {
   logicMastersReference, parseLogicMastersPage, directSudokuPadEntry,
   logicMastersSearchUrl, parseLogicMastersSearch, parseLogicMastersDetails,
-  logicMastersDifficultyLabel
+  logicMastersDifficultyLabel, LOGIC_MASTERS_SORTS
 } from './logic-masters.js';
 
 // The bundled snapshot works without a network, including on first launch of the APK.
@@ -30,6 +30,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   let lmdDetailSource = '';
   let lmdTotal = null;
   let lmdCurrentQuery = '';
+  let lmdCurrentSort = 'neu';
   let lmdOffset = 0;
   let loading = false;
   let actionId = '';
@@ -71,6 +72,12 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
           item.difficulty,item.difficultyEstimated);
         heading.append(difficulty);
       }
+      if (item.ratingPercent !== null && item.ratingPercent !== undefined) {
+        const score = document.createElement('span');
+        score.className = 'lmd-rating';
+        score.textContent = '评分 ' + item.ratingPercent + '%';
+        heading.append(score);
+      }
       const meta = document.createElement('small');
       meta.textContent = 'LMD ' + item.id +
         (item.author ? ' · 作者 ' + item.author : '') + ' · 点击查看详情';
@@ -105,33 +112,39 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     if (html.length > 1024*1024) throw Error('Logic Masters 页面超过大小限制');
     return html;
   }
-  async function searchLmd(query, offset = 0) {
+  async function searchLmd(query, offset = 0, sort = $('lmdSort').value) {
     if (actionId) return;
     const keyword = query.trim();
-    const url = logicMastersSearchUrl(keyword,offset);
+    const url = logicMastersSearchUrl(keyword,offset,sort);
     actionId = 'lmd:search';
     lmdSearchStatus('正在搜索 Logic Masters 题库…');
     $('lmdSearchButton').disabled = true;
     $('lmdLatest').disabled = true;
+    $('lmdSort').disabled = true;
     try {
       const html = await fetchLmdHtml(url,'search_logic_masters',
-        {query:keyword,start:offset});
+        {query:keyword,start:offset,sort});
       const {items,total} = parseLogicMastersSearch(html);
       lmdMatches = items;
       lmdTotal = total;
       lmdCurrentQuery = keyword;
+      lmdCurrentSort = sort;
       lmdOffset = offset;
-      lmdSearchStatus((keyword ? '搜索“'+keyword+'”' : '最新题目') +
+      const sortLabel = LOGIC_MASTERS_SORTS.find(option => option.value === sort)?.label || sort;
+      lmdSearchStatus((keyword ? '搜索“'+keyword+'”' : '浏览题库') +
+        ' · ' + sortLabel +
         ' · 本页 ' + items.length + ' 题' +
         (total !== null ? ' · 共 '+total+' 题' : '') +
         ' · 点选题目查看可导入版本');
     } catch(error) {
+      $('lmdSort').value = lmdCurrentSort;
       lmdSearchStatus('检索失败：' + errorText(error) + '。已下载的谜题仍可离线打开。');
       // Preserve the previous result page if a network request fails.
     } finally {
       actionId = '';
       $('lmdSearchButton').disabled = false;
       $('lmdLatest').disabled = false;
+      $('lmdSort').disabled = false;
       renderLmdMatches();
     }
   }
@@ -154,9 +167,11 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
       detail?.difficulty ?? lmdSelected?.difficulty,
       detail?.difficulty === null || !detail
         ? lmdSelected?.difficultyEstimated : detail.difficultyEstimated);
+    const score = detail?.ratingPercent ?? lmdSelected?.ratingPercent;
     $('lmdDetailMeta').textContent = [
       lmdSelected?.author ? '作者 ' + lmdSelected.author : '',
-      rating ? '难度 ' + rating : ''
+      rating ? '难度 ' + rating : '',
+      score !== null && score !== undefined ? '评分 ' + score + '%' : '暂无评分'
     ].filter(Boolean).join(' · ');
     const panel = $('lmdDescriptionPanel');
     panel.hidden = !detail;
@@ -564,18 +579,21 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     $('lmdSelectedTitle').textContent = '粘贴内容导入';
     lmdAction(resolveLmdPasted);
   });
+  $('lmdSort').addEventListener('change',() =>
+    searchLmd(lmdCurrentQuery,0,$('lmdSort').value));
   $('lmdSearchForm').addEventListener('submit',event => {
     event.preventDefault();
     searchLmd($('lmdSearch').value.trim(),0);
   });
   $('lmdLatest').addEventListener('click',() => {
     $('lmdSearch').value = '';
-    searchLmd('',0);
+    $('lmdSort').value = 'neu';
+    searchLmd('',0,'neu');
   });
   $('lmdPrev').addEventListener('click',() =>
-    searchLmd(lmdCurrentQuery,Math.max(0,lmdOffset-20)));
+    searchLmd(lmdCurrentQuery,Math.max(0,lmdOffset-20),lmdCurrentSort));
   $('lmdNext').addEventListener('click',() =>
-    searchLmd(lmdCurrentQuery,lmdOffset+20));
+    searchLmd(lmdCurrentQuery,lmdOffset+20,lmdCurrentSort));
   $('lmdDiscover').addEventListener('click',() => showLmdView('discover'));
   $('lmdSaved').addEventListener('click',() => {
     showLmdView('saved');

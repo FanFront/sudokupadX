@@ -3,6 +3,13 @@ import {puzzleIdFromUrl} from './online-library.js';
 export const LOGIC_MASTERS_NAME = 'Logic Masters Deutschland';
 const BASE = 'https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=';
 
+// The portal sorts the entire result set, not merely the 20 loaded items.
+export const LOGIC_MASTERS_SORTS = Object.freeze([
+  {value:'neu',label:'最新发布'},
+  {value:'schoen',label:'评分最高'},
+  {value:'leicht',label:'难度最低'}
+]);
+
 // Never fetch a user-supplied host: resolve only the official puzzle-page ID.
 export function logicMastersReference(input) {
   const raw = String(input || '').trim();
@@ -49,6 +56,18 @@ function difficultyFromText(value) {
   return level === null ? null : {
     level, estimated:/geschätzt|estimated|author(?:'s)? estimate/.test(text)
   };
+}
+// Beauty/quality rating is a separate percentage, not a difficulty star.
+// An N/A or missing percentage must stay unrated.
+function ratingPercentFromHtml(fragment, labeled = false) {
+  const text = plainText(fragment);
+  const pattern = labeled ? /\b(?:Rating|Bewertung)\s*:\s*(\d{1,3})\s*%/gi : /(?:^|\s)(\d{1,3})\s*%/g;
+  let rating = null;
+  for (const match of text.matchAll(pattern)) {
+    const value = Number(match[1]);
+    if (value >= 0 && value <= 100) rating = value;
+  }
+  return rating;
 }
 function difficultyFromHtml(fragment) {
   const images = fragment.match(/<img\b[^>]*>/gi) || [];
@@ -205,7 +224,8 @@ export function parseLogicMastersDetails(html, reference) {
   return {
     title, description, hasImages, images, segments,
     difficulty:difficulty?.level ?? null,
-    difficultyEstimated:difficulty?.estimated ?? false
+    difficultyEstimated:difficulty?.estimated ?? false,
+    ratingPercent:ratingPercentFromHtml(html,true)
   };
 }
 
@@ -223,13 +243,16 @@ export function directSudokuPadEntry(input) {
 
 // The portal supports a permanent, server-side advanced search URL.
 // Using search fields avoids downloading thousands of puzzles to a phone.
-export function logicMastersSearchUrl(keyword = '', start = 0) {
+export function logicMastersSearchUrl(keyword = '', start = 0, sort = 'neu') {
   const search = String(keyword).trim();
   if (search.length > 100) throw Error('搜索关键词最多 100 个字符');
   if (!Number.isSafeInteger(start) || start < 0 || start > 20000 || start % 20 !== 0)
     throw Error('无效的搜索页码');
+  if (!LOGIC_MASTERS_SORTS.some(option => option.value === sort))
+    throw Error('无效的 Logic Masters 排序方式');
   const url = new URL('https://logic-masters.de/Raetselportal/Suche/erweitert.php');
   url.searchParams.set('chlang','en');
+  url.searchParams.set('sort',sort);
   if (search) {
     url.searchParams.set('skname','x');
     url.searchParams.set('sktext','x');
@@ -275,6 +298,7 @@ export function parseLogicMastersSearch(html) {
       author: authorMatch ? plainText(authorMatch[1]).slice(0,100) : '',
       difficulty:rating?.level ?? null,
       difficultyEstimated:rating?.estimated ?? false,
+      ratingPercent:ratingPercentFromHtml(after),
       url:logicMastersReference(id).url
     });
     if (items.length >= 20) break;

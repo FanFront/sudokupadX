@@ -125,12 +125,15 @@ async fn fetch_logic_masters_page(puzzle_id: String) -> Result<String, String> {
 // Query the official LMD advanced-search endpoint. The server performs the
 // keyword filtering; clients fetch only one 20-item page at a time.
 #[tauri::command]
-async fn search_logic_masters(query: String, start: u32) -> Result<String, String> {
+async fn search_logic_masters(query: String, start: u32, sort: String) -> Result<String, String> {
     if query.chars().count() > 100 || query.contains('\0') {
         return Err("Logic Masters 搜索关键词过长或无效".into());
     }
     if start > 20_000 || start % 20 != 0 {
         return Err("Logic Masters 搜索页码无效".into());
+    }
+    if !matches!(sort.as_str(), "neu" | "schoen" | "leicht") {
+        return Err("Logic Masters 排序方式无效".into());
     }
     let mut url = reqwest::Url::parse(
         "https://logic-masters.de/Raetselportal/Suche/erweitert.php"
@@ -138,6 +141,7 @@ async fn search_logic_masters(query: String, start: u32) -> Result<String, Strin
     {
         let mut params = url.query_pairs_mut();
         params.append_pair("chlang", "en");
+        params.append_pair("sort", &sort);
         if !query.trim().is_empty() {
             params.append_pair("skname", "x");
             params.append_pair("sktext", "x");
