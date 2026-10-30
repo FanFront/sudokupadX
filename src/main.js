@@ -902,7 +902,7 @@ $('exportCheckpoint').addEventListener('click',()=>{
   try{
     if(!puzzle||!progress)throw Error('请先打开一道谜题');
     save();
-    const data=createCheckpoint(puzzle,currentEntry,progress);
+    const data=createCheckpoint(puzzle,currentEntry,progress,penLines);
     const contents=JSON.stringify(data);
     $('checkpointText').value=contents;
     $('checkpointFile').value='';
@@ -920,7 +920,7 @@ $('exportCheckpoint').addEventListener('click',()=>{
 $('copyCheckpoint').addEventListener('click',async()=>{
   try{
     if(!$('checkpointText').value.trim()&&puzzle)
-      $('checkpointText').value=JSON.stringify(createCheckpoint(puzzle,currentEntry,progress));
+      $('checkpointText').value=JSON.stringify(createCheckpoint(puzzle,currentEntry,progress,penLines));
     const text=$('checkpointText').value.trim();
     if(!text)throw Error('没有可复制的存档');
     if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
@@ -955,6 +955,8 @@ $('importCheckpoint').addEventListener('click',async()=>{
     // cells and given-cell edits without mutating the current session.
     save();
     progress=await call('restore_progress',{cells});
+    penLines=cp.penLines;
+    undoStack=[];redoStack=[];
     refreshConflicts();
     save();lastCompletion=Boolean(progress.solved);
     selected=-1;selectedCells=[];updateControls();requestDraw();
