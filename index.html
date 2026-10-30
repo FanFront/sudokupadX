@@ -74,11 +74,11 @@
   </div>
   <dialog id="importDialog" class="modal">
     <form method="dialog" class="modal-content">
-      <div class="modal-top"><h2>导入 SudokuPad 谜题</h2><button value="cancel" class="modal-close" aria-label="Close">✕</button></div>
-      <p>选择本地 <code>.scl</code> 或 <code>.json</code> 文件，也可以粘贴完整压缩文本。不会上传到服务器。</p>
+      <div class="modal-top"><h2>导入 SudokuPad / Penpa+ 谜题</h2><button value="cancel" class="modal-close" aria-label="Close">✕</button></div>
+      <p>选择本地 <code>.scl</code> / <code>.json</code> 文件，或粘贴 SCL / JSON / Penpa+ 分享链接。Penpa+ 在设备上转换，不上传谜题内容。</p>
       <label class="file-drop">从设备选择文件<input id="filePicker" type="file" accept=".scl,.json,.txt,application/json,text/plain"></label>
-      <label class="paste-label" for="pasteInput">或者粘贴 SCL / JSON</label>
-      <textarea id="pasteInput" rows="5" spellcheck="false" placeholder="scl... 或 {&quot;cells&quot;:[...]}"></textarea>
+      <label class="paste-label" for="pasteInput">或者粘贴 SCL / JSON / Penpa+ URL</label>
+      <textarea id="pasteInput" rows="5" spellcheck="false" placeholder="scl...、{&quot;cells&quot;:[...]} 或 https://swaroopg92.github.io/penpa-edit/#m=solve&amp;p=..."></textarea>
       <p id="importError" role="alert"></p>
       <div class="modal-actions"><button value="cancel" type="button" id="cancelImport">取消</button><button type="button" id="confirmImport" class="primary-btn">打开谜题</button></div>
     </form>
@@ -171,14 +171,14 @@
           </div>
           <details class="lmd-import">
             <summary>按 ID / 链接导入（高级选项）</summary>
-            <p>可直接粘贴作者的 SudokuPad 链接，或输入 Logic Masters 的六位题号。</p>
+            <p>可直接粘贴作者的 SudokuPad / Penpa+ 链接，或输入 Logic Masters 的六位题号。</p>
             <div class="lmd-input-row">
-              <input id="lmdReference" type="text" aria-label="Logic Masters ID or puzzle URL" placeholder="000OKF / Logic Masters 页面 / SudokuPad 链接" autocomplete="off" spellcheck="false">
+              <input id="lmdReference" type="text" aria-label="Logic Masters ID or puzzle URL" placeholder="000OKF / Logic Masters / SudokuPad / Penpa+ 链接" autocomplete="off" spellcheck="false">
               <button id="lmdFetch" type="button">提取页面链接</button>
             </div>
-            <p>网页版如遇跨域限制，可粘贴 SudokuPad 链接或页面 HTML。</p>
+            <p>网页版如遇跨域限制，可粘贴 SudokuPad / Penpa+ 链接或页面 HTML。</p>
             <div class="lmd-input-row">
-              <textarea id="lmdPasted" rows="2" placeholder="可选：粘贴 SudokuPad 链接或 Logic Masters 网页 HTML" aria-label="粘贴谜题链接或页面 HTML"></textarea>
+              <textarea id="lmdPasted" rows="2" placeholder="可选：粘贴 SudokuPad / Penpa+ 链接或 Logic Masters 网页 HTML" aria-label="粘贴谜题链接或页面 HTML"></textarea>
               <button id="lmdParsePaste" type="button">解析粘贴内容</button>
             </div>
           </details>
