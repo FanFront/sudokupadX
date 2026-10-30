@@ -60,28 +60,31 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
       button.type = 'button';
       button.className = 'lmd-result-button';
       button.disabled = Boolean(actionId);
-      const heading = document.createElement('div');
-      heading.className = 'lmd-result-heading';
+      // Keep long titles readable without squeezing metadata into the same line.
       const title = document.createElement('strong');
+      title.className = 'lmd-result-title';
       title.textContent = item.title;
-      heading.append(title);
+      button.title = item.title;
+      const meta = document.createElement('div');
+      meta.className = 'lmd-result-meta';
       if (item.difficulty) {
         const difficulty = document.createElement('span');
         difficulty.className = 'lmd-difficulty';
-        difficulty.textContent = logicMastersDifficultyLabel(
-          item.difficulty,item.difficultyEstimated);
-        heading.append(difficulty);
+        difficulty.textContent = '难度 ' +
+          (item.difficultyEstimated ? '≈' : '') + item.difficulty + '/5';
+        if (item.difficultyEstimated) difficulty.title = '作者预估难度';
+        meta.append(difficulty);
       }
       if (item.ratingPercent !== null && item.ratingPercent !== undefined) {
         const score = document.createElement('span');
         score.className = 'lmd-rating';
         score.textContent = '评分 ' + item.ratingPercent + '%';
-        heading.append(score);
+        meta.append(score);
       }
-      const meta = document.createElement('small');
-      meta.textContent = 'LMD ' + item.id +
-        (item.author ? ' · 作者 ' + item.author : '') + ' · 点击查看详情';
-      button.append(heading,meta);
+      // Author and puzzle ID remain available through the detail/lookup flow,
+      // but don't occupy any space in the search result list.
+      button.append(title);
+      if (meta.childNodes.length) button.append(meta);
       button.addEventListener('click',() => selectLmdMatch(item));
       container.append(button);
     }
