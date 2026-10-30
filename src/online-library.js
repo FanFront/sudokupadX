@@ -1,3 +1,4 @@
+import {parsePenpaUrl,convertPenpaUrl} from './penpa-import.js';
 // Online SudokuPad index and on-demand offline puzzle storage.
 // Keep remote content as data; the Rust puzzle engine validates it before play.
 export const ONLINE_INDEX_URL = 'https://stefanlobbenmeier.github.io/sudoku-index/index.json';
@@ -93,7 +94,8 @@ export function normalizeRemotePuzzle(text) {
   throw Error('在线谜题不是当前支持的 SCL / JSON 格式');
 }
 
-export async function fetchOnlinePuzzle(entry, fetcher = fetch) {
+export async function fetchOnlinePuzzle(entry, fetcher = fetch, penpaConverter = convertPenpaUrl) {
+  if (parsePenpaUrl(entry.puzzleUrl)) return normalizeRemotePuzzle(await penpaConverter(entry.puzzleUrl));
   const id = puzzleIdFromUrl(entry.puzzleUrl);
   const url = puzzleDownloadUrl(entry.puzzleUrl);
   if (!url) return normalizeRemotePuzzle(id);
