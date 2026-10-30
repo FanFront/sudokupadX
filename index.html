@@ -30,7 +30,7 @@
           </div>
         </div>
         <div id="boardFrame" class="board-frame">
-          <canvas id="boardCanvas" tabindex="0" aria-label="Sudoku board: drag one finger to select multiple cells; use two fingers to pan or zoom"></canvas>
+          <canvas id="boardCanvas" tabindex="0" aria-label="棋盘：单指滑选格子，画线模式单指描线，双指平移缩放"></canvas>
           <div class="board-hud"><span id="selectionLabel">选择一个格子</span><span id="zoomLabel">100%</span></div>
           <div class="zoom-tools">
             <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
@@ -46,6 +46,7 @@
           <button data-mode="corner" type="button">角标</button>
           <button data-mode="center" type="button">中心</button>
           <button data-mode="color" type="button">颜色</button>
+          <button data-mode="pen" type="button">画线</button>
         </div>
         <div class="pad-title"><span id="padTitle">数字输入</span><button id="letterPage" type="button" hidden>下一组</button></div>
         <div class="keypad" id="keypad" role="group" aria-label="Number and letter pad"></div>
@@ -55,6 +56,20 @@
           <button data-color="#9fcbff" style="--swatch:#9fcbff" type="button" aria-label="Blue"></button>
           <button data-color="#e9b0d6" style="--swatch:#e9b0d6" type="button" aria-label="Pink"></button>
           <button data-color="#bfb5fa" style="--swatch:#bfb5fa" type="button" aria-label="Purple"></button>
+        </div>
+        <div id="penTools" class="pen-tools" aria-label="画线工具" hidden>
+          <div class="pen-grid" role="group" aria-label="画线位置">
+            <button type="button" data-pen-grid="center" aria-pressed="true">格心连线</button>
+            <button type="button" data-pen-grid="edge" aria-pressed="false">网格边线</button>
+          </div>
+          <div class="pen-colors" role="group" aria-label="线条颜色">
+            <button type="button" data-pen-color="#34495e" style="--pen-swatch:#34495e" aria-label="深灰线" aria-pressed="true"></button>
+            <button type="button" data-pen-color="#d45867" style="--pen-swatch:#d45867" aria-label="红色线" aria-pressed="false"></button>
+            <button type="button" data-pen-color="#2486b3" style="--pen-swatch:#2486b3" aria-label="蓝色线" aria-pressed="false"></button>
+            <button type="button" data-pen-color="#348b57" style="--pen-swatch:#348b57" aria-label="绿色线" aria-pressed="false"></button>
+            <button type="button" data-pen-color="#b77726" style="--pen-swatch:#b77726" aria-label="橙色线" aria-pressed="false"></button>
+          </div>
+          <small>单指描线，重描已有线条可擦除；双指平移缩放</small>
         </div>
         <div class="action-bar">
           <button id="eraseButton" type="button">⌫ 清除</button>
@@ -68,7 +83,7 @@
           <div id="sectorLinks" class="sector-links"></div>
           <div id="warningList" class="warnings" hidden></div>
         </div>
-        <p class="help-text">点格输入 · 拖动平移 · 双指缩放 · 字母模式可翻页选择 A–Z</p>
+        <p class="help-text">点格输入 · 单指滑选 · 画线模式可绘制格心或网格边线 · 双指缩放</p>
       </aside>
     </main>
   </div>
