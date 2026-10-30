@@ -8,7 +8,8 @@ import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
 import {setupOnlineLibrary} from './online-ui.js';
-import {readResumePuzzle,saveResumePuzzle} from './online-library.js';
+import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
+import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
 import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
 import {bilingualTitle,displayBilingual} from './bilingual.js';
 import './style.css';
@@ -806,7 +807,18 @@ $('confirmImport').addEventListener('click',async()=>{
   try{
     const file=$('filePicker').files?.[0];
     const input=file?await file.text():$('pasteInput').value.trim();
-    await openInput(input);
+    if (parsePenpaUrl(input)) {
+      // Penpa+ conversion happens entirely in-app; no request to the source site.
+      const entry = directPenpaEntry(input);
+      const scl = await fetchOnlinePuzzle(entry);
+      await openIndexedPuzzle(entry,scl,false);
+      if ($('importDialog').open) $('importDialog').close();
+      $('pasteInput').value='';
+      $('filePicker').value='';
+      toast('Penpa+ 已转换为可玩的 SudokuPad 棋盘；非数独画线/涂色玩法可能受限');
+    } else {
+      await openInput(input);
+    }
   }catch(error){$('importError').textContent=String(error);}
 });
 // Cross-app checkpoints are verified against puzzle dimensions and all givens
