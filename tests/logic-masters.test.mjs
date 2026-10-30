@@ -159,6 +159,37 @@ test('image renderer is present and the native CSP allows remote HTTPS images',a
   const native=JSON.parse(await readFile(
     new URL('../src-tauri/tauri.conf.json',import.meta.url),'utf8'));
   assert.match(html,/id="lmdImageDialog"/);
-  assert.match(html,/id="lmdImageGrid"/);
+  assert.match(html,/id="lmdDescriptionText"/);
+  assert.doesNotMatch(html,/id="lmdImageGrid"/);
   assert.match(native.app.security.csp,/img-src[^;]*https:/);
+});
+
+
+test('LMD text and author images retain their precise source order',()=>{
+  const html = '<h2>Mixed description</h2>' +
+    '<p>Before the diagram.</p>' +
+    '<p><img src="../../Dateien/grid.png" alt="Main grid"></p>' +
+    '<p>Between diagrams.</p>' +
+    '<img src="//logic-masters.de/Dateien/clue.png" alt="Clue">' +
+    '<p>After both images.</p><p>Lösungscode: Row 2</p>' +
+    '<img src="https://logic-masters.de/secret.png">';
+  const detail=parseLogicMastersDetails(html,'000OKF');
+  assert.deepEqual(detail.segments.map(part=>part.type),
+    ['text','image','text','image','text']);
+  assert.match(detail.segments[0].text,/Before the diagram/);
+  assert.equal(detail.segments[1].url,'https://logic-masters.de/Dateien/grid.png');
+  assert.match(detail.segments[2].text,/Between diagrams/);
+  assert.equal(detail.segments[3].alt,'Clue');
+  assert.match(detail.segments[4].text,/After both images/);
+  assert.doesNotMatch(detail.description,/Lösungscode|secret\.png|图片见下方/);
+});
+
+test('inline LMD renderer does not inject HTML and still supports full screen zoom',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const src=await readFile(new URL('../src/online-ui.js',import.meta.url),'utf8');
+  assert.match(src,/for \(const part of detail\?\.segments/);
+  assert.match(src,/paragraph\.textContent = part\.text/);
+  assert.match(src,/img\.src = part\.url/);
+  assert.match(src,/imageViewer\.open\(part,button\)/);
+  assert.doesNotMatch(src,/lmdImageGrid|lmdImagesPanel/);
 });

@@ -225,17 +225,12 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .lmd-description{padding:13px;border-radius:10px;border:1px solid #3b6078;background:#11283b}
 .lmd-description[hidden],.lmd-description-notice[hidden]{display:none}
 .lmd-description>strong{font-size:13px;color:#d5e9f1}
-.lmd-description-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.65;color:#d6e6ef;user-select:text;margin-top:8px}
+.lmd-description-text{display:flex;flex-direction:column;align-items:flex-start;gap:10px;overflow-wrap:anywhere;font-size:13px;line-height:1.65;color:#d6e6ef;user-select:text;margin-top:8px}
+.lmd-description-copy{white-space:pre-wrap;margin:0;width:100%;min-width:0}
+.lmd-inline-image{display:block;align-self:flex-start;max-width:100%;min-width:0;min-height:0;padding:6px;line-height:0;cursor:zoom-in;background:#172f44;border:1px solid #496a7c;border-radius:8px}
+.lmd-inline-image img{display:block;width:auto;height:auto;max-width:100%;max-height:52dvh;object-fit:contain;border-radius:4px;background:#fff}
+.lmd-inline-image-failed{font-size:12px;line-height:1.5;color:#ffdfb6;padding:10px}
 .lmd-description-notice{font-size:11px;line-height:1.5;color:#adc7d6;margin:10px 0 0}
-.lmd-images{padding:13px;border:1px solid #3b6078;border-radius:10px;background:#11283b}
-.lmd-images[hidden]{display:none}
-.lmd-images>strong{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:13px;color:#d5e9f1}
-.lmd-images>strong small{font-size:11px;color:#a4c4d2;font-weight:400}
-.lmd-image-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px;margin-top:10px}
-.lmd-image-thumbnail{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0;min-height:0;padding:9px;background:#192f42;border:1px solid #4b6e81}
-.lmd-image-thumbnail img{display:block;width:100%;max-height:330px;object-fit:contain;background:#fff;border-radius:6px}
-.lmd-image-thumbnail small{font-size:11px;color:#bbd5e2}
-.lmd-image-failed img{display:none}
 .lmd-image-dialog{position:fixed;inset:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border:0;border-radius:0;padding:0;background:#07111e;color:#ecf7ff}
 .lmd-image-dialog::backdrop{background:#040a13f5}
 .lmd-image-viewer{height:100%;display:flex;flex-direction:column;min-height:0;padding:calc(9px + var(--app-top-inset)) max(12px,env(safe-area-inset-right,0px)) calc(9px + var(--app-bottom-inset)) max(12px,env(safe-area-inset-left,0px));gap:9px}

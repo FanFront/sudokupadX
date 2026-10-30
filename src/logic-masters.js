@@ -125,23 +125,61 @@ function officialPuzzleImage(raw, base) {
     return url.href;
   } catch { return null; }
 }
-function authorImages(region, base) {
-  const images = [];
-  for (const [tag] of region.matchAll(/<img\b[^>]*>/gi)) {
-    const src = imageAttribute(tag,'data-src') || imageAttribute(tag,'src');
-    const url = officialPuzzleImage(src,base);
-    if (!url) continue;
-    images.push({
-      url,
-      alt: imageAttribute(tag,'alt').replace(/\s+/g,' ').slice(0,240)
-    });
-    if (images.length >= 24) break;
+// Preserve the author's order of paragraphs, inline images and rules. Never
+// inject remote HTML: each segment is rendered as a text node or a validated
+// HTTPS image element, so scripts/attributes from the page cannot execute.
+function descriptionSegments(region, base) {
+  const clean = region
+    .replace(/<!--[\s\S]*?-->/g,'')
+    .replace(/<(script|style|noscript|form)\b[^>]*>[\s\S]*?<\/\1>/gi,'');
+  const segments = [];
+  let text = '';
+  let totalText = 0;
+  let imageCount = 0;
+  function flushText() {
+    const lines = decodeEntities(text).replace(/\u00a0/g,' ')
+      .split(/\n+/).map(line => line.replace(/\s+/g,' ').trim())
+      .filter(line => line && !/^\(?\s*(?:Eingestellt|Published|Posted)\b/i.test(line));
+    const value = lines.join('\n').slice(0,Math.max(0,12000-totalText));
+    if (value) {
+      segments.push({type:'text',text:value});
+      totalText += value.length;
+    }
+    text = '';
   }
-  return images;
+  const tags = /<img\b[^>]*>|<br\s*\/?>|<li\b[^>]*>|<\/(?:p|div|ul|ol|li|h[1-6]|table|tr|blockquote)\s*>|<[^>]*>/gi;
+  let lastIndex = 0;
+  for (const match of clean.matchAll(tags)) {
+    text += clean.slice(lastIndex,match.index);
+    const tag = match[0];
+    if (/^<img\b/i.test(tag)) {
+      const src = imageAttribute(tag,'data-src') || imageAttribute(tag,'src');
+      const url = officialPuzzleImage(src,base);
+      if (url && imageCount < 24) {
+        flushText();
+        segments.push({
+          type:'image',url,
+          alt:imageAttribute(tag,'alt').replace(/\s+/g,' ').slice(0,240)
+        });
+        imageCount++;
+      } else text += ' [图片无法显示] ';
+    } else if (/^<br\b/i.test(tag) ||
+        /^<\/(?:p|div|ul|ol|li|h[1-6]|table|tr|blockquote)\b/i.test(tag)) {
+      text += '\n';
+    } else if (/^<li\b/i.test(tag)) {
+      text += '\n• ';
+    } else {
+      text += ' ';
+    }
+    lastIndex=match.index+tag.length;
+  }
+  text+=clean.slice(lastIndex);
+  flushText();
+  return segments;
 }
 
-// Keep the setter's original-language rules as plain text. Render only image
-// URLs from the puzzle body, not the portal's rating icons or comment section.
+// Keep the setter's original-language rules and embedded images in source
+// order. Only the puzzle body is parsed (never portal icons/comments).
 export function parseLogicMastersDetails(html, reference) {
   if (typeof html !== 'string' || html.length > 1024*1024)
     throw Error('Logic Masters 页面内容无效或超出 1 MiB');
@@ -156,22 +194,16 @@ export function parseLogicMastersDetails(html, reference) {
   const region = codeAt >= 0 ? afterHeading.slice(0,codeAt) : '';
   const base = reference ? logicMastersReference(reference?.id || reference).url :
     'https://logic-masters.de/Raetselportal/Raetsel/zeigen.php';
-  const images = authorImages(region,base);
+  const segments = descriptionSegments(region,base);
+  const images = segments.filter(part => part.type === 'image').map(
+    ({url,alt}) => ({url,alt})
+  );
   const hasImages = /<img\b/i.test(region);
-  const lines = decodeEntities(region
-    .replace(/<!--[\s\S]*?-->/g,'')
-    .replace(/<(script|style|noscript|form)\b[^>]*>[\s\S]*?<\/\1>/gi,'')
-    .replace(/<img\b[^>]*>/gi,' [图片见下方] ')
-    .replace(/<br\s*\/?>/gi,'\n')
-    .replace(/<li\b[^>]*>/gi,'\n• ')
-    .replace(/<\/(?:p|div|ul|ol|li|h[1-6]|table|tr|blockquote)>/gi,'\n')
-    .replace(/<[^>]*>/g,' ')
-  ).replace(/\u00a0/g,' ').split(/\n+/).map(line=>line.replace(/\s+/g,' ').trim())
-    .filter(line=>line && !/^\(?\s*(?:Eingestellt|Published|Posted)\b/i.test(line));
-  const description = lines.join('\n').slice(0,12000);
+  const description = segments.filter(part=>part.type === 'text')
+    .map(part=>part.text).join('\n');
   const difficulty = difficultyFromHtml(html);
   return {
-    title, description, hasImages, images,
+    title, description, hasImages, images, segments,
     difficulty:difficulty?.level ?? null,
     difficultyEstimated:difficulty?.estimated ?? false
   };

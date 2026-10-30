@@ -160,38 +160,44 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     ].filter(Boolean).join(' · ');
     const panel = $('lmdDescriptionPanel');
     panel.hidden = !detail;
-    $('lmdDescriptionText').textContent = detail?.description ||
-      (detail?.hasImages ? '原题说明主要使用图片，请打开原题查看完整图示。' :
-        '未从此页面提取到文字说明，请查看原题页面。');
+    const content = $('lmdDescriptionText');
+    content.replaceChildren();
+    let imageNumber = 0;
+    for (const part of detail?.segments || []) {
+      if (part.type === 'text') {
+        const paragraph = document.createElement('p');
+        paragraph.className = 'lmd-description-copy';
+        paragraph.textContent = part.text;
+        content.append(paragraph);
+      } else if (part.type === 'image') {
+        imageNumber++;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'lmd-inline-image';
+        button.title = '点击查看图片 ' + imageNumber + ' 的大图';
+        button.setAttribute('aria-label',button.title);
+        const img = document.createElement('img');
+        img.src = part.url;
+        img.alt = part.alt || '作者提供的谜题图片 ' + imageNumber;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        img.addEventListener('error',() => {
+          button.textContent = '图片加载失败，请查看 Logic Masters 原题';
+          button.classList.add('lmd-inline-image-failed');
+        });
+        button.append(img);
+        button.addEventListener('click',()=>imageViewer.open(part,button));
+        content.append(button);
+      }
+    }
+    if (!content.childNodes.length) {
+      content.textContent = detail?.hasImages ?
+        '原题图片无法直接显示，请查看 Logic Masters 原页面。' :
+        '未从此页面提取到文字说明，请查看原题页面。';
+    }
     $('lmdDescriptionNotice').hidden = !detail?.hasImages ||
       Boolean(detail?.images?.length);
-    const images = detail?.images || [];
-    const imagePanel = $('lmdImagesPanel');
-    const imageGrid = $('lmdImageGrid');
-    imagePanel.hidden = !images.length;
-    imageGrid.replaceChildren();
-    images.forEach((item,index) => {
-      const thumb = document.createElement('button');
-      thumb.type = 'button';
-      thumb.className = 'lmd-image-thumbnail';
-      thumb.title = '查看第 ' + (index+1) + ' 张大图';
-      thumb.setAttribute('aria-label',thumb.title);
-      const img = document.createElement('img');
-      img.src = item.url;
-      img.alt = item.alt || '作者提供的谜题图片 ' + (index+1);
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      img.referrerPolicy = 'no-referrer';
-      const caption = document.createElement('small');
-      caption.textContent = '图片 ' + (index+1) + ' · 点击放大';
-      img.addEventListener('error',() => {
-        caption.textContent = '图片加载失败 · 可尝试查看原题';
-        thumb.classList.add('lmd-image-failed');
-      });
-      thumb.append(img,caption);
-      thumb.addEventListener('click',()=>imageViewer.open(item,thumb));
-      imageGrid.append(thumb);
-    });
     const source = $('lmdDetailSource');
     source.hidden = !lmdDetailSource;
     if (lmdDetailSource) source.href = lmdDetailSource;
