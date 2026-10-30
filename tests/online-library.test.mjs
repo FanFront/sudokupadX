@@ -114,7 +114,8 @@ test('search-and-select LMD interface is present on Android and web',()=>{
   for(const id of [
     'lmdLibraryTab','lmdLibraryPanel','lmdSearchForm','lmdSearch',
     'lmdSearchButton','lmdSearchResults','lmdPrev','lmdNext',
-    'lmdSelected','lmdResults','lmdLatest','lmdSaved'
+    'lmdDiscoverView','lmdSavedView','lmdDetailView',
+    'lmdResults','lmdLatest','lmdSaved','lmdDiscover','lmdBack'
   ]) assert.ok(html.includes('id="'+id+'"'),id);
   assert.match(script,/search_logic_masters/);
   assert.match(script,/parseLogicMastersSearch\(html\)/);
