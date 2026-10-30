@@ -108,9 +108,41 @@ export function parseLogicMastersPage(html, reference) {
   }));
 }
 
-// Keep the setter's original-language rules; never render external HTML in
-// the app. Images/diagrams cannot be converted into text and stay on LMD.
-export function parseLogicMastersDetails(html) {
+// HTML attribute values can be quoted or unquoted on the portal. Read as
+// data only: callers must create their own DOM nodes rather than insert HTML.
+function imageAttribute(tag, name) {
+  const match = tag.match(new RegExp('\\b' + name + '\\s*=\\s*(?:"([^"]*)"|\\'([^\\']*)\\'|([^\\s>]+))','i'));
+  return match ? decodeEntities(match[1] ?? match[2] ?? match[3]) : '';
+}
+function officialPuzzleImage(raw, base) {
+  if (!raw || raw.length > 2048) return null;
+  try {
+    const url = new URL(raw.trim(), base);
+    // All source URLs are sanitized; only HTTPS image requests are allowed.
+    // This includes external HTTPS image hosts chosen by the puzzle author.
+    if (url.protocol !== 'https:' || url.username || url.password ||
+        (url.port && url.port !== '443')) return null;
+    return url.href;
+  } catch { return null; }
+}
+function authorImages(region, base) {
+  const images = [];
+  for (const [tag] of region.matchAll(/<img\b[^>]*>/gi)) {
+    const src = imageAttribute(tag,'data-src') || imageAttribute(tag,'src');
+    const url = officialPuzzleImage(src,base);
+    if (!url) continue;
+    images.push({
+      url,
+      alt: imageAttribute(tag,'alt').replace(/\s+/g,' ').slice(0,240)
+    });
+    if (images.length >= 24) break;
+  }
+  return images;
+}
+
+// Keep the setter's original-language rules as plain text. Render only image
+// URLs from the puzzle body, not the portal's rating icons or comment section.
+export function parseLogicMastersDetails(html, reference) {
   if (typeof html !== 'string' || html.length > 1024*1024)
     throw Error('Logic Masters 页面内容无效或超出 1 MiB');
   const titleMatch = /<h2\b[^>]*>([\s\S]*?)<\/h2>/i.exec(html);
@@ -122,11 +154,14 @@ export function parseLogicMastersDetails(html) {
   );
   // Missing code delimiter: do not accidentally copy the entire portal chrome.
   const region = codeAt >= 0 ? afterHeading.slice(0,codeAt) : '';
+  const base = reference ? logicMastersReference(reference?.id || reference).url :
+    'https://logic-masters.de/Raetselportal/Raetsel/zeigen.php';
+  const images = authorImages(region,base);
   const hasImages = /<img\b/i.test(region);
   const lines = decodeEntities(region
     .replace(/<!--[\s\S]*?-->/g,'')
     .replace(/<(script|style|noscript|form)\b[^>]*>[\s\S]*?<\/\1>/gi,'')
-    .replace(/<img\b[^>]*>/gi,' [题面图片] ')
+    .replace(/<img\b[^>]*>/gi,' [图片见下方] ')
     .replace(/<br\s*\/?>/gi,'\n')
     .replace(/<li\b[^>]*>/gi,'\n• ')
     .replace(/<\/(?:p|div|ul|ol|li|h[1-6]|table|tr|blockquote)>/gi,'\n')
@@ -136,7 +171,7 @@ export function parseLogicMastersDetails(html) {
   const description = lines.join('\n').slice(0,12000);
   const difficulty = difficultyFromHtml(html);
   return {
-    title, description, hasImages,
+    title, description, hasImages, images,
     difficulty:difficulty?.level ?? null,
     difficultyEstimated:difficulty?.estimated ?? false
   };

@@ -4,6 +4,7 @@ import {
   listOfflinePuzzles, readOfflinePuzzle, saveOfflinePuzzle, removeOfflinePuzzle
 } from './online-library.js';
 import {invoke} from '@tauri-apps/api/core';
+import {installLmdImageViewer} from './lmd-image-viewer.js';
 import {
   logicMastersReference, parseLogicMastersPage, directSudokuPadEntry,
   logicMastersSearchUrl, parseLogicMastersSearch, parseLogicMastersDetails,
@@ -32,6 +33,12 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   let lmdOffset = 0;
   let loading = false;
   let actionId = '';
+  const imageViewer = installLmdImageViewer({
+    dialog:$('lmdImageDialog'),stage:$('lmdImageStage'),image:$('lmdImageFull'),
+    error:$('lmdImageError'),zoomLabel:$('lmdImageZoom'),
+    zoomIn:$('lmdImageZoomIn'),zoomOut:$('lmdImageZoomOut'),
+    reset:$('lmdImageReset'),close:$('lmdImageClose')
+  });
 
   const status = message => { $('onlineIndexStatus').textContent = message; };
   const errorText = error => String(error?.message || error);
@@ -156,7 +163,35 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     $('lmdDescriptionText').textContent = detail?.description ||
       (detail?.hasImages ? '原题说明主要使用图片，请打开原题查看完整图示。' :
         '未从此页面提取到文字说明，请查看原题页面。');
-    $('lmdDescriptionNotice').hidden = !detail?.hasImages;
+    $('lmdDescriptionNotice').hidden = !detail?.hasImages ||
+      Boolean(detail?.images?.length);
+    const images = detail?.images || [];
+    const imagePanel = $('lmdImagesPanel');
+    const imageGrid = $('lmdImageGrid');
+    imagePanel.hidden = !images.length;
+    imageGrid.replaceChildren();
+    images.forEach((item,index) => {
+      const thumb = document.createElement('button');
+      thumb.type = 'button';
+      thumb.className = 'lmd-image-thumbnail';
+      thumb.title = '查看第 ' + (index+1) + ' 张大图';
+      thumb.setAttribute('aria-label',thumb.title);
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.alt = item.alt || '作者提供的谜题图片 ' + (index+1);
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      const caption = document.createElement('small');
+      caption.textContent = '图片 ' + (index+1) + ' · 点击放大';
+      img.addEventListener('error',() => {
+        caption.textContent = '图片加载失败 · 可尝试查看原题';
+        thumb.classList.add('lmd-image-failed');
+      });
+      thumb.append(img,caption);
+      thumb.addEventListener('click',()=>imageViewer.open(item,thumb));
+      imageGrid.append(thumb);
+    });
     const source = $('lmdDetailSource');
     source.hidden = !lmdDetailSource;
     if (lmdDetailSource) source.href = lmdDetailSource;
@@ -280,14 +315,14 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     const html = await fetchLmdHtml(ref.url,'fetch_logic_masters_page',
       {puzzleId:ref.id});
     lmdFound = parseLogicMastersPage(html,ref);
-    lmdDetails = parseLogicMastersDetails(html);
+    lmdDetails = parseLogicMastersDetails(html,ref);
     lmdDetailSource = ref.url;
     if (!lmdSelected && lmdDetails.title)
       $('lmdSelectedTitle').textContent = lmdDetails.title;
     renderLmdDetailInfo();
     lmdStatus(lmdFound.length ?
       '从 Logic Masters ' + ref.id + ' 找到 ' + lmdFound.length + ' 个 SudokuPad 链接。':
-      '这个页面未提供可用的 SudokuPad 链接。仅有图片或 Penpa+ 的题目无法自动还原。');
+      '这个页面未提供可导入的 SudokuPad 链接；如有作者图片，可在下方直接查看（暂不能转成可玩棋盘）。');
     renderLmd();
   }
   async function resolveLmdPasted() {
@@ -297,14 +332,14 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     } else {
       const ref = logicMastersReference($('lmdReference').value);
       lmdFound = parseLogicMastersPage(input,ref);
-      lmdDetails = parseLogicMastersDetails(input);
+      lmdDetails = parseLogicMastersDetails(input,ref);
       lmdDetailSource = ref.url;
       if (lmdDetails.title) $('lmdSelectedTitle').textContent = lmdDetails.title;
     }
     renderLmdDetailInfo();
     lmdStatus(lmdFound.length ?
       '从粘贴内容提取到 ' + lmdFound.length + ' 道可加载的 SudokuPad 谜题。':
-      '粘贴内容没有可用的 SudokuPad 链接；图片题面暂不能自动转成可玩数独。');
+      '粘贴内容没有可导入的 SudokuPad 链接；作者图片可直接查看，但暂不能转换为可玩棋盘。');
     renderLmd();
   }
   async function lmdAction(action) {

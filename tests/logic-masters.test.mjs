@@ -113,6 +113,9 @@ test('details retain readable original rules without portal chrome or unsafe mar
   assert.match(detail.description,/Play on SudokuPad/);
   assert.doesNotMatch(detail.description,/Lösungscode|Kommentare|unsafe|Eingestellt/);
   assert.equal(detail.hasImages,true);
+  assert.deepEqual(detail.images,[{
+    url:'https://logic-masters.de/Raetselportal/Raetsel/grid.png',alt:''
+  }]);
   assert.equal(detail.difficulty,2);
   assert.equal(detail.difficultyEstimated,true);
 });
@@ -121,4 +124,41 @@ test('missing description marker never displays the whole LMD website',()=>{
   assert.equal(detail.description,'');
   assert.equal(detail.difficulty,null);
   assert.throws(()=>parseLogicMastersDetails('x'.repeat(1024*1024+1)),/1 MiB/);
+});
+
+
+test('author images resolve official and external HTTPS sources without showing portal icons',()=>{
+  const html = '<h2>My Puzzle</h2>' +
+    '<p>Intro <img src="../../Dateien/bild.php?data=abc123" alt="Grid &amp; clues"></p>' +
+    '<img src="//logic-masters.de/Dateien/bild.php?data=second">' +
+    '<img src=https://images.example.org/puzzle.png>' +
+    '<img src="javascript:alert(1)"><img src="data:image/svg+xml,test">' +
+    '<img src="http://images.example.org/insecure.png">' +
+    '<img src="https://example.org:8443/private.jpg">' +
+    '<p>Lösungscode: Col 4</p><img src="https://evil.example/comments.png">';
+  const detail=parseLogicMastersDetails(html,'000OKF');
+  assert.deepEqual(detail.images,[
+    {url:'https://logic-masters.de/Dateien/bild.php?data=abc123',alt:'Grid & clues'},
+    {url:'https://logic-masters.de/Dateien/bild.php?data=second',alt:''},
+    {url:'https://images.example.org/puzzle.png',alt:''}
+  ]);
+  assert.equal(detail.hasImages,true);
+  assert.doesNotMatch(detail.description,/comments.png/);
+});
+
+test('images after the puzzle content and before the heading are not extracted',()=>{
+  const html = '<img src="https://logic-masters.de/logo.png">' +
+    '<h2>My Puzzle</h2><p>Rules</p><p>Solution code: Row 3</p>' +
+    '<img src="https://logic-masters.de/comments.png">';
+  assert.deepEqual(parseLogicMastersDetails(html).images,[]);
+});
+
+test('image renderer is present and the native CSP allows remote HTTPS images',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
+  const native=JSON.parse(await readFile(
+    new URL('../src-tauri/tauri.conf.json',import.meta.url),'utf8'));
+  assert.match(html,/id="lmdImageDialog"/);
+  assert.match(html,/id="lmdImageGrid"/);
+  assert.match(native.app.security.csp,/img-src[^;]*https:/);
 });

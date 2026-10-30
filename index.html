@@ -192,13 +192,36 @@
             <section id="lmdDescriptionPanel" class="lmd-description" aria-label="谜题说明与规则" hidden>
               <strong>题目说明与规则（原文）</strong>
               <div id="lmdDescriptionText" class="lmd-description-text"></div>
-              <p id="lmdDescriptionNotice" class="lmd-description-notice" hidden>原题含图片或图示；完整图形及原始排版请查看 Logic Masters 原页面。</p>
+              <p id="lmdDescriptionNotice" class="lmd-description-notice" hidden>原题部分图片暂无法显示；请打开 Logic Masters 原页面。</p>
+            </section>
+            <section id="lmdImagesPanel" class="lmd-images" aria-label="作者提供的谜题图片" hidden>
+              <strong>作者原图 <small>点击图片查看大图，可双指缩放</small></strong>
+              <div id="lmdImageGrid" class="lmd-image-grid"></div>
             </section>
             <div id="lmdResults" class="online-index-list" aria-label="可打开或下载的谜题"></div>
           </div>
           <a id="lmdDetailSource" class="source-link" target="_blank" rel="noopener noreferrer" hidden>查看 Logic Masters 原题与完整图示</a>
         </section>
       </section>
+    </div>
+  </dialog>
+  <dialog id="lmdImageDialog" class="lmd-image-dialog" aria-label="Logic Masters 图片全屏预览">
+    <div class="lmd-image-viewer">
+      <div class="lmd-image-toolbar">
+        <strong>作者原图</strong>
+        <div class="lmd-image-tools">
+          <button id="lmdImageZoomOut" type="button" title="缩小" aria-label="缩小图片">−</button>
+          <span id="lmdImageZoom" aria-live="polite">100%</span>
+          <button id="lmdImageZoomIn" type="button" title="放大" aria-label="放大图片">+</button>
+          <button id="lmdImageReset" type="button">适合屏幕</button>
+          <button id="lmdImageClose" type="button" aria-label="关闭图片预览">✕</button>
+        </div>
+      </div>
+      <div id="lmdImageStage" class="lmd-image-stage">
+        <img id="lmdImageFull" alt="Logic Masters 谜题图片" draggable="false">
+        <p id="lmdImageError" class="lmd-image-error" role="alert" hidden></p>
+      </div>
+      <p class="lmd-image-hint">双指缩放 · 拖动查看 · 关闭后返回谜题详情</p>
     </div>
   </dialog>
   <dialog id="checkDialog" class="modal" aria-labelledby="checkTitle">
