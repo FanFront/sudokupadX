@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const css=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-const headerButtons=['backButton','libraryButton','demoButton','checkpointButton','importButton'];
+const headerButtons=['backButton','libraryButton','checkpointButton','importButton'];
 const boardButtons=['linkedPuzzleButton','rulesButton','gridButton','fitButton'];
 
 function markup(id){
