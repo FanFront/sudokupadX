@@ -24,3 +24,40 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p sudokupadx-core --all-targets
+
+  browser-wasm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GITHUB_PAGES: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: npm install
+      - run: cargo install wasm-pack --locked
+      - run: npm run build:web
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Exercise real mobile browser layout, Home, input and resume
+        run: |
+          set -euo pipefail
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/sudokupadx-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" || true' EXIT
+          for i in {1..45}; do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:4173/sudokupadX/; then break; fi
+            sleep 1
+          done
+          node scripts/web-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-ui-browser-screenshots
+          path: artifacts/web/*.png
+          if-no-files-found: warn
