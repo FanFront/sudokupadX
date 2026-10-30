@@ -468,3 +468,8 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 @media(max-width:850px){
   #app #gameScreen.workspace{padding-top:calc(5px + var(--app-top-inset))}
 }
+
+/* The previous phone toolbar hid its brand copy. Home must always show the
+   product name and subtitle, including on narrow Android screens. */
+#app .home-hero .brand{gap:12px}
+#app .home-hero .brand strong,#app .home-hero .brand small{display:block}
