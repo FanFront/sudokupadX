@@ -89,17 +89,48 @@ export function drawArrows(ctx, puzzle, clip) {
     ctx.closePath();ctx.fill();ctx.restore();
   }
 }
+// Distinguishable colors for killer cages that share at least one cell.
+// Isolated cages keep their authored outline colors.
+const OVERLAPPING_CAGE_COLORS=[
+  '#3569ad','#d05a26','#228575','#9849a8','#b0476b','#99701b',
+  '#387c35','#b64a45','#326c81','#7455b7','#99602d','#51839a'
+];
+
 export function drawCages(ctx, puzzle, clip) {
   const size=CELL_SIZE;
-  for (const cage of puzzle.cages||[]) {
-    // Hidden cages describe ordinary row/column/box constraints and are not
-    // visual killer cages. Drawing them invents dashed borders and 45/21 sums.
-    if (cage?.hidden===true || !Array.isArray(cage?.cells) || cage.cells.length===0)continue;
+  // Resolve overlapping cages before viewport culling. Otherwise panning
+  // could change the assigned offsets/colors when another cage leaves view.
+  const cages=(puzzle.cages||[]).filter(cage=>
+    cage?.hidden!==true && Array.isArray(cage?.cells) && cage.cells.length>0
+  ).map(cage=>{
     const cells=cage.cells.map(pair=>
       Array.isArray(pair)?[Number(pair[0]),Number(pair[1])]:null
     ).filter(p=>p&&p.every(Number.isFinite));
-    if (!cells.length)continue;
-    const set=new Set(cells.map(([row,col])=>row+','+col));
+    return {cage,cells,set:new Set(cells.map(([r,c])=>r+','+c)),slot:0,overlaps:false};
+  }).filter(item=>item.cells.length);
+
+  // A cage keeps one offset all the way around its perimeter. Assign the
+  // first unused slot among cages sharing any cell, so their shared edges
+  // cannot paint over each other. A chain of overlaps can reuse slots.
+  const owners=new Map();
+  for(const item of cages){
+    if(item.cells.length<2)continue; // Single-cell cages have no dashed border.
+    const occupied=new Set();
+    for(const cell of item.set){
+      for(const neighbor of owners.get(cell)||[]){
+        occupied.add(neighbor.slot);
+        neighbor.overlaps=true;
+        item.overlaps=true;
+      }
+    }
+    while(occupied.has(item.slot))item.slot++;
+    for(const cell of item.set){
+      if(!owners.has(cell))owners.set(cell,[]);
+      owners.get(cell).push(item);
+    }
+  }
+
+  for(const {cage,cells,set,slot,overlaps} of cages){
     const left=Math.min(...cells.map(c=>c[1]))*size,top=Math.min(...cells.map(c=>c[0]))*size;
     // The bounding rectangle's top-left corner may be outside an L-shaped or
     // otherwise irregular cage. Anchor its sum to the actual topmost cell,
@@ -111,9 +142,13 @@ export function drawCages(ctx, puzzle, clip) {
        Math.max(...cells.map(c=>c[0]))*size<clip.top)continue;
     ctx.save();
     if(cells.length>1){
-      ctx.strokeStyle=cage.outlineC||'#6d5e8b';
+      const color=overlaps ? OVERLAPPING_CAGE_COLORS[slot%OVERLAPPING_CAGE_COLORS.length]
+        : (cage.outlineC||'#6d5e8b');
+      ctx.strokeStyle=color;
       ctx.lineWidth=1.4;ctx.setLineDash([4,3]);ctx.beginPath();
-      const inset=3;
+      // Use 2px steps between nested dashed outlines. Clamp the inset inside
+      // the cell for extreme stacking without changing ordinary cage geometry.
+      const inset=overlaps ? Math.min(size/2-3,3+2*slot) : 3;
       for(const [r,c] of cells){
         const x=c*size,y=r*size;
         if(!set.has((r-1)+','+c)){ctx.moveTo(x+inset,y+inset);ctx.lineTo(x+size-inset,y+inset);}
@@ -128,7 +163,10 @@ export function drawCages(ctx, puzzle, clip) {
     const sum=cage.value??cage.sum;
     if(sum!==undefined&&sum!==null&&String(sum)){
       ctx.textAlign='left';ctx.textBaseline='top';ctx.font='600 10px sans-serif';
-      ctx.fillStyle=cage.fontC||'#5a4c74';ctx.fillText(String(sum).slice(0,8),labelCell[1]*size+6,labelCell[0]*size+5);
+      ctx.fillStyle=cage.fontC||(overlaps
+        ? OVERLAPPING_CAGE_COLORS[slot%OVERLAPPING_CAGE_COLORS.length]
+        : '#5a4c74');
+      ctx.fillText(String(sum).slice(0,8),labelCell[1]*size+6,labelCell[0]*size+5);
     }
     ctx.restore();
   }
