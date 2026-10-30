@@ -6,7 +6,7 @@ import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLin
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
-import {PEN_COLORS,normalizePenLines,penNodeAt,tracePenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines} from './pen-lines.js';
+import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
 import {setupOnlineLibrary} from './online-ui.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
@@ -29,6 +29,7 @@ let selected = -1;
 let selectedCells = [];
 let mode = 'value';
 let penLines = [];
+let penMarks = [];
 let penColor = PEN_COLORS[0];
 let penGrid = 'center';
 let penErase = false;
@@ -112,7 +113,7 @@ function save() {
   if (!puzzle || !progress) return;
   clearTimeout(saveTimer);
   try {
-    localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells,penLines}));
+    localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells,penLines,penMarks}));
     const view=captureView(camera,frame.clientWidth,frame.clientHeight,selectedCells,showGridLines);
     const resume=serializeResume(activeSource,view,navigationStack);
     if(resume) localStorage.setItem(RESUME_KEY,resume);
@@ -151,6 +152,8 @@ async function restoreSaved() {
   catch (error) {notify('存档未载入: '+String(error));}
   try {penLines=normalizePenLines(stored.penLines??[],puzzle.rows,puzzle.cols);}
   catch {penLines=[];notify('画线存档无效，已保留数字进度');}
+  try {penMarks=normalizePenMarks(stored.penMarks??[],puzzle.rows,puzzle.cols);}
+  catch {penMarks=[];notify('圆圈和叉号存档无效，已保留其他进度');}
 }
 function toast(message) {
   const el = $('toast');
@@ -342,7 +345,7 @@ function updateInfo() {
 async function openResult(result) {
   puzzle=result.puzzle;
   progress=result.progress;
-  undoStack=[];redoStack=[];penLines=[];
+  undoStack=[];redoStack=[];penLines=[];penMarks=[];
   selected=-1;selectedCells=[];
   gesture=null;pointers.clear();
   buildRegions();
@@ -434,7 +437,7 @@ function updateControls() {
     el.setAttribute('aria-pressed',String(el.dataset.penGrid===penGrid));
   });
   board.classList.toggle('pen-active',mode==='pen');
-  board.setAttribute('aria-label',mode==='pen'?'棋盘：单指画线，双指平移缩放':'棋盘：单指滑选格子，双指平移缩放');
+  board.setAttribute('aria-label',mode==='pen'?'棋盘：单指拖动画线，点击格子画圆圈，点击格线画叉号，双指平移缩放':'棋盘：单指滑选格子，双指平移缩放');
   document.querySelectorAll('[data-mode]').forEach(el=>{
     el.classList.toggle('active',el.dataset.mode===mode);
     el.setAttribute('aria-pressed',String(el.dataset.mode===mode));
@@ -595,6 +598,7 @@ function draw() {
   // Solver-drawn ink is visible in fog, but never exposes hidden clues.
   // Paint digits last so lines cannot cover givens or pencil marks.
   drawPenLines(ctx,penLines,CELL,clip);
+  drawPenMarks(ctx,penMarks,CELL,clip);
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c;
     drawCellInk(idx,c*CELL,r*CELL,!isVisible(progress,idx));
@@ -660,6 +664,7 @@ async function history(direction) {
   try {
     if(record.kind==='pen'){
       penLines=direction==='undo'?record.before:record.after;
+      penMarks=direction==='undo'?record.beforeMarks:record.afterMarks;
     }else{
       const change=await call(direction);
       applyChange(change);
@@ -700,6 +705,60 @@ function locationInFrame(event) {
 }
 function pointerDistance(a,b) {return Math.hypot(a.x-b.x,a.y-b.y);}
 function pointerCenter(a,b) {return {x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
+// A short motion is a tap, not a stroke. Do not create tiny accidental lines
+// when a finger wobbles over a grid boundary while tapping an O or X.
+function movePenGesture(g,p) {
+  const threshold=Math.max(5,Math.min(12,CELL*camera.scale*.16));
+  if(!g.dragged && pointerDistance(g.start,p)<threshold){
+    g.last=p;
+    return;
+  }
+  const from=g.dragged?g.last:g.start;
+  g.dragged=true;
+  let last=g.node;
+  for(const next of tracePenNodes(from,p,camera,CELL,puzzle,g.grid)){
+    if(last&&next)applyPenStep(g.stroke,last,next);
+    last=next;
+  }
+  g.node=last;g.last=p;
+  penLines=penStrokeLines(g.stroke);
+  requestDraw();
+}
+function finishPenGesture(g,p,cancelled) {
+  if(cancelled){
+    penLines=g.stroke.before;
+    penMarks=g.beforeMarks;
+    requestDraw();
+    return;
+  }
+  if(!g.samples.length || pointerDistance(g.samples.at(-1),p)>0)
+    g.samples.push(p);
+  movePenGesture(g,p);
+  if(g.dragged){
+    const diagonal=straightDiagonalPenNodes(
+      g.start,p,g.samples,camera,CELL,puzzle,g.grid);
+    if(diagonal){
+      // Replace a spurious right-angle detour with a true diagonal, including
+      // gestures that only received down/up events from Android's WebView.
+      const stroke=createPenStroke(g.stroke.before,g.stroke.color,g.erasing);
+      for(let i=1;i<diagonal.length;i++)
+        applyPenStep(stroke,diagonal[i-1],diagonal[i]);
+      g.stroke=stroke;
+    }
+    penLines=penStrokeLines(g.stroke);
+  }else{
+    const at=penMarkAt(p,camera,CELL,puzzle);
+    penMarks=tapPenMark(g.beforeMarks,at,g.stroke.color,g.erasing);
+  }
+  if(JSON.stringify(penLines)!==JSON.stringify(g.stroke.before) ||
+     penMarks!==g.beforeMarks){
+    undoStack.push({kind:'pen',before:g.stroke.before,after:penLines,
+      beforeMarks:g.beforeMarks,afterMarks:penMarks});
+    redoStack=[];
+    updateControls();scheduleSave();
+  }
+  requestDraw();
+}
 board.addEventListener('contextmenu',event=>event.preventDefault());
 board.addEventListener('pointerdown',event=>{
   if(!puzzle)return;
@@ -709,7 +768,9 @@ board.addEventListener('pointerdown',event=>{
     const panMouse=event.pointerType==='mouse' &&
       (event.button===1||event.button===2||event.shiftKey||event.altKey);
     if(!panMouse&&mode==='pen'){
-      gesture={kind:'pen',last:p,node:penNodeAt(p,camera,CELL,puzzle,penGrid),
+      gesture={kind:'pen',start:p,last:p,samples:[p],dragged:false,
+        node:penNodeAt(p,camera,CELL,puzzle,penGrid),grid:penGrid,
+        beforeMarks:penMarks,erasing:penErase,
         stroke:createPenStroke(penLines,penColor,penErase)};
     }else{
       const oldSelection=[...selectedCells];
@@ -719,6 +780,7 @@ board.addEventListener('pointerdown',event=>{
   }else if(pointers.size===2){
     if(gesture?.kind==='pen'){
       penLines=gesture.stroke.before;
+      penMarks=gesture.beforeMarks;
       requestDraw();
     }
     if(gesture?.kind==='select'&&!gesture.moved)setSelection(gesture.oldSelection);
@@ -733,7 +795,6 @@ board.addEventListener('pointermove',event=>{
   if(pointers.size===2&&gesture.kind==='transform'){
     const [a,b]=[...pointers.values()];
     const center=pointerCenter(a,b),distance=pointerDistance(a,b);
-    // Two fingers pan with their midpoint, and pinch to zoom.
     camera.x+=center.x-gesture.lastCenter.x;
     camera.y+=center.y-gesture.lastCenter.y;
     if(gesture.lastDistance>0&&distance>0)
@@ -745,32 +806,18 @@ board.addEventListener('pointermove',event=>{
     camera.x+=p.x-previous.x;camera.y+=p.y-previous.y;
     gesture.last=p;requestDraw();scheduleViewSave();
   }else if(pointers.size===1&&gesture.kind==='select'){
-    if(Math.hypot(p.x-gesture.last.x,p.y-gesture.last.y)>0.5)gesture.moved=true;
+    if(pointerDistance(p,gesture.last)>0.5)gesture.moved=true;
     extendSelection(dragCellIndices(previous,p,camera,puzzle));
     gesture.last=p;
   }else if(pointers.size===1&&gesture.kind==='pen'){
-    let last=gesture.node,changed=false;
-    for(const next of tracePenNodes(previous,p,camera,CELL,puzzle,penGrid)){
-      if(last&&next&&applyPenStep(gesture.stroke,last,next))changed=true;
-      last=next;
-    }
-    gesture.node=last;
-    gesture.last=p;
-    if(changed){penLines=penStrokeLines(gesture.stroke);requestDraw();}
+    if(gesture.samples.length<4000)gesture.samples.push(p);
+    movePenGesture(gesture,p);
   }
 });
 function endPointer(event){
   if(!pointers.has(event.pointerId))return;
-  if(pointers.size===1&&gesture?.kind==='pen'){
-    if(event.type==='pointercancel')penLines=gesture.stroke.before;
-    else if(gesture.stroke.changed){
-      penLines=penStrokeLines(gesture.stroke);
-      undoStack.push({kind:'pen',before:gesture.stroke.before,after:penLines});
-      redoStack=[];
-      updateControls();scheduleSave();
-    }
-    requestDraw();
-  }
+  if(pointers.size===1&&gesture?.kind==='pen')
+    finishPenGesture(gesture,locationInFrame(event),event.type==='pointercancel');
   pointers.delete(event.pointerId);
   if(pointers.size===1)gesture={kind:'ignore'};
   else if(pointers.size===0)gesture=null;
@@ -902,7 +949,7 @@ $('exportCheckpoint').addEventListener('click',()=>{
   try{
     if(!puzzle||!progress)throw Error('请先打开一道谜题');
     save();
-    const data=createCheckpoint(puzzle,currentEntry,progress,penLines);
+    const data=createCheckpoint(puzzle,currentEntry,progress,penLines,penMarks);
     const contents=JSON.stringify(data);
     $('checkpointText').value=contents;
     $('checkpointFile').value='';
@@ -920,7 +967,7 @@ $('exportCheckpoint').addEventListener('click',()=>{
 $('copyCheckpoint').addEventListener('click',async()=>{
   try{
     if(!$('checkpointText').value.trim()&&puzzle)
-      $('checkpointText').value=JSON.stringify(createCheckpoint(puzzle,currentEntry,progress,penLines));
+      $('checkpointText').value=JSON.stringify(createCheckpoint(puzzle,currentEntry,progress,penLines,penMarks));
     const text=$('checkpointText').value.trim();
     if(!text)throw Error('没有可复制的存档');
     if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
@@ -956,6 +1003,7 @@ $('importCheckpoint').addEventListener('click',async()=>{
     save();
     progress=await call('restore_progress',{cells});
     penLines=cp.penLines;
+    penMarks=cp.penMarks;
     undoStack=[];redoStack=[];
     refreshConflicts();
     save();lastCompletion=Boolean(progress.solved);
