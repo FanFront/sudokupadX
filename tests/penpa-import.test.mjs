@@ -6,6 +6,7 @@ import {
   preparePenpaScl, convertPenpaUrl
 } from '../src/penpa-import.js';
 import {fetchOnlinePuzzle} from '../src/online-library.js';
+import {cachedSource,parseResume,serializeResume} from '../src/resume-session.js';
 import {parseLogicMastersPage,directPuzzleEntry} from '../src/logic-masters.js';
 
 const url = 'https://swaroopg92.github.io/penpa-edit/#m=solve&p=YWJj+/==';
@@ -104,6 +105,17 @@ test('Logic Masters extracts Penpa+ links without mixing or duplicating SudokuPa
   const direct=directPuzzleEntry(url);
   assert.equal(direct.id,'lmd:direct:'+penpaPuzzleId(url));
   assert.match(direct.puzzleUrl,/penpa-edit/);
+});
+
+
+test('Penpa+ imported puzzle can restore its source, camera and selection',()=>{
+  const entry=directPenpaEntry(url);
+  const source=cachedSource('original-penpa',entry);
+  assert.equal(source.type,'online');
+  const text=serializeResume(source,{centerX:100,centerY:140,scale:0.8,selectedCells:[2],gridLines:true});
+  const restored=parseResume(text);
+  assert.equal(restored.source.entry.puzzleUrl,url);
+  assert.deepEqual(restored.view.selectedCells,[2]);
 });
 
 test('Main import UI and restricted Android CSP integrate the bundled converter',()=>{
