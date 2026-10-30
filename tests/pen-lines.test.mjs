@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PEN_COLORS,normalizePenLines,penNodeAt,tracePenNodes,
+  PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,
+  tapPenMark,tracePenNodes,straightDiagonalPenNodes,
   createPenStroke,applyPenStep,penStrokeLines,penSegmentKey
 } from '../src/pen-lines.js';
 
@@ -71,4 +72,78 @@ test('foreign or malformed strokes are rejected, duplicates are normalized',()=>
     {...segment,a:[0,1]}
   ])assert.throws(()=>normalizePenLines([invalid],9,9),/pen line/i);
   assert.throws(()=>normalizePenLines({},9,9),/pen lines/i);
+});
+
+test('diagonal R1C1 to R2C2 and R1C2 to R2C1 remain single diagonal lines',()=>{
+  for(const [start,end,expectedA,expectedB] of [
+    [{x:26,y:26},{x:78,y:78},center(0,0),center(1,1)],
+    [{x:78,y:26},{x:26,y:78},center(1,0),center(0,1)]
+  ]){
+    const nodes=straightDiagonalPenNodes(start,end,
+      [start,{x:(start.x+end.x)/2+1,y:(start.y+end.y)/2-1},end],
+      camera,52,puzzle,'center');
+    assert.deepEqual(nodes,[expectedA,expectedB]);
+    const stroke=createPenStroke([],PEN_COLORS[1]);
+    assert.equal(applyPenStep(stroke,...nodes),true);
+    assert.deepEqual(penStrokeLines(stroke),[{a:expectedA,b:expectedB,color:PEN_COLORS[1]}]);
+  }
+});
+
+test('small finger jitter on a diagonal is corrected, but deliberate right angles stay',()=>{
+  const start={x:26,y:26},end={x:78,y:78};
+  assert.deepEqual(straightDiagonalPenNodes(start,end,
+    [start,{x:53,y:49},end],camera,52,puzzle,'center'),
+    [center(0,0),center(1,1)]);
+  assert.equal(straightDiagonalPenNodes(start,end,
+    [start,{x:78,y:26},end],camera,52,puzzle,'center'),null);
+  // Even if the WebView only sends down/up, the release still joins cells.
+  assert.deepEqual(straightDiagonalPenNodes(start,end,[start,end],camera,52,puzzle,'center'),
+    [center(0,0),center(1,1)]);
+  assert.deepEqual(straightDiagonalPenNodes({x:0,y:0},{x:104,y:104},
+    [{x:0,y:0},{x:104,y:104}],camera,52,puzzle,'edge'),
+    [edge(0,0),edge(1,1),edge(2,2)]);
+});
+
+test('taps choose cell centers, edge midpoints or grid intersections',()=>{
+  assert.deepEqual(penMarkAt({x:26,y:26},camera,52,puzzle),[1,1]);
+  assert.deepEqual(penMarkAt({x:52,y:26},camera,52,puzzle),[2,1]);
+  assert.deepEqual(penMarkAt({x:26,y:52},camera,52,puzzle),[1,2]);
+  assert.deepEqual(penMarkAt({x:52,y:52},camera,52,puzzle),[2,2]);
+  assert.deepEqual(penMarkAt({x:99,y:200},{x:47,y:96,scale:2},52,puzzle),[1,1]);
+  assert.equal(penMarkAt({x:500,y:500},camera,52,puzzle),null);
+});
+
+test('cell tap cycles circle, X and clear while grid-line tap starts with X',()=>{
+  let marks=[];
+  const centerPoint=[1,1],edgePoint=[2,1];
+  marks=tapPenMark(marks,centerPoint,PEN_COLORS[2]);
+  assert.deepEqual(marks,[{at:centerPoint,type:'circle',color:PEN_COLORS[2]}]);
+  marks=tapPenMark(marks,centerPoint,PEN_COLORS[2]);
+  assert.equal(marks[0].type,'cross');
+  marks=tapPenMark(marks,centerPoint,PEN_COLORS[2]);
+  assert.deepEqual(marks,[]);
+  marks=tapPenMark(marks,edgePoint,PEN_COLORS[3]);
+  assert.equal(marks[0].type,'cross');
+  marks=tapPenMark(marks,edgePoint,PEN_COLORS[3]);
+  assert.equal(marks[0].type,'circle');
+  marks=tapPenMark(marks,edgePoint,PEN_COLORS[3]);
+  assert.deepEqual(marks,[]);
+});
+
+test('eraser only removes selected mark and marks stay in bounds for saves',()=>{
+  const cell=tapPenMark([],[1,1],PEN_COLORS[0]);
+  const two=tapPenMark(cell,[2,1],PEN_COLORS[4]);
+  assert.equal(two.length,2);
+  const removed=tapPenMark(two,[2,1],PEN_COLORS[1],true);
+  assert.deepEqual(removed,cell);
+  assert.equal(tapPenMark(removed,[2,1],PEN_COLORS[1],true),removed);
+  assert.deepEqual(normalizePenMarks(two,9,9),two);
+  for(const mark of [
+    {at:[-1,1],type:'circle',color:PEN_COLORS[0]},
+    {at:[20,1],type:'cross',color:PEN_COLORS[0]},
+    {at:[2.2,1],type:'cross',color:PEN_COLORS[0]},
+    {at:[1,1],type:'dot',color:PEN_COLORS[0]},
+    {at:[1,1],type:'cross',color:'#abc'}
+  ])assert.throws(()=>normalizePenMarks([mark],9,9),/pen mark/i);
+  assert.throws(()=>normalizePenMarks({},9,9),/pen mark/i);
 });
