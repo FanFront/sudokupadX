@@ -174,3 +174,79 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .bilingual-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:7px}
 .bilingual-term{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;font-size:12px;padding:7px 8px;border:1px solid #39546b;border-radius:6px}
 .bilingual-term span:last-child{color:#9ce0c8;text-align:right}
+
+/* The library is an independent screen, not a stack of scrollable mini-dialogs. */
+#libraryDialog{width:min(94vw,920px);max-height:92dvh}
+#libraryDialog .modal-content{
+  height:min(88dvh,830px);max-height:none;min-height:0;overflow:hidden;
+  padding:20px;gap:14px
+}
+#libraryDialog .modal-top{flex-shrink:0;padding-bottom:4px}
+#libraryDialog .library-tabs{flex-shrink:0}
+#libraryDialog .library-tabs button{min-height:46px;padding:7px 8px;line-height:1.3}
+#libraryDialog #bundledLibraryPanel,
+#libraryDialog #onlineLibraryPanel,
+#libraryDialog #lmdLibraryPanel{flex:1;min-height:0;overflow:hidden}
+#libraryDialog #bundledLibraryPanel{display:flex;flex-direction:column;gap:10px}
+#libraryDialog .library-list,
+#libraryDialog #onlineIndexList{flex:1;min-height:0;max-height:none;overflow-y:auto}
+#libraryDialog .library-list{padding:2px}
+.library-section-heading{display:flex;flex-direction:column;gap:3px}
+.library-section-heading strong{font-size:17px;line-height:1.3}
+.library-section-heading span{font-size:12px;color:#a8c7d8;line-height:1.4}
+.lmd-subtabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lmd-subtabs button{min-height:44px;background:#18334b}
+.lmd-subtabs button[aria-selected="true"]{background:#b9e4d6;color:#163445;border-color:#b9e4d6}
+#lmdLibraryPanel{gap:12px}
+.lmd-view{flex:1;min-height:0;display:flex;flex-direction:column;gap:11px}
+.lmd-view[hidden]{display:none!important}
+#lmdLibraryPanel[data-view="detail"] .lmd-subtabs,
+#lmdLibraryPanel[data-view="detail"] .library-section-heading{display:none}
+#lmdSearchResults,#lmdSavedResults,#lmdResults{
+  flex:1;min-height:0;max-height:none;overflow-y:auto;padding:2px 3px 8px
+}
+#lmdDiscoverView .lmd-import{flex-shrink:0;max-height:32dvh;overflow-y:auto}
+#lmdDiscoverView .lmd-input-row{margin:0}
+#lmdDiscoverView .lmd-input-row input{min-height:44px;font-size:13px}
+#lmdDiscoverView .lmd-browse-actions{gap:10px}
+#lmdSearchStatus{flex:1 1 180px;font-size:12px}
+#lmdDiscoverView .lmd-pages{flex-shrink:0;padding-top:2px}
+.lmd-view-heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.lmd-view-heading strong{font-size:16px}
+.lmd-view-heading span{font-size:12px;color:#a7c8d6}
+.lmd-detail-toolbar{display:flex;flex-shrink:0}
+.lmd-detail-toolbar button{min-height:40px;padding:0 12px;background:#1b3a51}
+#lmdSelectedTitle{font-size:16px;overflow-wrap:anywhere}
+#lmdStatus{font-size:12px}
+#lmdLibraryPanel .online-entry-actions button{min-height:40px}
+#libraryDialog .online-index-list{overscroll-behavior:contain}
+@media(max-width:650px){
+  #libraryDialog{
+    position:fixed;inset:0;margin:0;width:100vw;max-width:100vw;
+    height:100dvh;max-height:100dvh;border:0;border-radius:0
+  }
+  #libraryDialog .modal-content{
+    height:100%;padding:calc(14px + var(--app-top-inset))
+      max(14px,env(safe-area-inset-right,0px))
+      calc(14px + var(--app-bottom-inset))
+      max(14px,env(safe-area-inset-left,0px));
+    gap:12px
+  }
+  #libraryDialog .modal-top h2{font-size:19px}
+  #libraryDialog .library-tabs{gap:6px}
+  #libraryDialog .library-tabs button{font-size:12px;min-height:44px;padding:4px}
+  .library-section-heading strong{font-size:16px}
+  #libraryDialog #onlineIndexList,
+  #libraryDialog .library-list,
+  #lmdSearchResults,#lmdSavedResults,#lmdResults{max-height:none}
+  #libraryDialog .online-entry{padding:13px}
+  #libraryDialog .online-entry-actions{gap:8px}
+  #lmdLibraryPanel .lmd-result-button{min-height:60px;padding:13px}
+  #lmdLibraryPanel .lmd-input-row{flex-direction:row}
+  #lmdLibraryPanel .lmd-input-row button{min-height:44px}
+}
+@media(max-width:370px){
+  #lmdLibraryPanel .lmd-input-row{flex-direction:column}
+  #lmdLibraryPanel .lmd-input-row button{width:100%}
+  #libraryDialog .library-tabs button{font-size:11px}
+}

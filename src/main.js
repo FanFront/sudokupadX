@@ -1,4 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { installExternalLinkHandler } from './external-links.js';
 import {invokeBrowser} from './web-runtime.js';
 import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
@@ -109,6 +111,17 @@ function scheduleSave() {
 }
 document.addEventListener('visibilitychange',()=>{
   if (document.visibilityState==='hidden') save();
+});
+window.addEventListener('pagehide', save);
+// Open original SudokuPad / Logic Masters links in the system browser on
+// Android, so the OS back gesture returns to this still-running puzzle.
+installExternalLinkHandler({
+  root: document,
+  native,
+  openNative: url => openUrl(url),
+  openWeb: url => window.open(url,'_blank','noopener,noreferrer'),
+  save,
+  notify
 });
 async function restoreSaved() {
   let stored;

@@ -140,43 +140,56 @@
       </section>
 
       <section id="lmdLibraryPanel" role="tabpanel" hidden>
-        <p>直接搜索 Logic Masters Deutschland 在线题库，选择喜欢的谜题后导入 SudokuPadX。安卓版可直接检索；已下载题面可离线游玩。</p>
-        <form id="lmdSearchForm" class="lmd-input-row">
-          <input id="lmdSearch" type="search" maxlength="100" autocomplete="off" placeholder="搜索题名或题目正文关键词" aria-label="搜索 Logic Masters 在线题库">
-          <button id="lmdSearchButton" type="submit" class="primary-btn">搜索</button>
-        </form>
-        <div class="lmd-browse-actions">
-          <button id="lmdLatest" type="button">最新题目</button>
-          <button id="lmdSaved" type="button">已下载</button>
-          <span id="lmdSearchStatus" role="status" aria-live="polite">进入后显示最新题目；也可输入关键词搜索。</span>
+        <div class="library-section-heading">
+          <strong>Logic Masters Deutschland</strong>
+          <span>发现新题目，收藏到手机，随时继续游戏。</span>
         </div>
-        <div id="lmdSearchResults" class="online-index-list" aria-label="Logic Masters 搜索结果"></div>
-        <div class="lmd-pages">
-          <button id="lmdPrev" type="button" disabled>上一页</button>
-          <span id="lmdPageLabel">第 1 页</span>
-          <button id="lmdNext" type="button" disabled>下一页</button>
+        <div class="lmd-subtabs" role="tablist" aria-label="Logic Masters 浏览方式">
+          <button id="lmdDiscover" type="button" role="tab" aria-controls="lmdDiscoverView" aria-selected="true">探索题库</button>
+          <button id="lmdSaved" type="button" role="tab" aria-controls="lmdSavedView" aria-selected="false">我的下载</button>
         </div>
-        <div id="lmdSelected" class="lmd-selected" hidden>
+        <section id="lmdDiscoverView" class="lmd-view" role="tabpanel">
+          <form id="lmdSearchForm" class="lmd-input-row">
+            <input id="lmdSearch" type="search" maxlength="100" autocomplete="off" placeholder="搜索题名、规则或关键词" aria-label="搜索 Logic Masters 在线题库">
+            <button id="lmdSearchButton" type="submit" class="primary-btn">搜索</button>
+          </form>
+          <div class="lmd-browse-actions">
+            <button id="lmdLatest" type="button">最新题目</button>
+            <span id="lmdSearchStatus" role="status" aria-live="polite">进入后显示最新题目；也可输入关键词搜索。</span>
+          </div>
+          <div id="lmdSearchResults" class="online-index-list" aria-label="Logic Masters 搜索结果"></div>
+          <div class="lmd-pages">
+            <button id="lmdPrev" type="button" disabled>上一页</button>
+            <span id="lmdPageLabel">第 1 页</span>
+            <button id="lmdNext" type="button" disabled>下一页</button>
+          </div>
+          <details class="lmd-import">
+            <summary>按 ID / 链接导入（高级选项）</summary>
+            <p>可直接粘贴作者的 SudokuPad 链接，或输入 Logic Masters 的六位题号。</p>
+            <div class="lmd-input-row">
+              <input id="lmdReference" type="text" aria-label="Logic Masters ID or puzzle URL" placeholder="000OKF / Logic Masters 页面 / SudokuPad 链接" autocomplete="off" spellcheck="false">
+              <button id="lmdFetch" type="button">提取页面链接</button>
+            </div>
+            <p>网页版如遇跨域限制，可粘贴 SudokuPad 链接或页面 HTML。</p>
+            <div class="lmd-input-row">
+              <textarea id="lmdPasted" rows="2" placeholder="可选：粘贴 SudokuPad 链接或 Logic Masters 网页 HTML" aria-label="粘贴谜题链接或页面 HTML"></textarea>
+              <button id="lmdParsePaste" type="button">解析粘贴内容</button>
+            </div>
+          </details>
+        </section>
+        <section id="lmdSavedView" class="lmd-view" role="tabpanel" hidden>
+          <div class="lmd-view-heading">
+            <strong>已下载的谜题</strong>
+            <span id="lmdSavedCount">正在读取本机下载…</span>
+          </div>
+          <div id="lmdSavedResults" class="online-index-list" aria-label="已下载的 Logic Masters 谜题"></div>
+        </section>
+        <section id="lmdDetailView" class="lmd-view" role="region" aria-label="所选谜题" hidden>
+          <div class="lmd-detail-toolbar"><button id="lmdBack" type="button">← 返回列表</button></div>
           <strong id="lmdSelectedTitle">已选择题目</strong>
           <p id="lmdStatus" role="status" aria-live="polite">正在读取可导入的题面…</p>
-          <div id="lmdResults" class="online-index-list" aria-label="选择并导入 Logic Masters 谜题"></div>
-        </div>
-        <details class="lmd-import">
-          <summary>高级选项：按 ID / 链接导入（可选）</summary>
-          <p>一般不需要使用：也可粘贴 Logic Masters 题号 / 页面链接或作者提供的 SudokuPad 链接。</p>
-          <div class="lmd-input-row">
-            <input id="lmdReference" type="text" aria-label="Logic Masters ID or puzzle URL" placeholder="000OKF / Logic Masters 页面 / SudokuPad 链接" autocomplete="off" spellcheck="false">
-            <button id="lmdFetch" type="button">提取页面链接</button>
-          </div>
-          <p>网页版若因 CORS 无法检索，可在此粘贴作者给出的 SudokuPad 链接；也支持粘贴页面 HTML。</p>
-          <div class="lmd-input-row">
-            <textarea id="lmdPasted" rows="2" placeholder="可选：粘贴 SudokuPad 链接或 Logic Masters 网页 HTML" aria-label="粘贴谜题链接或页面 HTML"></textarea>
-            <button id="lmdParsePaste" type="button">解析粘贴内容</button>
-          </div>
-          <p id="lmdStatus" role="status" aria-live="polite">已下载的 Logic Masters 谜题会在下方显示，可离线打开。</p>
-          <div id="lmdResults" class="online-index-list" aria-label="Logic Masters 导入与下载"></div>
-        </details>
-
+          <div id="lmdResults" class="online-index-list" aria-label="可打开或下载的谜题"></div>
+        </section>
       </section>
     </div>
   </dialog>
