@@ -179,12 +179,13 @@ export function saveResumePuzzle(key, input) {
       typeof input !== 'string' || !input.length || input.length > MAX_ONLINE_PUZZLE)
     throw Error('无法保存当前谜题的离线恢复数据');
   return transaction(['resume'], 'readwrite', tx => {
-    tx.objectStore('resume').put({id:key,input});
+    tx.objectStore('resume').put({id:'current',key,input});
   });
 }
 export function readResumePuzzle(key) {
   if (typeof key !== 'string' || !key || key.length > 1024) return Promise.resolve(null);
   return transaction(['resume'], 'readonly', (tx, done) => {
-    tx.objectStore('resume').get(key).onsuccess = e => done(e.target.result?.input || null);
+    tx.objectStore('resume').get('current').onsuccess = e =>
+      done(e.target.result?.key === key ? e.target.result.input : null);
   });
 }
