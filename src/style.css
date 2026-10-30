@@ -58,7 +58,6 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 
 @media(max-width:410px){
   #libraryButton{display:block}
-  #demoButton{padding:0 7px;min-height:35px;font-size:11px}
   .board-tools button{min-height:30px;padding:0 5px}
 }
 @media(max-width:370px){
@@ -74,12 +73,10 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .checkpoint-actions{justify-content:flex-start;flex-wrap:wrap}
 .checkpoint-actions button{padding:0 12px}
 @media(max-width:850px){
-  #demoButton{display:none}
   .top-actions #checkpointButton{padding:0 8px;min-height:35px;font-size:11px}
   .top-actions #importButton{padding:0 8px;min-height:35px;font-size:11px}
 }
 @media(max-width:410px){
-  #demoButton{display:none}
   .top-actions #importButton{font-size:0;min-width:38px}
   .top-actions #importButton::after{content:'导题';font-size:11px}
 }
@@ -296,7 +293,6 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   #app .top-actions .icon-button{flex-basis:40px;width:40px;min-width:40px;max-width:40px;height:40px;min-height:40px}
   #app .board-tools{gap:5px}
   #app .board-tools .icon-button{flex-basis:40px;width:40px;min-width:40px;max-width:40px;height:40px;min-height:40px;padding:0}
-  #app .top-actions #demoButton{display:inline-flex}
   #app .top-actions .icon-button .toolbar-icon,
   #app .board-tools .icon-button .toolbar-icon{width:20px;height:20px}
 }
