@@ -25,16 +25,18 @@ export function parsePenpaUrl(raw) {
   const mode = modeValue || 'solve';
   const payload = getRawParameter(fragment, 'p');
   if (!['solve','edit'].includes(mode) || !payload || payload.length > MAX_PENPA_LINK ||
-      !/^[A-Za-z0-9+/=]+$/.test(payload)) return null;
+      !/^[A-Za-z0-9+/_=-]+$/.test(payload)) return null;
   const answer = getRawParameter(fragment, 'a');
   if (/(?:^|&)a=/.test(fragment) && answer === null) return null;
   if (answer !== null && (answer.length > MAX_PENPA_LINK ||
-      !/^[A-Za-z0-9+/=]+$/.test(answer))) return null;
+      !/^[A-Za-z0-9+/_=-]+$/.test(answer))) return null;
   // The upstream loader splits '&' and '=' directly, without URL-decoding.
   // Supply plain Base64 so encoded %2B, %2F and %3D cannot break it.
-  const converterUrl = PENPA_ORIGIN + '?m=' + mode + '&p=' + payload +
-    (answer ? '&a=' + answer : '');
-  return {url:url.href, converterUrl, mode, payload};
+  const standardBase64 = value => value.replace(/-/g,'+').replace(/_/g,'/');
+  const normalized = standardBase64(payload);
+  const converterUrl = PENPA_ORIGIN + '?m=' + mode + '&p=' + normalized +
+    (answer ? '&a=' + standardBase64(answer) : '');
+  return {url:url.href, converterUrl, mode, payload:normalized};
 }
 
 export function penpaPuzzleId(url) {
