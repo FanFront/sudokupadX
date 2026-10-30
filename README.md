@@ -1,5 +1,7 @@
 # SudokuPad X
 
+**English** | [简体中文](README.zh-CN.md)
+
 A SudokuPad-compatible puzzle player for **Android and the web**, built with Rust, Tauri 2, and a custom Canvas board. It focuses on adventure Sudoku, offline play, and Chinese localization.
 
 **[Play in browser](https://fanfront.github.io/sudokupadX/)** · **[Download Android APK](https://github.com/FanFront/sudokupadX/releases/download/android-test-latest/SudokuPadX-arm64.apk)**
