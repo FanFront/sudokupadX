@@ -905,15 +905,15 @@ $('continueButton').addEventListener('click',async()=>{
     updateHomeCard();
   }finally{$('continueButton').disabled=false;}
 });
-$('fitButton').addEventListener('click',fit);
+$('fitButton').addEventListener('click',()=>{fit();save();});
 $('gridButton').addEventListener('click',()=>{
   showGridLines=!showGridLines;
   updateGridButton();
   requestDraw();
-  scheduleViewSave();
+  save();
 });
-$('zoomIn').addEventListener('click',()=>setZoom(camera.scale*1.25));
-$('zoomOut').addEventListener('click',()=>setZoom(camera.scale/1.25));
+$('zoomIn').addEventListener('click',()=>{setZoom(camera.scale*1.25);save();});
+$('zoomOut').addEventListener('click',()=>{setZoom(camera.scale/1.25);save();});
 $('alphabetButton').addEventListener('click',()=>{alphabet=!alphabet;letterPage=0;updateControls();});
 $('letterPage').addEventListener('click',()=>{letterPage=(letterPage+1)%3;updateControls();});
 $('modeBar').addEventListener('click',event=>{
