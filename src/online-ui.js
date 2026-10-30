@@ -6,7 +6,8 @@ import {
 import {invoke} from '@tauri-apps/api/core';
 import {
   logicMastersReference, parseLogicMastersPage, directSudokuPadEntry,
-  logicMastersSearchUrl, parseLogicMastersSearch
+  logicMastersSearchUrl, parseLogicMastersSearch, parseLogicMastersDetails,
+  logicMastersDifficultyLabel
 } from './logic-masters.js';
 
 // The bundled snapshot works without a network, including on first launch of the APK.
@@ -23,6 +24,9 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   let lmdView = 'discover';
   let lmdReturnView = 'discover';
   let lmdMatches = [];
+  let lmdSelected = null;
+  let lmdDetails = null;
+  let lmdDetailSource = '';
   let lmdTotal = null;
   let lmdCurrentQuery = '';
   let lmdOffset = 0;
@@ -48,12 +52,22 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
       button.type = 'button';
       button.className = 'lmd-result-button';
       button.disabled = Boolean(actionId);
+      const heading = document.createElement('div');
+      heading.className = 'lmd-result-heading';
       const title = document.createElement('strong');
       title.textContent = item.title;
+      heading.append(title);
+      if (item.difficulty) {
+        const difficulty = document.createElement('span');
+        difficulty.className = 'lmd-difficulty';
+        difficulty.textContent = logicMastersDifficultyLabel(
+          item.difficulty,item.difficultyEstimated);
+        heading.append(difficulty);
+      }
       const meta = document.createElement('small');
       meta.textContent = 'LMD ' + item.id +
-        (item.author ? ' · 作者 ' + item.author : '') + ' · 点击选择并导入';
-      button.append(title,meta);
+        (item.author ? ' · 作者 ' + item.author : '') + ' · 点击查看详情';
+      button.append(heading,meta);
       button.addEventListener('click',() => selectLmdMatch(item));
       container.append(button);
     }
@@ -127,12 +141,35 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     $('lmdDiscover').setAttribute('aria-selected', String(view === 'discover'));
     $('lmdSaved').setAttribute('aria-selected', String(view === 'saved'));
   }
+  function renderLmdDetailInfo() {
+    const detail = lmdDetails;
+    const rating = logicMastersDifficultyLabel(
+      detail?.difficulty ?? lmdSelected?.difficulty,
+      detail?.difficulty === null || !detail
+        ? lmdSelected?.difficultyEstimated : detail.difficultyEstimated);
+    $('lmdDetailMeta').textContent = [
+      lmdSelected?.author ? '作者 ' + lmdSelected.author : '',
+      rating ? '难度 ' + rating : ''
+    ].filter(Boolean).join(' · ');
+    const panel = $('lmdDescriptionPanel');
+    panel.hidden = !detail;
+    $('lmdDescriptionText').textContent = detail?.description ||
+      (detail?.hasImages ? '原题说明主要使用图片，请打开原题查看完整图示。' :
+        '未从此页面提取到文字说明，请查看原题页面。');
+    $('lmdDescriptionNotice').hidden = !detail?.hasImages;
+    const source = $('lmdDetailSource');
+    source.hidden = !lmdDetailSource;
+    if (lmdDetailSource) source.href = lmdDetailSource;
+  }
   async function selectLmdMatch(item) {
     if (actionId) return;
+    lmdSelected = item;
+    lmdDetails = null;
+    lmdDetailSource = item.url;
     $('lmdReference').value = item.id;
-    $('lmdSelectedTitle').textContent = item.title +
-      (item.author ? ' · '+item.author : '');
+    $('lmdSelectedTitle').textContent = item.title;
     lmdFound = [];
+    renderLmdDetailInfo();
     renderLmd();
     await lmdAction(resolveLmdReference);
   }
@@ -243,6 +280,11 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     const html = await fetchLmdHtml(ref.url,'fetch_logic_masters_page',
       {puzzleId:ref.id});
     lmdFound = parseLogicMastersPage(html,ref);
+    lmdDetails = parseLogicMastersDetails(html);
+    lmdDetailSource = ref.url;
+    if (!lmdSelected && lmdDetails.title)
+      $('lmdSelectedTitle').textContent = lmdDetails.title;
+    renderLmdDetailInfo();
     lmdStatus(lmdFound.length ?
       '从 Logic Masters ' + ref.id + ' 找到 ' + lmdFound.length + ' 个 SudokuPad 链接。':
       '这个页面未提供可用的 SudokuPad 链接。仅有图片或 Penpa+ 的题目无法自动还原。');
@@ -255,7 +297,11 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     } else {
       const ref = logicMastersReference($('lmdReference').value);
       lmdFound = parseLogicMastersPage(input,ref);
+      lmdDetails = parseLogicMastersDetails(input);
+      lmdDetailSource = ref.url;
+      if (lmdDetails.title) $('lmdSelectedTitle').textContent = lmdDetails.title;
     }
+    renderLmdDetailInfo();
     lmdStatus(lmdFound.length ?
       '从粘贴内容提取到 ' + lmdFound.length + ' 道可加载的 SudokuPad 谜题。':
       '粘贴内容没有可用的 SudokuPad 链接；图片题面暂不能自动转成可玩数独。');
@@ -462,10 +508,18 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   $('onlineOfflineOnly').addEventListener('change', renderList);
   $('refreshOnlineIndex').addEventListener('click', () => refreshIndex().catch(notify));
   $('lmdFetch').addEventListener('click', () => {
+    lmdSelected = null;
+    lmdDetails = null;
+    lmdDetailSource = '';
+    renderLmdDetailInfo();
     $('lmdSelectedTitle').textContent = '按 ID / 链接导入';
     lmdAction(resolveLmdReference);
   });
   $('lmdParsePaste').addEventListener('click', () => {
+    lmdSelected = null;
+    lmdDetails = null;
+    lmdDetailSource = '';
+    renderLmdDetailInfo();
     $('lmdSelectedTitle').textContent = '粘贴内容导入';
     lmdAction(resolveLmdPasted);
   });

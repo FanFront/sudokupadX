@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   logicMastersReference,parseLogicMastersPage,directSudokuPadEntry,
-  logicMastersSearchUrl,parseLogicMastersSearch
+  logicMastersSearchUrl,parseLogicMastersSearch,parseLogicMastersDetails,
+  logicMastersDifficultyLabel
 } from '../src/logic-masters.js';
 
 test('Logic Masters IDs and official HTTPS links resolve to canonical page',()=>{
@@ -76,4 +77,48 @@ test('listings resolve only real LMD puzzle links with titles, unique IDs and au
 test('unrelated HTML cannot invent Logic Masters search hits',()=>{
   assert.deepEqual(parseLogicMastersSearch('<p>No puzzles</p>'),{items:[],total:null});
   assert.throws(()=>parseLogicMastersSearch('x'.repeat(1024*1024+1)),/1 MiB/);
+});
+
+
+test('search results include per-row difficulty and estimated flag',()=>{
+  const html = '<p>2 entries have been found.</p><table>' +
+    '<tr><td><a href="../Raetsel/zeigen.php?id=000ABC">First</a> by <a href="#">Alice</a></td>' +
+    '<td><img alt="Vom Rätselautor geschätzt: mittelschweres Rätsel"></td></tr>' +
+    '<tr><td><a href="../Raetsel/zeigen.php?id=000DEF">Second</a> by <a href="#">Bob</a></td>' +
+    '<td><img title="sehr schweres Rätsel"></td></tr></table>';
+  const {items}=parseLogicMastersSearch(html);
+  assert.deepEqual(items.map(x=>x.difficulty),[3,5]);
+  assert.deepEqual(items.map(x=>x.difficultyEstimated),[true,false]);
+  assert.match(logicMastersDifficultyLabel(3,true),/中等.*作者预估/);
+  assert.equal(logicMastersDifficultyLabel(null),'');
+});
+test('difficulty does not leak from the next result row',()=>{
+  const html = '<table><tr><td><a href="../Raetsel/zeigen.php?id=000ABC">No rating</a></td></tr>' +
+    '<tr><td><a href="../Raetsel/zeigen.php?id=000DEF">Easy</a></td>' +
+    '<td><img alt="sehr leichtes Rätsel"></td></tr></table>';
+  assert.deepEqual(parseLogicMastersSearch(html).items.map(x=>x.difficulty),[null,1]);
+});
+test('details retain readable original rules without portal chrome or unsafe markup',()=>{
+  const html = '<h2>Whispers &amp; Arrows</h2><p>(Eingestellt heute von Alex)</p>' +
+    '<div><p>Rules:</p><ul><li>Place digits 1-9.</li><li>German Whispers line.</li></ul>' +
+    '<p><a href="https://sudokupad.app/abc123">Play on SudokuPad</a></p>' +
+    '<img src="grid.png"></div>' +
+    '<p><strong>Lösungscode:</strong> Row 1</p>' +
+    '<div>Kommentare<script>alert("unsafe")</script></div>' +
+    '<img alt="Vom Rätselautor geschätzt: leichtes Rätsel">';
+  const detail=parseLogicMastersDetails(html);
+  assert.equal(detail.title,'Whispers & Arrows');
+  assert.match(detail.description,/Place digits 1-9/);
+  assert.match(detail.description,/German Whispers line/);
+  assert.match(detail.description,/Play on SudokuPad/);
+  assert.doesNotMatch(detail.description,/Lösungscode|Kommentare|unsafe|Eingestellt/);
+  assert.equal(detail.hasImages,true);
+  assert.equal(detail.difficulty,2);
+  assert.equal(detail.difficultyEstimated,true);
+});
+test('missing description marker never displays the whole LMD website',()=>{
+  const detail=parseLogicMastersDetails('<h2>Image only</h2><p>Menu and comments</p>');
+  assert.equal(detail.description,'');
+  assert.equal(detail.difficulty,null);
+  assert.throws(()=>parseLogicMastersDetails('x'.repeat(1024*1024+1)),/1 MiB/);
 });

@@ -186,8 +186,17 @@
         <section id="lmdDetailView" class="lmd-view" role="region" aria-label="所选谜题" hidden>
           <div class="lmd-detail-toolbar"><button id="lmdBack" type="button">← 返回列表</button></div>
           <strong id="lmdSelectedTitle">已选择题目</strong>
+          <p id="lmdDetailMeta" class="lmd-detail-meta"></p>
           <p id="lmdStatus" role="status" aria-live="polite">正在读取可导入的题面…</p>
-          <div id="lmdResults" class="online-index-list" aria-label="可打开或下载的谜题"></div>
+          <div id="lmdDetailContent" class="lmd-detail-content">
+            <section id="lmdDescriptionPanel" class="lmd-description" aria-label="谜题说明与规则" hidden>
+              <strong>题目说明与规则（原文）</strong>
+              <div id="lmdDescriptionText" class="lmd-description-text"></div>
+              <p id="lmdDescriptionNotice" class="lmd-description-notice" hidden>原题含图片或图示；完整图形及原始排版请查看 Logic Masters 原页面。</p>
+            </section>
+            <div id="lmdResults" class="online-index-list" aria-label="可打开或下载的谜题"></div>
+          </div>
+          <a id="lmdDetailSource" class="source-link" target="_blank" rel="noopener noreferrer" hidden>查看 Logic Masters 原题与完整图示</a>
         </section>
       </section>
     </div>

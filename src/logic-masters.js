@@ -36,6 +36,38 @@ function decodeEntities(value) {
 function plainText(text) {
   return decodeEntities(text.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ')).trim();
 }
+// LMD presents difficulty as the image's alt/title text in the search table.
+// Ratings may be the setter's estimate until enough solvers have voted.
+function difficultyFromText(value) {
+  const text = decodeEntities(value).toLowerCase().replace(/[\s\u00a0]+/g,' ');
+  let level = null;
+  if (/sehr leicht|very easy/.test(text)) level = 1;
+  else if (/sehr schwer|very hard/.test(text)) level = 5;
+  else if (/mittelschwer|medium|moderate/.test(text)) level = 3;
+  else if (/\bleicht|easy/.test(text)) level = 2;
+  else if (/schwer|hard/.test(text)) level = 4;
+  return level === null ? null : {
+    level, estimated:/geschätzt|estimated|author(?:'s)? estimate/.test(text)
+  };
+}
+function difficultyFromHtml(fragment) {
+  const images = fragment.match(/<img\b[^>]*>/gi) || [];
+  for (const image of images) {
+    const attrs = [...image.matchAll(/\b(?:alt|title)\s*=\s*(["'])(.*?)\1/gi)];
+    for (const attr of attrs) {
+      const difficulty = difficultyFromText(attr[2]);
+      if (difficulty) return difficulty;
+    }
+  }
+  return null;
+}
+export function logicMastersDifficultyLabel(level, estimated = false) {
+  const labels = ['非常简单','简单','中等','困难','非常困难'];
+  if (!Number.isInteger(level) || level < 1 || level > 5) return '';
+  return '★'.repeat(level) + '☆'.repeat(5-level) + ' ' + labels[level-1] +
+    (estimated ? ' · 作者预估' : '');
+}
+
 function supportedLink(raw) {
   try {
     const url = new URL(raw);
@@ -74,6 +106,40 @@ export function parseLogicMastersPage(html, reference) {
     publishedAt:'',
     puzzleUrl
   }));
+}
+
+// Keep the setter's original-language rules; never render external HTML in
+// the app. Images/diagrams cannot be converted into text and stay on LMD.
+export function parseLogicMastersDetails(html) {
+  if (typeof html !== 'string' || html.length > 1024*1024)
+    throw Error('Logic Masters 页面内容无效或超出 1 MiB');
+  const titleMatch = /<h2\b[^>]*>([\s\S]*?)<\/h2>/i.exec(html);
+  const title = titleMatch ? plainText(titleMatch[1]) : '';
+  const afterHeading = titleMatch
+    ? html.slice(titleMatch.index + titleMatch[0].length) : '';
+  const codeAt = afterHeading.search(
+    /(?:L(?:ö|&ouml;|&#(?:246|x0*f6);)sungscode|Solution(?:\s|&nbsp;)*code)\s*:/i
+  );
+  // Missing code delimiter: do not accidentally copy the entire portal chrome.
+  const region = codeAt >= 0 ? afterHeading.slice(0,codeAt) : '';
+  const hasImages = /<img\b/i.test(region);
+  const lines = decodeEntities(region
+    .replace(/<!--[\s\S]*?-->/g,'')
+    .replace(/<(script|style|noscript|form)\b[^>]*>[\s\S]*?<\/\1>/gi,'')
+    .replace(/<img\b[^>]*>/gi,' [题面图片] ')
+    .replace(/<br\s*\/?>/gi,'\n')
+    .replace(/<li\b[^>]*>/gi,'\n• ')
+    .replace(/<\/(?:p|div|ul|ol|li|h[1-6]|table|tr|blockquote)>/gi,'\n')
+    .replace(/<[^>]*>/g,' ')
+  ).replace(/\u00a0/g,' ').split(/\n+/).map(line=>line.replace(/\s+/g,' ').trim())
+    .filter(line=>line && !/^\(?\s*(?:Eingestellt|Published|Posted)\b/i.test(line));
+  const description = lines.join('\n').slice(0,12000);
+  const difficulty = difficultyFromHtml(html);
+  return {
+    title, description, hasImages,
+    difficulty:difficulty?.level ?? null,
+    difficultyEstimated:difficulty?.estimated ?? false
+  };
 }
 
 export function directSudokuPadEntry(input) {
@@ -128,12 +194,20 @@ export function parseLogicMastersSearch(html) {
     const title = plainText(match[4]);
     if (!title) continue;
     seen.add(id);
-    // Read the adjacent author link when it exists, without trusting any HTML.
-    const after = html.slice(linkPattern.lastIndex,linkPattern.lastIndex+450);
+    // Limit metadata to the same table row to prevent borrowing the next
+    // puzzle's difficulty or author when a field is absent.
+    const endRow = html.indexOf('</tr>',linkPattern.lastIndex);
+    const nextRow = html.indexOf('<tr',linkPattern.lastIndex);
+    const end = endRow >= 0 && (nextRow < 0 || endRow < nextRow)
+      ? endRow : Math.min(html.length,linkPattern.lastIndex+650);
+    const after = html.slice(linkPattern.lastIndex,end);
     const authorMatch = after.match(/(?:\bby\b|\bvon\b)\s*(?:<a\b[^>]*>)?([^<(\n]{1,100})/i);
+    const rating = difficultyFromHtml(after);
     items.push({
       id, title: title.slice(0,240),
       author: authorMatch ? plainText(authorMatch[1]).slice(0,100) : '',
+      difficulty:rating?.level ?? null,
+      difficultyEstimated:rating?.estimated ?? false,
       url:logicMastersReference(id).url
     });
     if (items.length >= 20) break;
