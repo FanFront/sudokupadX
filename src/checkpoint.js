@@ -1,4 +1,4 @@
-import {normalizePenLines} from './pen-lines.js';
+import {normalizePenLines,normalizePenMarks} from './pen-lines.js';
 
 // Portable checkpoint shared with FanFront/sodokupadAndroid.
 // This is a board snapshot, not a SudokuPad replay or a puzzle definition.
@@ -37,17 +37,18 @@ function normalizeCell(cell) {
   if(color!==null&&(!PALETTE.includes(color)))throw Error('Unsupported checkpoint colour.');
   return {value:symbol(cell.value),center:marks(cell.center||[]),corner:marks(cell.corner||[]),color};
 }
-export function createCheckpoint(puzzle, entry, progress, penLines = []) {
+export function createCheckpoint(puzzle, entry, progress, penLines = [], penMarks = []) {
   if(!puzzle||!Array.isArray(progress?.cells))throw Error('No active puzzle to export.');
   const cells=progress.cells.map(normalizeCell);
   const lines=normalizePenLines(penLines,puzzle.rows,puzzle.cols);
+  const marks=normalizePenMarks(penMarks,puzzle.rows,puzzle.cols);
   if(cells.length!==puzzle.cells.length)throw Error('Puzzle and checkpoint have different dimensions.');
   return {
     format:CHECKPOINT_FORMAT,version:CHECKPOINT_VERSION,
     source:'sudokupadx', exportedAt:new Date().toISOString(),
     puzzleId:entry?.id||null, sourceUrl:entry?.url||null,
     key:puzzle.key, title:puzzle.title, rows:puzzle.rows, cols:puzzle.cols,
-    givens:givensOf(puzzle),cells,penLines:lines
+    givens:givensOf(puzzle),cells,penLines:lines,penMarks:marks
   };
 }
 export function inspectCheckpoint(raw) {
@@ -73,7 +74,8 @@ export function inspectCheckpoint(raw) {
   });
   const cells=cp.cells.map(normalizeCell);
   const penLines=normalizePenLines(cp.penLines??[],cp.rows,cp.cols);
-  return {...cp,givens,cells,penLines};
+  const penMarks=normalizePenMarks(cp.penMarks??[],cp.rows,cp.cols);
+  return {...cp,givens,cells,penLines,penMarks};
 }
 export function verifyCheckpoint(cp,puzzle,entry) {
   if(cp.rows!==puzzle.rows||cp.cols!==puzzle.cols)throw Error('Checkpoint board dimensions do not match.');

@@ -30,7 +30,7 @@
           </div>
         </div>
         <div id="boardFrame" class="board-frame">
-          <canvas id="boardCanvas" tabindex="0" aria-label="棋盘：单指滑选格子，画线模式单指描线，双指平移缩放"></canvas>
+          <canvas id="boardCanvas" tabindex="0" aria-label="棋盘：画线模式可以斜向连线；点格子画圆圈，点格线画叉号；双指移动缩放"></canvas>
           <div class="board-hud"><span id="selectionLabel">选择一个格子</span><span id="zoomLabel">100%</span></div>
           <div class="zoom-tools">
             <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
@@ -69,7 +69,7 @@
             <button type="button" data-pen-color="#348b57" style="--pen-swatch:#348b57" aria-label="绿色线" aria-pressed="false"></button>
             <button type="button" data-pen-color="#b77726" style="--pen-swatch:#b77726" aria-label="橙色线" aria-pressed="false"></button>
           </div>
-          <small>单指描线，重描已有线条可擦除；双指平移缩放</small>
+          <small>拖动画线（包括斜线）· 点格心：○→×→清除 · 点格线：×→○→清除 · 双指移动缩放</small>
         </div>
         <div class="action-bar">
           <button id="eraseButton" type="button">⌫ 清除</button>
@@ -83,7 +83,7 @@
           <div id="sectorLinks" class="sector-links"></div>
           <div id="warningList" class="warnings" hidden></div>
         </div>
-        <p class="help-text">点格输入 · 单指滑选 · 画线模式可绘制格心或网格边线 · 双指缩放</p>
+        <p class="help-text">画线模式：拖动画直线/斜线，点格心加○、点格线加×；连续轻点切换符号 · 双指缩放</p>
       </aside>
     </main>
   </div>
