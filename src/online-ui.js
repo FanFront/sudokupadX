@@ -20,6 +20,8 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   let active = false;
   let lmdActive = false;
   let lmdSearchStarted = false;
+  let lmdView = 'discover';
+  let lmdReturnView = 'discover';
   let lmdMatches = [];
   let lmdTotal = null;
   let lmdCurrentQuery = '';
@@ -90,7 +92,6 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     lmdSearchStatus('正在搜索 Logic Masters 题库…');
     $('lmdSearchButton').disabled = true;
     $('lmdLatest').disabled = true;
-    $('lmdSaved').disabled = true;
     try {
       const html = await fetchLmdHtml(url,'search_logic_masters',
         {query:keyword,start:offset});
@@ -110,14 +111,25 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
       actionId = '';
       $('lmdSearchButton').disabled = false;
       $('lmdLatest').disabled = false;
-      $('lmdSaved').disabled = false;
       renderLmdMatches();
     }
+  }
+  function showLmdView(view) {
+    if (view === 'detail') {
+      lmdReturnView = lmdView === 'saved' ? 'saved' : 'discover';
+    }
+    lmdView = view;
+    $('lmdLibraryPanel').dataset.view = view;
+    for (const name of ['discover','saved','detail']) {
+      const id = 'lmd' + name[0].toUpperCase() + name.slice(1) + 'View';
+      $(''+id).hidden = name !== view;
+    }
+    $('lmdDiscover').setAttribute('aria-selected', String(view === 'discover'));
+    $('lmdSaved').setAttribute('aria-selected', String(view === 'saved'));
   }
   async function selectLmdMatch(item) {
     if (actionId) return;
     $('lmdReference').value = item.id;
-    $('lmdSelected').hidden = false;
     $('lmdSelectedTitle').textContent = item.title +
       (item.author ? ' · '+item.author : '');
     lmdFound = [];
@@ -133,6 +145,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     $('bundledLibraryTab').setAttribute('aria-selected','false');
     $('onlineLibraryTab').setAttribute('aria-selected','false');
     $('lmdLibraryTab').setAttribute('aria-selected','true');
+    showLmdView('discover');
     try { saved = new Map((await listOfflinePuzzles()).map(e => [e.id,e])); }
     catch(error) { lmdSearchStatus('无法读取离线记录：'+errorText(error)); }
     renderLmd();
@@ -147,22 +160,15 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   // Import only an actual SudokuPad link published by the setter.
   let lmdFound = [];
   const lmdStatus = message => { $('lmdStatus').textContent = message; };
-  function renderLmd() {
-    if (!lmdActive) return;
-    const list = $('lmdResults');
+  function renderLmdEntries(list, entries, emptyMessage) {
     list.replaceChildren();
-    const all = [...lmdFound];
-    for (const entry of saved.values()) {
-      if (entry.id?.startsWith('lmd:') && !all.some(item => item.id === entry.id))
-        all.push(entry);
-    }
-    if (!all.length) {
+    if (!entries.length) {
       const p = document.createElement('p');
       p.className = 'online-empty';
-      p.textContent = '尚无可导入的 SudokuPad 链接或已下载的 Logic Masters 谜题。';
+      p.textContent = emptyMessage;
       list.append(p);
     }
-    for (const entry of all) {
+    for (const entry of entries) {
       const downloaded = saved.has(entry.id);
       const card = document.createElement('article');
       card.className = 'online-entry';
@@ -216,6 +222,15 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
       list.append(card);
     }
   }
+  function renderLmd() {
+    if (!lmdActive) return;
+    const downloaded = [...saved.values()].filter(entry => entry.id?.startsWith('lmd:'));
+    $('lmdSavedCount').textContent = downloaded.length + ' 道已下载';
+    renderLmdEntries($('lmdSavedResults'), downloaded,
+      '还没有离线谜题。在「探索题库」中选择题目并点击「下载离线」。');
+    renderLmdEntries($('lmdResults'), lmdFound,
+      '此题尚无可导入的 SudokuPad 链接。可返回列表选择其他谜题。');
+  }
   async function resolveLmdReference() {
     const input = $('lmdReference').value.trim();
     if (/^https:\/\/(?:www\.)?sudokupad\.app\//i.test(input)) {
@@ -252,7 +267,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     $('lmdFetch').disabled = true;
     $('lmdParsePaste').disabled = true;
     lmdStatus('正在提取谜题链接…');
-    $('lmdSelected').hidden = false;
+    showLmdView('detail');
     try { await action(); }
     catch (error) { lmdStatus('导入失败：' + errorText(error)); }
     finally {
@@ -446,8 +461,14 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   $('onlineSourceFilter').addEventListener('change', renderList);
   $('onlineOfflineOnly').addEventListener('change', renderList);
   $('refreshOnlineIndex').addEventListener('click', () => refreshIndex().catch(notify));
-  $('lmdFetch').addEventListener('click', () => lmdAction(resolveLmdReference));
-  $('lmdParsePaste').addEventListener('click', () => lmdAction(resolveLmdPasted));
+  $('lmdFetch').addEventListener('click', () => {
+    $('lmdSelectedTitle').textContent = '按 ID / 链接导入';
+    lmdAction(resolveLmdReference);
+  });
+  $('lmdParsePaste').addEventListener('click', () => {
+    $('lmdSelectedTitle').textContent = '粘贴内容导入';
+    lmdAction(resolveLmdPasted);
+  });
   $('lmdSearchForm').addEventListener('submit',event => {
     event.preventDefault();
     searchLmd($('lmdSearch').value.trim(),0);
@@ -460,14 +481,13 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     searchLmd(lmdCurrentQuery,Math.max(0,lmdOffset-20)));
   $('lmdNext').addEventListener('click',() =>
     searchLmd(lmdCurrentQuery,lmdOffset+20));
+  $('lmdDiscover').addEventListener('click',() => showLmdView('discover'));
   $('lmdSaved').addEventListener('click',() => {
-    $('lmdSelected').hidden = false;
-    $('lmdSelectedTitle').textContent = '已下载的 Logic Masters 谜题';
-    lmdFound = [];
-    lmdStatus('选择“离线打开”，无需网络。');
+    showLmdView('saved');
     renderLmd();
   });
+  $('lmdBack').addEventListener('click',() => showLmdView(lmdReturnView));
   $('lmdReference').addEventListener('keydown',event => {
-    if (event.key === 'Enter') { event.preventDefault(); lmdAction(resolveLmdReference); }
+    if (event.key === 'Enter') { event.preventDefault(); $('lmdFetch').click(); }
   });
 }
