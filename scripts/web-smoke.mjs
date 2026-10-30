@@ -46,6 +46,8 @@ try{
       return distinct;
     },null,{timeout:10000});
     await page.screenshot({path:`artifacts/web/${id}.png`});
+    assert.equal(await page.locator('#gameScreen').isVisible(),true);
+    assert.equal(await page.locator('#homeScreen').isHidden(),true);
     console.log('Rendered '+id+' ('+dimensions+')');
   }
 
@@ -88,6 +90,11 @@ try{
   await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('40 × 50'),null,{timeout:60000});
   assert.equal(await back.isHidden(),true,'Main map must not offer a stale back target');
 
+  // Go Home without destroying the parent puzzle, then choose a library item.
+  await page.locator('#homeButton').click();
+  assert.equal(await page.locator('#homeScreen').isVisible(),true);
+  assert.equal(await page.locator('#gameScreen').isHidden(),true);
+  assert.equal(await page.locator('#continueButton').isVisible(),true);
   // The spoiler-enabled library is another supported direct entry path.
   await page.locator('#libraryButton').click();
   await page.locator('#showAllPuzzles').check();
@@ -100,6 +107,7 @@ try{
   console.log('Direct linked-puzzle -> main-map return passed.');
 
   // The bundled index is usable without reaching the online JSON provider.
+  await page.locator('#homeButton').click();
   await page.locator('#libraryButton').click();
   await page.locator('#onlineLibraryTab').click();
   await page.locator('#onlineIndexList .online-entry').first().waitFor({timeout:15000});
@@ -157,11 +165,16 @@ try{
   assert.equal(await page.locator('#checkDialog').isHidden(),true);
   // Emulate an Android WebView that does not report the camera-cutout inset.
   await page.evaluate(()=>document.documentElement.classList.add('android-native'));
-  const brand=await page.locator('.brand').boundingBox();
-  assert.ok(brand && brand.y>=40,'Toolbar must sit below the camera/status-bar safe area');
+  await page.locator('#homeButton').click();
+  const brand=await page.locator('.home-hero .brand').boundingBox();
+  assert.ok(brand && brand.y>=40,'Home must sit below the camera/status-bar safe area');
+  await page.locator('#continueButton').click();
+  const boardHeader=await page.locator('.board-heading').boundingBox();
+  assert.ok(boardHeader && boardHeader.y>=40,'Board header must sit below the camera/status-bar safe area');
   await page.evaluate(()=>document.documentElement.classList.remove('android-native'));
 
   // A checkpoint roundtrip must restore the actual Rust/WASM board state.
+  await page.locator('#homeButton').click();
   await page.locator('#checkpointButton').click();
   await page.locator('#exportCheckpoint').click();
   const savedText=await page.locator('#checkpointText').inputValue();
@@ -171,9 +184,11 @@ try{
   assert.equal(checkpoint.cols,9);
   assert.equal(checkpoint.cells[40].value,'1');
   await page.locator('#closeCheckpoint').click();
+  await page.locator('#continueButton').click();
   await page.locator('#eraseButton').click();
   await page.waitForFunction(()=>!document.querySelector('#undoButton').disabled);
   page.once('dialog',dialog=>dialog.accept());
+  await page.locator('#homeButton').click();
   await page.locator('#checkpointButton').click();
   await page.locator('#importCheckpoint').click();
   await page.waitForFunction(()=>document.querySelector('#checkpointDialog')?.open===false);
@@ -185,6 +200,9 @@ try{
   const selectedBefore=await page.locator('#selectionLabel').textContent();
   assert.ok(!await page.locator('#demoButton').count(),'Example action must not ship');
   await page.goto(root,{waitUntil:'domcontentloaded'});
+  await page.locator('#continueButton').waitFor({state:'visible',timeout:60000});
+  assert.equal(await page.locator('#gameScreen').isHidden(),true);
+  await page.locator('#continueButton').click();
   await page.waitForFunction(()=>document.querySelector('#puzzleTitle')?.textContent?.includes('UI Smoke Fixture'),null,{timeout:60000});
   assert.equal(await page.locator('#zoomLabel').textContent(),zoomBefore,'Zoom should survive restart');
   assert.equal(await page.locator('#selectionLabel').textContent(),selectedBefore,'Selected cell should survive restart');
