@@ -226,3 +226,16 @@ test('inline LMD renderer does not inject HTML and still supports full screen zo
   assert.match(src,/imageViewer\.open\(part,button\)/);
   assert.doesNotMatch(src,/lmdImageGrid|lmdImagesPanel/);
 });
+
+test('Logic Masters search rows omit author and ID, with compact one-line metadata',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const ui=await readFile(new URL('../src/online-ui.js',import.meta.url),'utf8');
+  const css=await readFile(new URL('../src/style.css',import.meta.url),'utf8');
+  const list=ui.slice(ui.indexOf('function renderLmdMatches()'),ui.indexOf('async function fetchLmdHtml'));
+  assert.doesNotMatch(list,/item\.author|item\.id|点击查看详情/);
+  assert.match(list,/item\.difficulty \+ '\/5'/);
+  assert.match(list,/评分 /);
+  assert.match(css,/\.lmd-result-meta\{[^}]*white-space:nowrap/);
+  assert.match(css,/\.lmd-result-title\{[^}]*-webkit-line-clamp:2/);
+  assert.match(ui,/lmdSelected\?\.author/);
+});
