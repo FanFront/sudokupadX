@@ -312,8 +312,8 @@ function updateInfo() {
   const original=$('originalPuzzleLink');
   original.hidden=!currentEntry?.url;
   if(currentEntry?.url) original.href=currentEntry.url;
-  original.textContent = parsePenpaUrl(currentEntry?.url) ? '在 Penpa+ 中查看原题' : '在原版 SudokuPad 中对比此谜题';
   else original.removeAttribute('href');
+  original.textContent = parsePenpaUrl(currentEntry?.url) ? '在 Penpa+ 中查看原题' : '在原版 SudokuPad 中对比此谜题';
   const lmdSource=$('lmdSourceLink');
   lmdSource.hidden=!currentEntry?.sourceUrl;
   if(currentEntry?.sourceUrl) lmdSource.href=currentEntry.sourceUrl;
