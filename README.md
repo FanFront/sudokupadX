@@ -1,4 +1,4 @@
-# SudokuPad X / 数独冒险 X
+# SudokuPad X
 
 A SudokuPad-compatible puzzle player for **Android and the web**, built with Rust, Tauri 2, and a custom Canvas board. It focuses on adventure Sudoku, offline play, and Chinese localization.
 
