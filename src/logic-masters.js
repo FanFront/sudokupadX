@@ -1,4 +1,5 @@
 import {puzzleIdFromUrl} from './online-library.js';
+import {parsePenpaUrl,penpaPuzzleId,directPenpaEntry} from './penpa-import.js';
 
 export const LOGIC_MASTERS_NAME = 'Logic Masters Deutschland';
 const BASE = 'https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=';
@@ -88,6 +89,8 @@ export function logicMastersDifficultyLabel(level, estimated = false) {
 }
 
 function supportedLink(raw) {
+  const penpa = parsePenpaUrl(raw);
+  if (penpa) return penpa.url;
   try {
     const url = new URL(raw);
     if (url.protocol !== 'https:' || !['sudokupad.app','www.sudokupad.app'].includes(url.hostname) ||
@@ -98,8 +101,8 @@ function supportedLink(raw) {
 }
 
 // LMD embeds puzzle diagrams as images, but some pages also link to an actual
-// SudokuPad definition. Only those links can be loaded without reconstructing
-// or altering the author's puzzle.
+// SudokuPad or Penpa+ definition. Preserve the author's complete puzzle link;
+// never reconstruct a puzzle from just an image.
 export function parseLogicMastersPage(html, reference) {
   if (typeof html !== 'string' || html.length > 1024*1024)
     throw Error('Logic Masters 页面内容无效或超出 1 MiB');
@@ -109,7 +112,7 @@ export function parseLogicMastersPage(html, reference) {
   const title = (titleMatch && plainText(titleMatch[1]).replace(/\s*[—|-]\s*Rätselportal.*$/i,'')) ||
     'Logic Masters ' + ref.id;
   const normalized = decodeEntities(html.replace(/\\\//g,'/'));
-  const matches = normalized.match(/https?:\/\/(?:www\.)?sudokupad\.app\/[^\s"'<>\\]+/gi) || [];
+  const matches = normalized.match(/https?:\/\/(?:www\.)?sudokupad\.app\/[^\s"'<>\\]+|https?:\/\/swaroopg92\.github\.io\/penpa-edit\/[^\s"'<>\\]+/gi) || [];
   const unique = new Set();
   for (let match of matches) {
     match = match.replace(/[),.;]+$/,'');
@@ -117,7 +120,7 @@ export function parseLogicMastersPage(html, reference) {
     if (url) unique.add(url);
   }
   return [...unique].slice(0,20).map((puzzleUrl, index) => ({
-    id:'lmd:' + ref.id + ':' + puzzleIdFromUrl(puzzleUrl),
+    id:'lmd:' + ref.id + ':' + (puzzleIdFromUrl(puzzleUrl) || penpaPuzzleId(puzzleUrl)),
     title:unique.size === 1 ? title : title + ' · 链接 ' + (index + 1),
     sourceId:'logic-masters',
     sourceName:LOGIC_MASTERS_NAME,
@@ -240,6 +243,15 @@ export function directSudokuPadEntry(input) {
   };
 }
 
+
+// This also lets manually pasted Penpa+ links use the existing LMD offline list.
+export function directPuzzleEntry(input) {
+  if (parsePenpaUrl(input)) {
+    const entry = directPenpaEntry(input);
+    return {...entry,id:'lmd:direct:' + entry.id};
+  }
+  return directSudokuPadEntry(input);
+}
 
 // The portal supports a permanent, server-side advanced search URL.
 // Using search fields avoids downloading thousands of puzzles to a phone.
