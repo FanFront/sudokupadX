@@ -598,11 +598,13 @@ function draw() {
   // Solver-drawn ink is visible in fog, but never exposes hidden clues.
   // Paint digits last so lines cannot cover givens or pencil marks.
   drawPenLines(ctx,penLines,CELL,clip);
-  drawPenMarks(ctx,penMarks,CELL,clip);
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c;
     drawCellInk(idx,c*CELL,r*CELL,!isVisible(progress,idx));
   }
+  // Tap symbols belong to the user's topmost ink layer, even when a digit
+  // occupies the cell; only selection outlines should sit above them.
+  drawPenMarks(ctx,penMarks,CELL,clip);
   for(const index of selectedCells){
     const x=(index%puzzle.cols)*CELL,y=Math.floor(index/puzzle.cols)*CELL;
     // Highlight covered cells without exposing their contents.
