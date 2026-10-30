@@ -589,8 +589,11 @@ function draw() {
   const w=board.width/dpr,h=board.height/dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#dfe9e6';ctx.fillRect(0,0,w,h);
   ctx.setTransform(dpr*camera.scale,0,0,dpr*camera.scale,dpr*camera.x,dpr*camera.y);
+  // Keep the viewport's off-board margins: authored arrows and sum clues
+  // can sit just outside the first row or column. Cell iteration is clamped
+  // separately below, but artwork must not be culled at row/column zero.
   const clip={
-    left:Math.max(0,-camera.x/camera.scale),top:Math.max(0,-camera.y/camera.scale),
+    left:-camera.x/camera.scale,top:-camera.y/camera.scale,
     right:(w-camera.x)/camera.scale,bottom:(h-camera.y)/camera.scale
   };
   const c0=Math.max(0,Math.floor(clip.left/CELL)-1),c1=Math.min(puzzle.cols,Math.ceil(clip.right/CELL)+1);
