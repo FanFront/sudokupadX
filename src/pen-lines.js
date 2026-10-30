@@ -200,7 +200,7 @@ export function drawPenMarks(ctx,marks,cellSize,clip) {
     const paint=()=>{
       ctx.beginPath();
       if(mark.type==='circle'){
-        ctx.arc(x,y,cellSize*.175,0,Math.PI*2);
+        ctx.arc(x,y,cellSize*.255,0,Math.PI*2);
       }else{
         const offset=cellSize*.125;
         ctx.moveTo(x-offset,y-offset);ctx.lineTo(x+offset,y+offset);
