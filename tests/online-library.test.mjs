@@ -120,7 +120,8 @@ test('search-and-select LMD interface is present on Android and web',()=>{
   assert.match(script,/search_logic_masters/);
   assert.match(script,/parseLogicMastersSearch\(html\)/);
   assert.match(script,/selectLmdMatch\(item\)/);
-  assert.match(rust,/async fn search_logic_masters\(query: String, start: u32\)/);
+  assert.match(rust,/async fn search_logic_masters\(query: String, start: u32, sort: String\)/);
+  assert.match(rust,/params\.append_pair\("sort", &sort\)/);
   assert.match(rust,/params\.append_pair\("suchtext", query\.trim\(\)\)/);
   assert.match(rust,/params\.append_pair\("skname", "x"\)/);
   assert.match(rust,/params\.append_pair\("sktext", "x"\)/);

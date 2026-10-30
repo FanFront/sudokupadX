@@ -31,8 +31,8 @@ export function logicMastersReference(input) {
 }
 
 function decodeEntities(value) {
-  return value.replace(/&(?:amp|quot|apos|lt|gt|#(?:x[0-9a-f]+|[0-9]+));/gi, token => {
-    const simple = {amp:'&',quot:'"',apos:"'",lt:'<',gt:'>'};
+  return value.replace(/&(?:amp|quot|apos|lt|gt|nbsp|#(?:x[0-9a-f]+|[0-9]+));/gi, token => {
+    const simple = {amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',nbsp:' '};
     const key = token.slice(1,-1).toLowerCase();
     if (simple[key]) return simple[key];
     const cp = key.startsWith('#x') ? parseInt(key.slice(2),16) : parseInt(key.slice(1),10);
