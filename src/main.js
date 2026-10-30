@@ -113,7 +113,7 @@ function saveKey() {return puzzle ? 'sudokupadx:v1:'+puzzle.key : '';}
 // The home view hides gameplay without destroying its Rust session or camera.
 function updateHomeCard() {
   const source=resumeRecord?.source;
-  const available=Boolean(puzzle && activeSource) || Boolean(source);
+  const available=Boolean(puzzle) || Boolean(source);
   $('homeContinueSection').hidden=!available;
   if(!available)return;
   const previous=source?.type==='bundled'
@@ -877,7 +877,7 @@ board.addEventListener('wheel',event=>{
 
 $('homeButton').addEventListener('click',showHome);
 $('continueButton').addEventListener('click',async()=>{
-  if(puzzle && activeSource){showGame();return;}
+  if(puzzle){showGame();return;}
   const record=resumeRecord;
   if(!record)return;
   $('continueButton').disabled=true;
