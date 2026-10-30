@@ -9,44 +9,47 @@ const headerButtons=['backButton','libraryButton','demoButton','checkpointButton
 const boardButtons=['linkedPuzzleButton','rulesButton','gridButton','fitButton'];
 
 function markup(id){
-  const escaped=id.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');
-  const matches=[...html.matchAll(new RegExp('<button\\b[^>]*\\bid="'+escaped+'"[^>]*>([\\s\\S]*?)<\\/button>','g'))];
-  assert.equal(matches.length,1,id+' must occur exactly once');
-  return {tag:matches[0][0].slice(0,matches[0][0].indexOf('>')+1),body:matches[0][1]};
+  const marker='id="'+id+'"';
+  assert.equal(html.split(marker).length-1,1,'duplicate or missing button '+id);
+  const markerIndex=html.indexOf(marker);
+  const start=html.lastIndexOf('<button',markerIndex);
+  const openEnd=html.indexOf('>',markerIndex);
+  const end=html.indexOf('</button>',openEnd);
+  assert.ok(start>=0 && end>openEnd,'button structure for '+id);
+  return {tag:html.slice(start,openEnd+1),body:html.slice(openEnd+1,end)};
 }
 
-test('both toolbars keep their same action ids, with real icons and accessible names',()=>{
+test('app and board toolbars have icons, accessible labels, and no width-changing text',()=>{
   for(const id of [...headerButtons,...boardButtons]){
     const {tag,body}=markup(id);
-    assert.match(tag,/class="[^"]*icon-button/,'icon button missing for '+id);
-    assert.match(tag,/aria-label="[^"]+"/,'accessible label missing for '+id);
-    assert.match(tag,/title="[^"]+"/,'tooltip missing for '+id);
-    assert.match(body,/<svg\\b[^>]*aria-hidden="true"/,'SVG icon missing for '+id);
-    // Icons stay present when the app toggles grid visibility or linked cells.
-    const withoutSvgAndCount=body.replace(/<svg[\\s\\S]*?<\\/svg>/,'')
-      .replace(/<span[^>]*id="linkedPuzzleCount"[^>]*><\\/span>/,'');
-    assert.equal(withoutSvgAndCount.trim(),'','button has width-changing text: '+id);
+    assert.ok(tag.includes('icon-button'),id+' is not an icon button');
+    assert.match(tag,/aria-label="[^"]+"/,'accessible name missing '+id);
+    assert.match(tag,/title="[^"]+"/,'tooltip missing '+id);
+    assert.ok(body.includes('<svg ') && body.includes('aria-hidden="true"'),'icon missing '+id);
+    const remainder=body.replace(/<svg[\s\S]*?<\/svg>/,'')
+      .replace(/<span[^>]*id="linkedPuzzleCount"[^>]*><\/span>/,'');
+    assert.equal(remainder.trim(),'','text may change icon width: '+id);
   }
-  assert.match(html,/role="toolbar" aria-label="棋盘操作"/);
-  assert.match(html,/class="top-actions" aria-label="应用操作"/);
+  assert.ok(html.includes('role="toolbar" aria-label="棋盘操作"'));
+  assert.ok(html.includes('class="top-actions" aria-label="应用操作"'));
 });
 
-test('linked puzzle selection updates accessible info and count without removing icon',()=>{
-  assert.doesNotMatch(main,/entrance\\.textContent=/);
-  assert.match(main,/entrance\\.hidden=count===0/);
-  assert.match(main,/entrance\\.setAttribute\\('aria-label',label\\)/);
-  assert.match(main,/badge\\.hidden=count<=1/);
-  assert.match(main,/badge\\.textContent=count>9\\?'9\\+':String\\(count\\)/);
-  assert.match(css,/#app \\.board-tools \\.linked-puzzle-entry/);
-  assert.match(css,/#app \\.linked-puzzle-count\\[hidden\\]\\{display:none!important\\}/);
+test('linked puzzles use an icon plus a small count badge without replacing icon markup',()=>{
+  assert.ok(!main.includes('entrance.textContent='));
+  assert.ok(main.includes('entrance.hidden=count===0'));
+  assert.ok(main.includes("entrance.setAttribute('aria-label',label)"));
+  assert.ok(main.includes('badge.hidden=count<=1'));
+  assert.ok(main.includes("badge.textContent=count>9?'9+':String(count)"));
+  assert.ok(css.includes('#app .board-tools .linked-puzzle-entry'));
+  assert.ok(css.includes('#app .linked-puzzle-count[hidden]{display:none!important}'));
 });
 
-test('back and grid state use labels without replacing SVG children',()=>{
-  assert.doesNotMatch(main,/\\$\\('backButton'\\)\\.textContent/);
-  assert.doesNotMatch(main,/\\$\\('gridButton'\\)\\.textContent/);
-  assert.match(main,/button\\.setAttribute\\('aria-pressed',String\\(showGridLines\\)\\)/);
-  assert.match(main,/button\\.setAttribute\\('aria-label',label\\)/);
-  assert.match(css,/#app \\.top-actions \\.icon-button\\[hidden\\]/);
-  assert.match(css,/#app \\.board-tools \\.icon-button\\[hidden\\]/);
-  assert.match(css,/@media\\(max-width:370px\\)/);
+test('grid and back update names without replacing their icon children',()=>{
+  assert.ok(!main.includes("$('backButton').textContent"));
+  assert.ok(!main.includes("$('gridButton').textContent"));
+  assert.ok(main.includes("button.setAttribute('aria-pressed',String(showGridLines))"));
+  assert.ok(main.includes("button.setAttribute('aria-label',label)"));
+  assert.ok(css.includes('#app .top-actions .icon-button[hidden]'));
+  assert.ok(css.includes('#app .board-tools .icon-button[hidden]'));
+  assert.ok(css.includes('@media(max-width:370px)'));
 });
