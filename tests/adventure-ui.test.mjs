@@ -228,6 +228,36 @@ test('arrow geometry follows SudokuPad row/column placement',()=>{
   assert.deepEqual(points.slice(0,2),[['move',104,52],['line',156,52]]);
 });
 
+
+test('off-grid diagonal sum arrows stay visible in all four board margins',()=>{
+  const strokes=[];
+  let path=[];
+  const ctx={
+    save(){},restore(){},beginPath(){path=[];},closePath(){},fill(){},
+    moveTo(x,y){path.push([x,y]);},lineTo(x,y){path.push([x,y]);},
+    stroke(){strokes.push(path.slice());}
+  };
+  const arrows=[
+    // Real Ascent ("登峰") coordinates: its left-side arrow is entirely at x < 0.
+    {wayPoints:[[3.266,-0.266],[3.068,-0.068]]},
+    {wayPoints:[[-0.266,3.266],[-0.068,3.068]]},
+    {wayPoints:[[9.266,3.266],[9.068,3.068]]},
+    {wayPoints:[[3.266,9.266],[3.068,9.068]]}
+  ];
+  const margin=24,side=9*52;
+  drawArrows(ctx,{arrows},{left:-margin,top:-margin,right:side+margin,bottom:side+margin});
+  assert.equal(strokes.length,4,'all off-grid arrow shafts should be painted');
+  assert.ok(strokes[0][0][0]<0&&strokes[0][1][0]<0,'left arrow remains outside the first column');
+  assert.ok(strokes[1][0][1]<0&&strokes[1][1][1]<0,'top arrow remains outside the first row');
+  assert.ok(strokes[2][0][1]>side,'bottom arrow stays outside the final row');
+  assert.ok(strokes[3][0][0]>side,'right arrow stays outside the final column');
+
+  // Artwork is still culled against the actual canvas viewport, not rendered unconditionally.
+  strokes.length=0;
+  drawArrows(ctx,{arrows},{left:0,top:0,right:side,bottom:side});
+  assert.equal(strokes.length,0,'off-screen arrows should still be culled');
+});
+
 test('underlay rectangles and numeric, long and colored text retain source geometry',()=>{
   const events=[];
   const ctx={
