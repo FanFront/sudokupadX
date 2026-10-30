@@ -9,25 +9,26 @@
 <body>
   <div id="app">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">X</span><div><strong>SudokuPad X</strong><small>原生谜题实验室</small></div></div>
-      <div class="top-actions">
+      <div class="brand" aria-label="SudokuPad X"><span class="brand-mark">X</span><div><strong>SudokuPad X</strong><small>原生谜题实验室</small></div></div>
+      <nav class="top-actions" aria-label="应用操作">
         <span class="runtime-badge" id="runtimeBadge">预览</span>
-        <button class="subtle-btn" id="backButton" type="button" hidden>返回地图</button>
-        <button class="subtle-btn" id="libraryButton" type="button">游戏库</button>
-        <button class="subtle-btn" id="demoButton" type="button">示例</button>
-        <button class="primary-btn" id="checkpointButton" type="button">存档互通</button>
-        <button class="primary-btn" id="importButton" type="button">导入 SCL / JSON</button>
+        <button class="subtle-btn icon-button" id="backButton" type="button" title="返回主谜题" aria-label="返回主谜题" hidden><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+        <button class="subtle-btn icon-button" id="libraryButton" type="button" title="谜题库" aria-label="打开谜题库"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><path d="m18 5 3 14"/></svg></button>
+        <button class="subtle-btn icon-button" id="demoButton" type="button" title="加载示例" aria-label="加载示例"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 5 12 7-12 7V5Z"/></svg></button>
+        <button class="icon-button" id="checkpointButton" type="button" title="存档导入与导出" aria-label="存档导入与导出"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 3-4 4 4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg></button>
+        <button class="primary-btn icon-button" id="importButton" type="button" title="导入 SCL / JSON 谜题" aria-label="导入 SCL / JSON 谜题"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M12 18v-8m-3 3 3-3 3 3"/></svg></button>
+      </nav>
       </div>
     </header>
     <main class="workspace">
       <section class="board-panel" aria-label="Puzzle board">
         <div class="board-heading">
           <div class="puzzle-heading"><h1 id="puzzleTitle">Loading…</h1><p id="puzzleAuthor">SudokuPad X</p></div>
-          <div class="board-tools">
-            <button id="linkedPuzzleButton" class="linked-puzzle-entry" type="button" title="进入关联谜题" hidden>进入关联谜题</button>
-            <button id="rulesButton" type="button" title="查看谜题规则">规则</button>
-            <button id="gridButton" type="button" title="切换细网格线">格线</button>
-            <button id="fitButton" type="button" title="适配棋盘">适配</button>
+          <div class="board-tools" role="toolbar" aria-label="棋盘操作">
+            <button id="linkedPuzzleButton" class="icon-button linked-puzzle-entry" type="button" title="进入关联谜题" aria-label="进入关联谜题" hidden><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span id="linkedPuzzleCount" class="linked-puzzle-count" aria-hidden="true" hidden></span></button>
+            <button id="rulesButton" class="icon-button" type="button" title="查看谜题规则" aria-label="查看谜题规则"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 7v14"/><path d="M3 18V5a2 2 0 0 1 2-2h3a4 4 0 0 1 4 4 4 4 0 0 1 4-4h3a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2h-3a4 4 0 0 0-4 4 4 4 0 0 0-4-4H5a2 2 0 0 0-2 2Z"/></svg></button>
+            <button id="gridButton" class="icon-button" type="button" title="隐藏格线" aria-label="隐藏格线" aria-pressed="true"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></button>
+            <button id="fitButton" class="icon-button" type="button" title="适配棋盘" aria-label="适配棋盘"><svg class="toolbar-icon" xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3"/></svg></button>
           </div>
         </div>
         <div id="boardFrame" class="board-frame">
