@@ -67,6 +67,56 @@ test('hidden constraint cages never draw; visible single-cell clues show only la
   ]);
 });
 
+test('overlapping killer cages use distinct inset borders and colors without changing isolated cages',()=>{
+  const strokes=[], labels=[];
+  let commands=[];
+  const ctx={
+    save(){},restore(){},beginPath(){commands=[];},
+    moveTo(x,y){commands.push(['move',x,y]);},
+    lineTo(x,y){commands.push(['line',x,y]);},
+    setLineDash(){},
+    stroke(){strokes.push({color:this.strokeStyle,path:commands.slice()});},
+    fillText(text,x,y){labels.push([text,x,y,this.fillStyle]);}
+  };
+  drawCages(ctx,{cages:[
+    {hidden:true,cells:[[0,1],[1,1]],value:99},
+    {cells:[[0,0],[0,1]],value:10,outlineC:'#111111'},
+    {cells:[[0,1],[1,1]],value:11,outlineC:'#111111'},
+    {cells:[[3,0],[3,1]],value:12,outlineC:'#314159'}
+  ]},{left:0,top:0,right:500,bottom:500});
+
+  assert.equal(strokes.length,3,'hidden cages do not allocate outline slots');
+  assert.notEqual(strokes[0].color,strokes[1].color,'shared cells receive distinct colors');
+  assert.equal(strokes[2].color,'#314159','unrelated authored border colors are retained');
+  assert.ok(strokes[0].path.some(p=>p[0]==='move'&&p[1]===55&&p[2]===3),
+    'first cage keeps an inset of 3 for the shared top edge');
+  assert.ok(strokes[1].path.some(p=>p[0]==='move'&&p[1]===57&&p[2]===5),
+    'second cage moves the shared top edge two pixels inward');
+  assert.ok(strokes[2].path.some(p=>p[0]==='move'&&p[1]===3&&p[2]===159),
+    'isolated cage keeps the legacy 3px inset');
+  assert.notEqual(labels[0][3],labels[1][3],'overlapping sums match their dashed outline colors');
+  assert.deepEqual(labels[2],['12',6,161,'#5a4c74']);
+});
+
+test('overlap slots only conflict for cages that actually share cells',()=>{
+  const colors=[];
+  const ctx={
+    save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},setLineDash(){},
+    stroke(){colors.push(this.strokeStyle);}
+  };
+  drawCages(ctx,{cages:[
+    {cells:[[0,0],[0,1]]},
+    {cells:[[0,1],[0,2]]},
+    {cells:[[0,2],[0,3]]},
+    // A visible single-cell sum has no dashed boundary and no outline slot.
+    {cells:[[0,1]],value:null}
+  ]},{left:0,top:0,right:500,bottom:500});
+  assert.equal(colors.length,3);
+  assert.notEqual(colors[0],colors[1]);
+  assert.notEqual(colors[1],colors[2]);
+  assert.equal(colors[0],colors[2],'non-neighboring cages may reuse a color/slot');
+});
+
 test('killer sum is anchored to an actual top-left cage cell, not its empty bounding corner',()=>{
   const labels=[];
   const ctx={
