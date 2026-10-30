@@ -20,11 +20,14 @@ export function parsePenpaUrl(raw) {
   // Original Penpa+ supports both ?m=solve&p= and #m=solve&p= links.
   const fragment = url.hash && /(?:^|&)p=/.test(url.hash.slice(1))
     ? url.hash.slice(1) : url.search.slice(1);
-  const mode = getRawParameter(fragment, 'm') || 'solve';
+  const modeValue = getRawParameter(fragment, 'm');
+  if (/(?:^|&)m=/.test(fragment) && modeValue === null) return null;
+  const mode = modeValue || 'solve';
   const payload = getRawParameter(fragment, 'p');
   if (!['solve','edit'].includes(mode) || !payload || payload.length > MAX_PENPA_LINK ||
       !/^[A-Za-z0-9+/=]+$/.test(payload)) return null;
   const answer = getRawParameter(fragment, 'a');
+  if (/(?:^|&)a=/.test(fragment) && answer === null) return null;
   if (answer !== null && (answer.length > MAX_PENPA_LINK ||
       !/^[A-Za-z0-9+/=]+$/.test(answer))) return null;
   // The upstream loader splits '&' and '=' directly, without URL-decoding.
