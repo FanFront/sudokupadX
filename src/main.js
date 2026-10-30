@@ -160,10 +160,20 @@ function translateDisplay(text) {
 }
 function updateBack(){
   const destination=returnDestination(currentEntry,catalog,navigationStack);
-  $('backButton').hidden=!destination;
-  $('backButton').textContent=destination?.fromStack &&
+  const button=$('backButton');
+  button.hidden=!destination;
+  const label=destination?.fromStack &&
     !['main','standalone'].includes(catalog.find(entry=>entry.id===destination.id)?.kind)
       ?'返回上一谜题':'返回主谜题';
+  button.setAttribute('aria-label',label);
+  button.title=label;
+}
+function updateGridButton(){
+  const button=$('gridButton');
+  const label=showGridLines?'隐藏格线':'显示格线';
+  button.setAttribute('aria-label',label);
+  button.title=label;
+  button.setAttribute('aria-pressed',String(showGridLines));
 }
 function renderSectorLinks(container,items) {
   container.replaceChildren();
@@ -194,9 +204,15 @@ function updateSector() {
   renderSectorLinks($('sectorLinks'),activeLinkedPuzzles);
   renderSectorLinks($('modalLinks'),activeLinkedPuzzles);
   const entrance=$('linkedPuzzleButton');
-  entrance.hidden=activeLinkedPuzzles.length===0;
-  entrance.textContent=activeLinkedPuzzles.length===1?'进入关联谜题':'关联谜题 · '+activeLinkedPuzzles.length;
-  entrance.title=activeLinkedPuzzles.length===1?activeLinkedPuzzles[0].title:'查看本区域的关联谜题';
+  const count=activeLinkedPuzzles.length;
+  entrance.hidden=count===0;
+  const label=count===1?'进入关联谜题：'+activeLinkedPuzzles[0].title:
+    '查看本区域的 '+count+' 道关联谜题';
+  entrance.setAttribute('aria-label',label);
+  entrance.title=label;
+  const badge=$('linkedPuzzleCount');
+  badge.hidden=count<=1;
+  badge.textContent=count>9?'9+':String(count);
 }
 function renderLibrary(){
   const list=$('libraryList');list.replaceChildren();
@@ -317,7 +333,7 @@ async function openResult(result) {
   // Super Sudokoid source URLs did not: retain their fine grid by default.
   showGridLines=!['digits-of-despair','lineage-of-logic'].includes(currentEntry?.id) &&
     !(currentEntry?.url && new URL(currentEntry.url).searchParams.has('setting-nogrid'));
-  $('gridButton').textContent=showGridLines?'隐藏格线':'显示格线';
+  updateGridButton();
   updateControls();
   fit();
   if(progress.visible?.some(lit=>!lit)){
@@ -647,7 +663,7 @@ board.addEventListener('wheel',event=>{
 $('fitButton').addEventListener('click',fit);
 $('gridButton').addEventListener('click',()=>{
   showGridLines=!showGridLines;
-  $('gridButton').textContent=showGridLines?'隐藏格线':'显示格线';
+  updateGridButton();
   requestDraw();
 });
 $('zoomIn').addEventListener('click',()=>setZoom(camera.scale*1.25));
