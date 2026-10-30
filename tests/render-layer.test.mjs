@@ -56,10 +56,10 @@ test('player ink renderer uses separate given/notes logic and contrast for fog',
 
 
 test('viewport culling retains negative puzzle coordinates for off-grid clues',()=>{
-  assert.match(draw,/left:-camera\\.x\\/camera\\.scale,top:-camera\\.y\\/camera\\.scale/,
+  assert.match(draw,/left:-camera\.x\/camera\.scale,top:-camera\.y\/camera\.scale/,
     'the visible viewport may include left/top margins outside the puzzle');
-  assert.match(draw,/const c0=Math\\.max\\(0,Math\\.floor/,
+  assert.match(draw,/const c0=Math\.max\(0,Math\.floor/,
     'cell iteration remains clamped even when artwork can extend off-grid');
-  assert.match(draw,/const r0=Math\\.max\\(0,Math\\.floor/,
+  assert.match(draw,/const r0=Math\.max\(0,Math\.floor/,
     'row iteration remains clamped independently of artwork culling');
 });
