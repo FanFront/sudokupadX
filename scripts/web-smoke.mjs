@@ -22,6 +22,14 @@ try{
   const page=await browser.newPage({viewport:{width:430,height:860},deviceScaleFactor:1});
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
+  // A cold launch must show Home, with no separate app toolbar above the board.
+  await page.goto(root,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.querySelector('#homeScreen')?.hidden===false &&
+    document.querySelector('#libraryList')?.children.length>0,null,{timeout:60000});
+  assert.equal(await page.locator('#gameScreen').isHidden(),true);
+  assert.equal(await page.locator('#homeContinueSection').isHidden(),true);
+  assert.equal(await page.locator('.topbar').count(),0);
+  await page.screenshot({path:'artifacts/web/android-home.png'});
   for(const [id,dimensions] of cases){
     const url=new URL(root);
     url.searchParams.set('puzzle',id);
@@ -139,6 +147,16 @@ try{
     document.querySelector('#puzzleTitle')?.textContent?.includes('UI Smoke Fixture'),null,{timeout:60000});
   const canvas=page.locator('#boardCanvas');
   const bounds=await canvas.boundingBox();
+  // Mobile buttons are a T9 pad with modes on its right, not stacked toolbars.
+  const keyOne=await page.locator('#keypad [data-symbol="1"]').boundingBox();
+  const keyTwo=await page.locator('#keypad [data-symbol="2"]').boundingBox();
+  const keyFour=await page.locator('#keypad [data-symbol="4"]').boundingBox();
+  const modeRail=await page.locator('#modeBar').boundingBox();
+  assert.ok(keyOne && keyTwo && keyFour && modeRail);
+  assert.ok(keyTwo.x>keyOne.x && Math.abs(keyOne.y-keyTwo.y)<2,'keypad must have columns');
+  assert.ok(keyFour.y>keyOne.y,'keypad must have rows');
+  assert.ok(modeRail.x>keyTwo.x,'mode rail must be beside the keypad');
+  assert.ok(bounds.height>200,'board must retain substantial vertical room on Android-sized screens');
   assert.ok(bounds && bounds.width>100 && bounds.height>100);
   await canvas.click({position:{x:bounds.width/2,y:bounds.height/2}});
   const selection=await page.locator('#selectionLabel').textContent();
