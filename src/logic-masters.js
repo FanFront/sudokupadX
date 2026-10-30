@@ -111,7 +111,7 @@ export function parseLogicMastersPage(html, reference) {
 // HTML attribute values can be quoted or unquoted on the portal. Read as
 // data only: callers must create their own DOM nodes rather than insert HTML.
 function imageAttribute(tag, name) {
-  const match = tag.match(new RegExp('\\b' + name + '\\s*=\\s*(?:"([^"]*)"|\\'([^\\']*)\\'|([^\\s>]+))','i'));
+  const match = tag.match(new RegExp("\\b" + name + "\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))","i"));
   return match ? decodeEntities(match[1] ?? match[2] ?? match[3]) : '';
 }
 function officialPuzzleImage(raw, base) {
