@@ -31,6 +31,10 @@ test('Penpa+ query and fragment URLs validate and normalize raw/escaped base64',
   assert.match(parsed.converterUrl,/\?m=solve&p=YWJj\+\/==$/);
   const escaped='https://swaroopg92.github.io/penpa-edit/?m=solve&p=YWJj%2B%2F%3D%3D';
   assert.equal(parsePenpaUrl(escaped).converterUrl,parsed.converterUrl);
+  // Real Penpa+ shares often use URL-safe Base64 (- and _) rather than + and /.
+  const urlSafe='https://swaroopg92.github.io/penpa-edit/#m=solve&p=YWJj-_==';
+  assert.match(parsePenpaUrl(urlSafe).converterUrl,/p=YWJj\+\/==$/);
+  assert.equal(penpaPuzzleId(urlSafe),penpaPuzzleId(url));
   assert.equal(penpaPuzzleId(escaped),penpaPuzzleId(url));
   assert.match(penpaPuzzleId(url),/^penpa-[0-9a-f]{16}-\d+$/);
 });
