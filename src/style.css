@@ -250,3 +250,72 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   #lmdLibraryPanel .lmd-input-row button{width:100%}
   #libraryDialog .library-tabs button{font-size:11px}
 }
+
+
+/* Compact icon-only actions: no action text may alter the toolbar's width. */
+#app .topbar{min-width:0}
+#app .brand{flex:0 1 auto;min-width:0}
+#app .top-actions{display:flex;flex:0 0 auto;align-items:center;gap:7px}
+#app .top-actions .icon-button,
+#app .board-tools .icon-button{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 42px;width:42px;min-width:42px;max-width:42px;
+  height:42px;min-height:42px;padding:0;border-radius:12px;
+  font-size:0;line-height:1;white-space:nowrap;touch-action:manipulation;
+}
+#app .top-actions .icon-button[hidden],
+#app .board-tools .icon-button[hidden]{display:none!important}
+#app .toolbar-icon{display:block;flex:none;width:21px;height:21px}
+#app .top-actions .icon-button svg,
+#app .board-tools .icon-button svg{pointer-events:none}
+#app .top-actions #importButton::after{content:none!important}
+#app .top-actions #importButton{background:#b9e4d6;color:#122737;border-color:#c2f2e4}
+#app .top-actions #checkpointButton{background:#234559;border-color:#3e6677;color:#c0e9f5}
+#app .top-actions .icon-button:focus-visible,
+#app .board-tools .icon-button:focus-visible{outline:3px solid #9ddfff;outline-offset:2px}
+#app .board-heading{min-width:0}
+#app .puzzle-heading{flex:1 1 auto;min-width:0;overflow:hidden}
+#app .board-tools{flex:0 0 auto;align-items:center;gap:6px}
+#app .board-tools #gridButton[aria-pressed="true"]{background:#305169;border-color:#72acc5;color:#d8f5ff}
+#app .board-tools .linked-puzzle-entry{
+  background:#2c756d;color:#f0fff7;border-color:#62b4a6;
+  box-shadow:0 0 0 1px #6bd0b322;
+}
+#app .board-tools .linked-puzzle-entry:hover{background:#368c80}
+#app .linked-puzzle-count{
+  position:absolute;top:-6px;right:-6px;display:grid;place-items:center;
+  min-width:18px;height:18px;padding:0 3px;border-radius:999px;
+  border:2px solid #111f30;background:#baf1d8;color:#143b34;
+  font-size:10px;font-weight:800;line-height:1;
+  pointer-events:none
+}
+#app .linked-puzzle-count[hidden]{display:none!important}
+@media(max-width:850px){
+  #app .topbar{gap:8px}
+  #app .top-actions{gap:5px}
+  #app .top-actions .icon-button{flex-basis:40px;width:40px;min-width:40px;max-width:40px;height:40px;min-height:40px}
+  #app .board-tools{gap:5px}
+  #app .board-tools .icon-button{flex-basis:40px;width:40px;min-width:40px;max-width:40px;height:40px;min-height:40px;padding:0}
+  #app .top-actions #demoButton{display:inline-flex}
+  #app .top-actions .icon-button .toolbar-icon,
+  #app .board-tools .icon-button .toolbar-icon{width:20px;height:20px}
+}
+@media(max-width:560px){
+  #app .brand strong,#app .brand small{display:none}
+  #app .brand{gap:0}
+  #app .topbar{padding-left:max(9px,env(safe-area-inset-left,0px));padding-right:max(9px,env(safe-area-inset-right,0px))}
+  #app .top-actions{gap:4px}
+  #app .board-heading{gap:7px;padding-left:9px;padding-right:9px}
+  #app .board-tools{gap:4px}
+}
+@media(max-width:370px){
+  #app .topbar{gap:5px}
+  #app .top-actions .icon-button{flex-basis:38px;width:38px;min-width:38px;max-width:38px;height:38px;min-height:38px;padding:0}
+  #app .board-tools .icon-button{flex-basis:38px;width:38px;min-width:38px;max-width:38px;height:38px;min-height:38px;padding:0}
+  #app .top-actions{gap:3px}
+  #app .board-tools{gap:3px}
+}
+@media(max-height:650px) and (max-width:850px){
+  #app .top-actions .icon-button{height:36px;min-height:36px}
+  #app .board-tools .icon-button{height:34px;min-height:34px}
+}
