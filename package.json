@@ -24,6 +24,7 @@
     "json5": "^2.2.3"
   },
   "dependencies": {
-    "@tauri-apps/plugin-opener": "^2.0.0"
+    "@tauri-apps/plugin-opener": "^2.0.0",
+    "@sudokupad/penpa-to-scl": "0.0.1-preview.2"
   }
 }
