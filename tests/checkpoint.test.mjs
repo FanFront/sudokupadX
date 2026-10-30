@@ -43,3 +43,17 @@ test('sodokupadAndroid checkpoint format can be imported without the X key',()=>
   const parsed=inspectCheckpoint(JSON.stringify(cp));
   assert.equal(verifyCheckpoint(parsed,puzzle,entry)[1].center[0],'3');
 });
+
+test('pen strokes round-trip through checkpoints without changing the Android v1 cell format',()=>{
+  const state={cells:Array.from({length:4},empty)};
+  const penLines=[{a:[1,1],b:[3,1],color:'#2486b3'},
+    {a:[0,0],b:[2,0],color:'#34495e'}];
+  const cp=createCheckpoint(puzzle,entry,state,penLines);
+  assert.equal(cp.version,1);
+  assert.deepEqual(inspectCheckpoint(JSON.stringify(cp)).penLines,penLines);
+  const old={...cp};delete old.penLines;
+  assert.deepEqual(inspectCheckpoint(JSON.stringify(old)).penLines,[]);
+  assert.throws(()=>inspectCheckpoint(JSON.stringify({
+    ...cp,penLines:[{a:[1,1],b:[5,1],color:'#2486b3'}]
+  })),/pen line/i);
+});
