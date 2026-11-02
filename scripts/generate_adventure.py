@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Generate a seeded 4-grid, 4-boss SudokuPadX adventure using Python's stdlib.
 
-The first three grids are intentionally ambiguous until the overlapping
-values from the following grid are available. Four independent boss puzzles
-award digits to off-grid gates; progression requires their completion. Output
-is SudokuPad JSON and a catalog fragment consumed by SudokuPadX at startup.
+All four grids have a genuinely ambiguous boss cell *inside* the 9x9:
+even with every overlapping digit known, each cell remains ambiguous until
+the linked boss supplies the missing digit. Output is SudokuPad JSON and a
+catalog fragment consumed by SudokuPadX at startup.
 """
 from __future__ import annotations
 
@@ -172,34 +172,38 @@ def dig(rng: random.Random, solution: list[int], banned: set[int],
     return clues
 
 
-def select_gate(rng: random.Random, grid: int, clues: dict[int, int],
-                solutions: list[list[int]]) -> tuple[dict[int, int], int]:
-    """Make the grid ambiguous until its downstream overlap is known.
+def shared_solved_cells(solutions: list[list[int]], grid: int) -> dict[int, int]:
+    """Reveal ALL overlap digits to rule out indirect Sudoku shortcuts."""
+    return {local: solutions[grid][local]
+            for other in range(4) if other != grid
+            for local, _ in overlap(grid, other)}
 
-    Requiring the downstream block *alone* to restore uniqueness proves that
-    the entire chain has one solution, starting from grid 4.
+
+def select_boss_cell(rng: random.Random, grid: int,
+                     clues: dict[int, int],
+                     solutions: list[list[int]]) -> tuple[dict[int, int], int]:
+    """Remove a *critical* given from inside a Sudoku grid.
+
+    Even if all other grids have been completed and every overlap value is
+    known, this grid must still admit >=2 solutions with different digits
+    at the boss cell. The boss answer restores uniqueness.
     """
-    next_shared = {a: solutions[grid][a] for a, _ in overlap(grid, grid + 1)}
-    prev_shared = ({a: solutions[grid][a] for a, _ in overlap(grid, grid - 1)}
-                   if grid else {})
-    indices = list(clues)
-    rng.shuffle(indices)
-    for i in indices:
-        candidate = dict(clues)
-        candidate.pop(i)
-        if count_solutions(candidate | prev_shared) <= 1:
+    known = shared_solved_cells(solutions, grid)
+    candidates = list(clues)
+    rng.shuffle(candidates)
+    for local in candidates:
+        if local in known:
             continue
-        if count_solutions(candidate | next_shared) != 1:
+        without_boss = dict(clues)
+        without_boss.pop(local)
+        # Start from a unique Sudoku; removing one pivotal clue breaks
+        # uniqueness. Supplying *all* shared digits must not fix it.
+        if count_solutions(without_boss | known) != 2:
             continue
-        # A beacon must be playable as a singles deduction *before* revealing
-        # the next chapter (no guessing or unavailable upstream clues).
-        forced = singles(candidate)
-        trigger_cells = [j for j in range(81) if j not in candidate
-                         and j in forced and j not in next_shared]
-        if trigger_cells:
-            rng.shuffle(trigger_cells)
-            return candidate, trigger_cells[0]
-    raise ValueError('No enterable cross-grid gate found')
+        if count_solutions(without_boss | {local: solutions[grid][local]}) != 1:
+            continue
+        return without_boss, local
+    raise ValueError(f'Grid {grid+1}: no genuinely ambiguous boss cell')
 
 
 def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
@@ -212,16 +216,17 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
                 if g != other:
                     banned[g].update(a for a, _ in overlap(g, other))
         clues = [dig(rng, solutions[g], banned[g]) for g in range(4)]
-        gates = []
+        boss_cells = []
         try:
-            for g in range(3):
-                clues[g], gate = select_gate(rng, g, clues[g], solutions)
-                gates.append(gate)
+            for g in range(4):
+                clues[g], boss_cell = select_boss_cell(rng, g, clues[g], solutions)
+                boss_cells.append(boss_cell)
         except ValueError:
             continue
         break
     else:
-        raise RuntimeError(f'Could not build gates after {attempts} attempts')
+        raise RuntimeError(f'Could not build four ambiguous boss cells '
+                           f'after {attempts} attempts')
 
     world_solution = ['.'] * (H * W)
     world_cells = [[{} for _ in range(W)] for _ in range(H)]
@@ -241,33 +246,17 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
             for bc in range(0, 9, 3):
                 regions.append([[top + br + dr, left + bc + dc]
                                 for dr in range(3) for dc in range(3)])
-        beacon = (f'The highlighted beacon is global R{global_index(g, gates[g])//W+1}'
-                  f'C{global_index(g, gates[g])%W+1}; enter its correct digit to reveal '
-                  'the next chapter.' if g < 3 else 'Final chapter. Complete the map.')
         grids.append({'top': top, 'left': left, 'width': 9, 'height': 9,
                       'title': f'Chapter {g+1}: {names[g]}',
                       'author': 'SudokuPadX Generator',
                       'rules': ('Normal Sudoku. Each row, column and outlined 3x3 box '
                                 'contains 1-9. Neighboring grids share their overlapping '
-                                'cells. Some chapters require deductions from the next.\n'
-                                + beacon + '\n'
-                                + f'Boss entrance: sudokupadx:puzzle/{WORLD_ID}-boss-{g+1}')})
+                                'cells. Each chapter has a logically '
+                                'indispensable embedded BOSS cell.\n'
+                                f'Boss entrance: sudokupadx:puzzle/{WORLD_ID}-boss-{g+1}')})
     initial = [[r, c] for r in range(9) for c in range(9)]
     effects = []
-    for g, local in enumerate(gates):
-        trigger_global = global_index(g, local)
-        tr, tc = divmod(trigger_global, W)
-        target = sorted(global_index(g + 1, i) for i in range(81))
-        effects.append({
-            'trigger': {'type': 'cellvalue', 'cell': f'r{tr+1}c{tc+1}'},
-            'effect': {'type': 'foglight', 'cells': ''.join(
-                f'r{p//W+1}c{p%W+1}' for p in target)}
-        })
-    beacons = [divmod(global_index(g, loc), W) for g, loc in enumerate(gates)]
-    # Draw behind the user's digit; the fog hides later chapter beacons.
-    highlights = [{'center': [r + .5, c + .5], 'width': .92, 'height': .92,
-                   'rounded': True, 'backgroundColor': '#f8e2a0'}
-                  for r, c in beacons]
+    highlights = []
     world = {
         'id': WORLD_ID,
         'cells': world_cells,
@@ -278,25 +267,31 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
         'metadata': {
             'title': 'The Four Gates — Generated Adventure',
             'author': 'SudokuPadX Procedural Generator',
-            'rules': ('Four overlapping Sudokus form one world. Enter each chapter '
-                      'beacon correctly to reveal the next region. Select a visible '
-                      'grid to open its boss. Earlier grids can require later clues.'),
+            'rules': ('Four overlapping Sudoku grids form one adventure. '
+                      'Every highlighted BOSS cell belongs to its 9x9 Sudoku '
+                      'and remains logically ambiguous until its linked '
+                      'boss provides the indispensable missing digit.'),
             'grids': grids,
             'solution': ''.join(world_solution),
             'msgcorrect': 'You solved every cell in the Four Gates!'
         }
     }
+    from boss_dependencies import attach_boss_dependencies, completed_boss_reward
     bosses = []
     for i in range(4):
-        for boss_attempt in range(100):
+        boss_id = f'{WORLD_ID}-boss-{i+1}'
+        target = str(solutions[i][boss_cells[i]])
+        # Find a boss whose ENTIRE solved grid yields exactly the missing
+        # main Sudoku digit. No extra off-grid cell or arbitrary code.
+        for boss_attempt in range(200):
             solved = make_solution(rng)
-            # The reward is calculated from all 81 solved digits, not from
-            # any designated cell or clue. No special empty R5C5 is needed.
+            if completed_boss_reward(''.join(map(str, solved)), boss_id, seed) != target:
+                continue
             given = dig(rng, solved, set(), min_clues=22)
             if len(singles(given)) <= 55:
                 break
         else:
-            raise RuntimeError('Could not generate a boss that resists singles')
+            raise RuntimeError(f'Could not generate matching hard boss {boss_id}')
         bosses.append({
             'id': f'{WORLD_ID}-boss-{i+1}',
             'cells': [[{'value': str(given[r * 9 + c])} if r * 9 + c in given else {}
@@ -311,20 +306,22 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
                 'msgcorrect': f'Gatekeeper {i+1} defeated. Return to the map.'
             }
         })
-    from boss_dependencies import attach_boss_dependencies
-    boss_gates = attach_boss_dependencies(world, bosses, seed, POSITIONS)
+    boss_gates = attach_boss_dependencies(
+        world, bosses, seed, POSITIONS, boss_cells)
     report = {
         'seed': seed, 'attempt': attempt + 1, 'world': [H, W],
         'grid_positions': [list(position) for position in POSITIONS],
         'overlaps': [len(overlap(g, g+1)) for g in range(3)],
         'grid_givens': [len(c) for c in clues],
-        'grid_solutions_before_next': [
-            count_solutions(clues[g] | ({a: solutions[g][a] for a, _ in overlap(g, g-1)}
-                                         if g else {}))
+        # Supply even the full shared region from every neighbor: the
+        # embedded boss digit must remain indispensable.
+        'grid_solutions_without_boss': [
+            count_solutions(clues[g] | shared_solved_cells(solutions, g))
             for g in range(4)],
-        'grid_solutions_with_next': [
-            count_solutions(clues[g] | {a: solutions[g][a] for a, _ in overlap(g, g+1)})
-            for g in range(3)],
+        'grid_solutions_with_boss': [
+            count_solutions(clues[g] | shared_solved_cells(solutions, g)
+                            | {boss_cells[g]: solutions[g][boss_cells[g]]})
+            for g in range(4)],
         'boss_givens': [sum(bool(cell) for row in b['cells'] for cell in row)
                         for b in bosses],
         'boss_singles_resolved': [
@@ -352,27 +349,27 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
     assert len(world['cells']) == H and all(len(row) == W for row in world['cells'])
     assert len(world['metadata']['solution']) == H * W
     assert report['overlaps'] == [9, 9, 9]
-    assert report['grid_solutions_before_next'] == [2, 2, 2, 1]
-    assert report['grid_solutions_with_next'] == [1, 1, 1]
+    assert report['grid_solutions_without_boss'] == [2] * 4
+    assert report['grid_solutions_with_boss'] == [1] * 4
     assert report['boss_solution_counts'] == [1] * 4
     assert max(report['boss_singles_resolved']) <= 55
-    assert len(world['foglight']) == 82
+    assert len(world['foglight']) == 81
     assert len(world['triggereffect']) == 0
     gates = world['metadata']['bossGates']
     assert len(gates) == len(bosses) == 4
     for gate, boss in zip(gates, bosses):
         r, c = gate['cell']
-        assert all(not (top <= r < top+9 and left <= c < left+9)
-                   for top, left in POSITIONS)
+        assert sum(top <= r < top+9 and left <= c < left+9
+                   for top, left in POSITIONS) == 1
         assert world['metadata']['solution'][r*W+c] == gate['reward']
         assert world['cells'][r][c] == {}
         assert boss['metadata']['bossLink']['bossId'] == boss['id']
-        assert gate['rewardVersion'] == boss['metadata']['bossLink']['rewardVersion'] == 2
+        assert gate['rewardVersion'] == boss['metadata']['bossLink']['rewardVersion'] == 3
         from boss_dependencies import completed_boss_reward
         assert gate['reward'] == completed_boss_reward(
             boss['metadata']['solution'], boss['id'], gate['seed'])
         assert gate['reward'] != boss['metadata']['solution'][40]
-    assert [len(gate['reveals']) for gate in gates] == [82, 82, 82, 0]
+    assert [len(gate['reveals']) for gate in gates] == [81, 81, 81, 0]
     for i, boss in enumerate(bosses):
         assert boss['id'].endswith(f'-boss-{i+1}')
     for row in world['cells']:

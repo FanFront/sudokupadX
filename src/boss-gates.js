@@ -10,9 +10,9 @@ function validLink(link) {
 
 function completionKey(link) {
   if(!validLink(link))return null;
-  // Reward algorithm changes invalidate old completion flags. A v1 boss
-  // completion cannot silently unlock a v2 whole-grid-code gate.
-  const version=link.rewardVersion===2?'v2':'v1';
+  // A new structural/solution design invalidates old boss completions.
+  // V3 embeds the reward in the Sudoku and cannot reuse v1/v2 clears.
+  const version=link.rewardVersion===3?'v3':link.rewardVersion===2?'v2':'v1';
   return 'sudokupadx:boss-cleared:'+version+':'+link.parent+':'+link.seed+':'+link.bossId;
 }
 
@@ -58,7 +58,8 @@ export function lockedBossGate(puzzle,index,storage) {
 /** Apply map visibility AFTER Rust restores/recomputes its standard fog.
  * Reveals are cumulative within one snapshot but contingent on every
  * preceding boss completion and correctly entered gate value. The gate
- * is outside Sudoku houses, so it cannot be deduced from the map.
+ * belongs to the Sudoku, but remains logically ambiguous even after
+ * all overlapping cells are given. The boss supplies the missing digit.
  */
 export function applyBossReveals(puzzle,progress,storage) {
   if(!puzzle||!progress||!Array.isArray(progress.visible)||
