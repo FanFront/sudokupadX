@@ -267,9 +267,10 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
         'metadata': {
             'title': 'The Four Gates — Generated Adventure',
             'author': 'SudokuPadX Procedural Generator',
-            'rules': ('Four overlapping Sudokus form one world. Enter each chapter '
-                      'beacon correctly to reveal the next region. Select a visible '
-                      'grid to open its boss. Earlier grids can require later clues.'),
+            'rules': ('Four overlapping Sudoku grids form one adventure. '
+                      'Every highlighted BOSS cell belongs to its 9x9 Sudoku '
+                      'and remains logically ambiguous until its linked '
+                      'boss provides the indispensable missing digit.'),
             'grids': grids,
             'solution': ''.join(world_solution),
             'msgcorrect': 'You solved every cell in the Four Gates!'
