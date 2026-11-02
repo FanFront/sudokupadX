@@ -388,7 +388,7 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
         assert gate['reward'] == completed_boss_reward(
             boss['metadata']['solution'], boss['id'], gate['seed'])
         assert gate['reward'] != boss['metadata']['solution'][40]
-    assert [len(gate['reveals']) for gate in gates] == [81, 81, 81, 0]
+    assert [len(gate['reveals']) for gate in gates] == report['fog_seed_sizes'][1:] + [0]
     for i, boss in enumerate(bosses):
         assert boss['id'].endswith(f'-boss-{i+1}')
     for row in world['cells']:
