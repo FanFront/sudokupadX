@@ -722,6 +722,7 @@ function applyChange(change) {
   refreshConflicts();
 }
 async function edit(action,symbol='') {
+  clearNumberHighlight();
   if(pending||!puzzle)return;
   // A map gate is a reward, not a Sudoku digit: the linked boss must
   // actually be finished before any value or note can be entered here.
@@ -749,6 +750,7 @@ async function edit(action,symbol='') {
   finally{pending=false;}
 }
 async function history(direction) {
+  clearNumberHighlight();
   if(pending||!puzzle)return;
   const from=direction==='undo'?undoStack:redoStack;
   const to=direction==='undo'?redoStack:undoStack;
@@ -782,6 +784,14 @@ function setSelection(indices) {
   updateSelection();requestDraw();
   scheduleViewSave();
   board.focus({preventScroll:true});
+}
+// Number focus is a temporary clue-finding aid, not a persistent mark.
+function clearNumberHighlight(resetTap=true) {
+  if(resetTap)lastBoardTap=null;
+  if(highlightedNumber===null)return;
+  highlightedNumber=null;
+  updateSelection();
+  requestDraw();
 }
 function select(index) {setSelection(index<0?[]:[index]);}
 function extendSelection(indices) {
@@ -854,8 +864,16 @@ function finishPenGesture(g,p,cancelled) {
   requestDraw();
 }
 board.addEventListener('contextmenu',event=>event.preventDefault());
+// Other controls (keypad, toolbar, dialogs) dismiss number highlighting.
+document.addEventListener('pointerdown',event=>{
+  if(event.target!==board)clearNumberHighlight();
+},true);
 board.addEventListener('pointerdown',event=>{
   if(!puzzle)return;
+  const highlightBeforeTap=highlightedNumber;
+  // A tap, drag, or pinch dismisses the highlight immediately. Retain
+  // the previous tap so the second click can still activate a new number.
+  clearNumberHighlight(false);
   event.preventDefault();board.setPointerCapture(event.pointerId);
   const p=locationInFrame(event);pointers.set(event.pointerId,p);
   if(pointers.size===1){
@@ -871,7 +889,7 @@ board.addEventListener('pointerdown',event=>{
       const oldSelection=[...selectedCells];
       const startIndex=gridIndex(p.x,p.y);
       gesture={kind:panMouse?'mouse-pan':'select',start:p,last:p,moved:false,
-        tapMoved:false,startIndex,oldSelection};
+        tapMoved:false,startIndex,oldSelection,highlightBeforeTap};
       if(!panMouse)select(startIndex);
     }
   }else if(pointers.size===2){
@@ -925,9 +943,9 @@ function endPointer(event){
        selectedCells.length===1 && selected===index){
       const tap={index,x:p.x,y:p.y,time:event.timeStamp,
         pointerType:event.pointerType,value:cellLargeValue(puzzle,progress,index)};
-      const result=advanceNumberHighlight(lastBoardTap,tap,highlightedNumber);
+      const result=advanceNumberHighlight(lastBoardTap,tap,gesture.highlightBeforeTap);
       lastBoardTap=result.previousTap;
-      if(result.changed){
+      if(result.selectedNumber!==highlightedNumber){
         highlightedNumber=result.selectedNumber;
         updateSelection();requestDraw();
       }
@@ -941,6 +959,7 @@ function endPointer(event){
 board.addEventListener('pointerup',endPointer);
 board.addEventListener('pointercancel',endPointer);
 board.addEventListener('wheel',event=>{
+  clearNumberHighlight();
   event.preventDefault();
   const p=locationInFrame(event);setZoom(camera.scale*Math.exp(-event.deltaY*.0015),p.x,p.y);
 },{passive:false});
@@ -1166,6 +1185,7 @@ document.addEventListener('keydown',event=>{
   const active=document.activeElement;
   if(active?.matches('input,textarea')||$('importDialog').open||$('rulesDialog').open||
       $('libraryDialog').open||$('completionDialog').open||$('checkDialog').open)return;
+  clearNumberHighlight();
   if(event.key==='Escape'&&navigationStack.length){
     event.preventDefault();goBack().catch(notify);return;
   }
