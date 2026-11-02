@@ -41,6 +41,17 @@ export function getLinkedPuzzles(rules, catalog, group) {
   if (!rules || !catalog?.length) return [];
   const results = [], seen = new Set();
   const links = rules.match(/https:\/\/sudokupad\.app\/[A-Za-z0-9_/-]+/g) || [];
+  // Bundled procedural adventures use real internal IDs, not fabricated
+  // sudokupad.app URLs. A selected visible sector exposes these boss links.
+  const internal = rules.match(/sudokupadx:puzzle\/[a-z0-9-]+/gi) || [];
+  for (const token of internal) {
+    const id = token.slice('sudokupadx:puzzle/'.length);
+    const entry = catalog.find(e => e.id === id && e.file);
+    if (entry && !seen.has(entry.id)) {
+      seen.add(entry.id);
+      results.push(entry);
+    }
+  }
   for (const url of links) {
     const slug = url.split('/').pop().toLowerCase();
     const entry = catalog.find(e => {
