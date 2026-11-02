@@ -7,7 +7,12 @@ export function cellInk(puzzle, progress, index) {
   const given=source.given??null;
   const entry=progress?.cells?.[index]||{};
   if(fogged&&given!==null) {
-    return {fogged,given:false,value:null,corner:[],center:[]};
+    // The authored clue is concealed, but player's own annotations must
+    // remain visible above the fog just like in any other hidden cell.
+    const value=entry.value??null;
+    return {fogged,given:false,value,
+      corner:value?[]:(entry.corner||[]),
+      center:value?[]:(entry.center||[])};
   }
   const value=given??entry.value??null;
   return {
