@@ -46,8 +46,11 @@ class GeneratorTests(unittest.TestCase):
         gates = self.world['metadata']['bossGates']
         self.assertEqual(self.report['grid_solutions_without_boss'], [2]*4)
         self.assertEqual(self.report['grid_solutions_with_boss'], [1]*4)
-        self.assertEqual(len(self.world['foglight']), 81)
+        self.assertLess(len(self.world['foglight']), 40)
+        self.assertGreaterEqual(len(self.world['foglight']), 2)
         self.assertEqual(len(self.world['triggereffect']), 0)
+        self.assertGreaterEqual(len(self.world['metadata']['generatedFogRules']), 100)
+        self.assertEqual(len(self.world['metadata']['generatedFogPlan']), 4)
         self.assertEqual(len(self.world['underlays']), 4)
         for i, gate in enumerate(gates):
             r, c = gate['cell']
@@ -85,10 +88,30 @@ class GeneratorTests(unittest.TestCase):
             self.assertEqual(gate['rewardVersion'], 3)
             self.assertEqual(boss['metadata']['bossLink']['rewardVersion'], 3)
             self.assertIn(reward, boss['metadata']['msgcorrect'])
-            self.assertEqual(len(gate['reveals']), 81 if i < 3 else 0)
-            if i:
-                self.assertIn([r,c], gates[i-1]['reveals'])
-        self.assertIn(gates[0]['cell'], self.world['foglight'])
+            if i < 3:
+                self.assertEqual(gate['reveals'],
+                    self.world['metadata']['generatedFogPlan'][i+1]['seed'])
+                self.assertLess(len(gate['reveals']), 40)
+            else:
+                self.assertEqual(gate['reveals'], [])
+            self.assertEqual(len(
+                self.world['metadata']['generatedFogPlan'][i]['milestones']), 3)
+        self.assertNotIn(gates[0]['cell'], self.world['foglight'])
+
+    def test_revealed_only_deduction_path_never_stalls(self):
+        from fog_progression import validate_fog_walk
+        all_solutions = [self.local(g)[1] for g in range(4)]
+        boss_cells = []
+        for g, gate in enumerate(self.world['metadata']['bossGates']):
+            r, c = gate['cell']
+            top, left = gen.POSITIONS[g]
+            boss_cells.append((r-top)*9+c-left)
+        self.assertTrue(validate_fog_walk(
+            self.world, gen.POSITIONS, all_solutions, boss_cells,
+            gen.PEERS, gen.UNITS))
+        # No full-grid reveal: every chapter begins with a small pocket.
+        self.assertTrue(all(2 <= n < 40 for n in self.report['fog_seed_sizes']))
+        self.assertEqual(self.report['fog_starter_counts'], [3]*4)
 
     def test_reward_requires_complete_boss_solution_not_one_cell(self):
         boss = self.bosses[0]
