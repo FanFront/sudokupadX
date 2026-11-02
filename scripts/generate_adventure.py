@@ -311,7 +311,7 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
     from fog_progression import add_progressive_fog
     fog_plans = add_progressive_fog(
         world, clues, solutions, boss_cells, POSITIONS, rng,
-        shared_solved_cells, count_solutions, singles)
+        shared_solved_cells, count_solutions, singles, PEERS, UNITS)
     report = {
         'seed': seed, 'attempt': attempt + 1, 'world': [H, W],
         'grid_positions': [list(position) for position in POSITIONS],
@@ -361,11 +361,19 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
     assert report['grid_solutions_with_boss'] == [1] * 4
     assert report['boss_solution_counts'] == [1] * 4
     assert max(report['boss_singles_resolved']) <= 55
-    assert 4 <= len(world['foglight']) <= 30
+    assert 2 <= len(world['foglight']) < 40
     assert len(world['triggereffect']) == 0
-    assert len(world['metadata']['generatedFogRules']) >= 120
-    assert all(4 <= size <= 30 for size in report['fog_seed_sizes'])
-    assert all(1 <= count <= 3 for count in report['fog_starter_counts'])
+    assert len(world['metadata']['generatedFogRules']) >= 100
+    assert all(2 <= size < 40 for size in report['fog_seed_sizes'])
+    assert all(count == 3 for count in report['fog_starter_counts'])
+    from fog_progression import validate_fog_walk
+    assert validate_fog_walk(world, POSITIONS, [
+        [int(world['metadata']['solution'][global_index(g,i)])
+         for i in range(81)] for g in range(4)], [
+        (gate['cell'][0] - POSITIONS[g][0])*9 +
+        gate['cell'][1] - POSITIONS[g][1]
+        for g, gate in enumerate(world['metadata']['bossGates'])
+    ], PEERS, UNITS)
     gates = world['metadata']['bossGates']
     assert len(gates) == len(bosses) == 4
     for gate, boss in zip(gates, bosses):
