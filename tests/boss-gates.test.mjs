@@ -95,7 +95,7 @@ test('embedded boss cells v3 reject old off-grid v2 completion flags',()=>{
   const {puzzle,progress}=world();
   puzzle.bossGates=[freshGate];
   const clearedV2=boss(oldGate,true);
-  assert.equal(markBossCleared(clearedV3.puzzle,clearedV3.progress,storage),true);
+  assert.equal(markBossCleared(clearedV2.puzzle,clearedV2.progress,storage),true);
   assert.equal(isBossCleared(puzzle,freshGate,storage),false);
   assert.equal(lockedBossGate(puzzle,4*27+5,storage),true);
   progress.cells[4*27+5].value='8';
