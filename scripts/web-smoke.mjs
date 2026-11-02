@@ -14,7 +14,9 @@ const cases=[
   ['utmh5dybvf','9 × 9'],
   ['mfhh567b60','9 × 9'],
   ['k7qc98e00u','9 × 9'],
-  ['boss-6cn54q09sv','9 × 9']
+  ['boss-6cn54q09sv','9 × 9'],
+  ['generated-adventure-1','27 × 27'],
+  ['generated-adventure-1-boss-1','9 × 9']
 ];
 await mkdir('artifacts/web',{recursive:true});
 const browser=await chromium.launch({headless:true});

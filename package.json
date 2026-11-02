@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "python3 scripts/generate_adventure.py",
+    "predev:web": "python3 scripts/generate_adventure.py",
+    "prebuild": "python3 scripts/generate_adventure.py",
+    "prebuild:web": "python3 scripts/generate_adventure.py",
+    "pretest": "python3 scripts/generate_adventure.py && python3 -m unittest discover -s tests -p 'test_generate_adventure.py'",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "wasm:build": "wasm-pack build crates/sudokupadx-web --target web --release --out-dir ../../public/wasm",

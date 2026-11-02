@@ -22,6 +22,10 @@ On Android, install the **APK file** from the link above (ARM64, Android 7.0+). 
 
 In the app, open **Library** to select a bundled game, search for puzzles, or manage offline downloads. Linked puzzles can be opened from their discovered regions, and you can return to the main map without losing your position.
 
+## Procedural adventures
+
+Run `python3 scripts/generate_adventure.py` to create a seeded offline adventure: four overlapping 9×9 grids, four bosses, fog reveal beacons, and uniqueness checks. Development and release builds generate the default adventure automatically. See [generation guide](docs/procedural-adventure.md) for how the puzzle design works and its difficulty limitations.
+
 ## Development
 
 Requires Node.js, Rust, and the relevant [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/).
