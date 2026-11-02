@@ -735,7 +735,7 @@ async function edit(action,symbol='') {
   if(action==='value'&&selectedCells.some(index=>lockedBossGate(puzzle,index,localStorage))){
     toast('请先完成关联首领谜题，取得通关数字');return;
   }
-  const indices=editableCellIndices(puzzle,progress,selectedCells);
+  const indices=editableCellIndices(puzzle,progress,selectedCells,action);
   if(!indices.length){
     if(!selectedCells.length)toast('请先选择格子');
     return;
