@@ -488,14 +488,15 @@ impl Session {
             return Err("Save has different board dimensions.".into());
         }
         for (index, value) in cells.iter().enumerate() {
-            // Notes/values entered while a clue was concealed by fog may
-            // outlive its reveal. Keep them in saves; the authored clue
-            // always takes precedence when rendering/checking correctness.
+            // All visible givens may carry player pencil marks/colour.
+            // For non-fog puzzles they must not carry a player large value;
+            // in fog puzzles a digit entered while hidden survives a reveal.
+            // In both cases the authored given remains authoritative.
             if self.puzzle.cells[index].given.is_some()
                 && self.puzzle.foglight.is_none()
-                && *value != InputCell::default()
+                && value.value.is_some()
             {
-                return Err("Save tried to modify a given cell.".into());
+                return Err("Save tried to overwrite a given digit.".into());
             }
             if value.value.as_deref().is_some_and(|s| !valid_symbol(s))
                 || value.corner.len() > 26 || value.center.len() > 26
@@ -514,8 +515,10 @@ impl Session {
     }
     pub fn apply(&mut self, index: usize, mode: &str, symbol: &str) -> Result<EditResult, String> {
         if index >= self.cells.len() { return Err("Cell is outside the board.".into()); }
-        if self.puzzle.cells[index].given.is_some() && self.visible[index] {
-            return Err("Visible given cells cannot be edited.".into());
+        if self.puzzle.cells[index].given.is_some() && self.visible[index]
+            && mode == "value"
+        {
+            return Err("Visible given digits cannot be overwritten.".into());
         }
         self.apply_many(&[index], mode, symbol)
     }
@@ -538,13 +541,14 @@ impl Session {
         let mut selected = Vec::new();
         for &index in indices {
             if index >= self.cells.len() { return Err("Cell is outside the board.".into()); }
-            // Fog-covered givens are visually unknown to the player, so
-            // they must accept candidate marks just like ordinary cells.
-            // Revealed givens remain immutable. The UI additionally knows
-            // about dynamically revealed procedural fog.
-            if (self.puzzle.cells[index].given.is_none() || !self.visible[index])
-                && !selected.contains(&index)
-            {
+            // Player annotations are allowed on fixed givens, including
+            // when a drag selection crosses a clue. Only value mode must
+            // skip visible givens; erasing annotations never erases a clue.
+            // UI may know about additional procedurally revealed fog.
+            let can_edit = mode != "value"
+                || self.puzzle.cells[index].given.is_none()
+                || !self.visible[index];
+            if can_edit && !selected.contains(&index) {
                 selected.push(index);
             }
         }
