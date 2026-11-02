@@ -48,6 +48,37 @@ A solution-counting backtracking solver verifies classic 9×9 uniqueness
 and ambiguity; the initial human-logic filter only handles naked and
 hidden singles, so the advertised hard difficulty is not calibrated.
 
+## Playable fog progression
+
+The first chapter no longer displays all 81 cells. The generator builds a
+**verified logical sequence** before deciding what to reveal. Each chapter
+starts with a deliberately small set of visible givens and one deducible
+empty cell. Filling that cell correctly reveals nearby cells plus any
+additional clues required to make the next planned Sudoku deduction.
+
+For every step, a Python verifier reproduces the entire process using
+**only the currently visible givens and values already entered correctly**
+and confirms that the next cell is an immediate naked or hidden single.
+It does *not* treat hidden clues as known. After three logically deducible
+steps, the embedded boss cell is revealed (but still cannot be filled without
+defeating the linked boss). After its reward is entered, the verifier checks
+that the rest of the grid can be completed without guessing and that every
+cell eventually becomes visible. Generated puzzles fail validation if this
+visible-only path stalls.
+
+To make this feasible, the generator can add a small number of further
+classic Sudoku givens, but only if they preserve the essential ambiguity of
+each boss cell—even with all neighboring overlaps fully solved. This makes
+the **main map an exploration puzzle**, while the four independent bosses
+remain intended to be difficult. The guarantee is a complete singles-based
+path, not a comprehensive human difficulty rating or proof that every
+possible player-entered ordering avoids temporary dead ends.
+
+Following the original Sudokuvania model, correctness-based rules typically
+illuminate neighboring cells, with occasional nonlocal clue reveals needed
+for continued deductions. Completing a boss unlocks only the *starter pocket*
+of the next 9×9; the remainder must be explored by solving.
+
 ## Player progression
 
 1. Select the highlighted orange boss cell **inside** a visible chapter
@@ -56,8 +87,9 @@ hidden singles, so the advertised hard difficulty is not calibrated.
    Sudoku digit derived from the whole completed boss grid.
 3. Return to the map and enter that digit **into the highlighted Sudoku
    cell itself**. It participates in ordinary row, column, and box rules.
-4. Entering the correct value after clearing the boss reveals the next
-   9×9 chapter. The fourth boss provides the final missing Sudoku value.
+4. Entering the correct value after clearing the boss reveals only the
+   next chapter's small initial patch. Solve its visible deductions to keep
+   pushing back the fog. The fourth boss provides the final missing digit.
 
 The game intentionally blocks placing a value in the boss cell until
 its linked boss is cleared, but the stronger guarantee is mathematical:
