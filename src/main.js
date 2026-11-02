@@ -6,6 +6,7 @@ import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLin
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
+import {TAP_MOVE_TOLERANCE,cellLargeValue,isHighlightedNumber,advanceNumberHighlight} from './number-highlight.js';
 import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
 import {markBossCleared,lockedBossGate,bossGateAt,applyBossReveals} from './boss-gates.js';
@@ -28,6 +29,8 @@ let puzzle = null;
 let progress = null;
 let selected = -1;
 let selectedCells = [];
+let highlightedNumber = null;
+let lastBoardTap = null;
 let mode = 'value';
 let penLines = [];
 let penMarks = [];
@@ -390,6 +393,7 @@ async function openResult(result) {
   progress=result.progress;
   undoStack=[];redoStack=[];penLines=[];penMarks=[];
   selected=-1;selectedCells=[];
+  highlightedNumber=null;lastBoardTap=null;
   gesture=null;pointers.clear();
   buildRegions();
   updateInfo();
@@ -495,7 +499,7 @@ function updateControls() {
     el.setAttribute('aria-pressed',String(el.dataset.penGrid===penGrid));
   });
   board.classList.toggle('pen-active',mode==='pen');
-  board.setAttribute('aria-label',mode==='pen'?'棋盘：单指拖动画线，点击格子画圆圈，点击格线画叉号，双指平移缩放':'棋盘：单指滑选格子，双指平移缩放');
+  board.setAttribute('aria-label',mode==='pen'?'棋盘：单指拖动画线，点击格子画圆圈，点击格线画叉号，双指平移缩放':'棋盘：单指滑选格子，双击数字高亮相同数字，再双击取消，双指平移缩放');
   document.querySelectorAll('[data-mode]').forEach(el=>{
     el.classList.toggle('active',el.dataset.mode===mode);
     el.setAttribute('aria-pressed',String(el.dataset.mode===mode));
@@ -515,12 +519,13 @@ function updateControls() {
   updateSelection();
 }
 function updateSelection() {
+  const highlightLabel=highlightedNumber===null?'':' · 高亮 '+highlightedNumber;
   if(mode==='pen'){
-    $('selectionLabel').textContent=penErase?'擦线模式 · 单指擦除':'画线模式 · 单指描线';
+    $('selectionLabel').textContent=(penErase?'擦线模式 · 单指擦除':'画线模式 · 单指描线')+highlightLabel;
     return;
   }
   if (!puzzle||selected<0) {
-    $('selectionLabel').textContent='选择一个格子';
+    $('selectionLabel').textContent='选择一个格子'+highlightLabel;
     if(puzzle)updateSector();
     return;
   }
@@ -528,7 +533,7 @@ function updateSelection() {
   const fogged=!isVisible(progress,selected);
   $('selectionLabel').textContent='R'+row+'C'+col+
     (selectedCells.length>1?' · 已选 '+selectedCells.length+' 格':
-      fogged?' · 迷雾':puzzle.cells[selected].given!==null?' · 提示':'');
+      fogged?' · 迷雾':puzzle.cells[selected].given!==null?' · 提示':'')+highlightLabel;
   updateSector();
 }
 
@@ -619,6 +624,11 @@ function draw() {
     const x=c*CELL,y=r*CELL;
     if(entry.color){ctx.fillStyle=entry.color;ctx.fillRect(x+1,y+1,CELL-2,CELL-2);}
     if(selectedCells.includes(idx)){ctx.fillStyle='#a0d5eb6d';ctx.fillRect(x,y,CELL,CELL);}
+    // Highlight matching visible givens/entries beneath authored constraints.
+    if(highlightedNumber!==null && isVisible(progress,idx) &&
+       isHighlightedNumber(puzzle,progress,idx,highlightedNumber)){
+      ctx.fillStyle='#ffc95e9c';ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+    }
     if(showGridLines) {
       ctx.strokeStyle='#bec7c9';ctx.lineWidth=.65;ctx.strokeRect(x,y,CELL,CELL);
     }
@@ -656,6 +666,18 @@ function draw() {
   // Keep deliberate scene outlines visible through the fog without exposing
   // hidden clues. They are independent of the optional fine grid lines.
   if(authoredBorders)drawPuzzleLines(ctx,puzzle.lines,clip,'grid');
+  // Fogged player entries can be highlighted, but fogged original givens
+  // must not be revealed: isHighlightedNumber uses cellInk's fog filtering.
+  if(highlightedNumber!==null){
+    for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
+      const idx=r*puzzle.cols+c;
+      if(!isVisible(progress,idx) &&
+         isHighlightedNumber(puzzle,progress,idx,highlightedNumber)){
+        ctx.fillStyle='#ffc95e9c';
+        ctx.fillRect(c*CELL+2,r*CELL+2,CELL-4,CELL-4);
+      }
+    }
+  }
   // Solver-drawn lines, circles and crosses belong beneath *all* cell ink.
   // Keep these marks visible through fog, without allowing them to obscure
   // original givens, player values or corner/center pencil marks.
@@ -839,6 +861,7 @@ board.addEventListener('pointerdown',event=>{
   if(pointers.size===1){
     const panMouse=event.pointerType==='mouse' &&
       (event.button===1||event.button===2||event.shiftKey||event.altKey);
+    if(panMouse||mode==='pen')lastBoardTap=null;
     if(!panMouse&&mode==='pen'){
       gesture={kind:'pen',start:p,last:p,samples:[p],dragged:false,
         node:penNodeAt(p,camera,CELL,puzzle,penGrid),grid:penGrid,
@@ -846,10 +869,13 @@ board.addEventListener('pointerdown',event=>{
         stroke:createPenStroke(penLines,penColor,penErase)};
     }else{
       const oldSelection=[...selectedCells];
-      gesture={kind:panMouse?'mouse-pan':'select',last:p,moved:false,oldSelection};
-      if(!panMouse)select(gridIndex(p.x,p.y));
+      const startIndex=gridIndex(p.x,p.y);
+      gesture={kind:panMouse?'mouse-pan':'select',start:p,last:p,moved:false,
+        tapMoved:false,startIndex,oldSelection};
+      if(!panMouse)select(startIndex);
     }
   }else if(pointers.size===2){
+    lastBoardTap=null;
     if(gesture?.kind==='pen'){
       penLines=gesture.stroke.before;
       penMarks=gesture.beforeMarks;
@@ -858,7 +884,7 @@ board.addEventListener('pointerdown',event=>{
     if(gesture?.kind==='select'&&!gesture.moved)setSelection(gesture.oldSelection);
     const [a,b]=[...pointers.values()];
     gesture={kind:'transform',lastCenter:pointerCenter(a,b),lastDistance:pointerDistance(a,b)};
-  }else gesture={kind:'ignore'};
+  }else {lastBoardTap=null;gesture={kind:'ignore'};}
 });
 board.addEventListener('pointermove',event=>{
   if(!pointers.has(event.pointerId)||!gesture)return;
@@ -879,6 +905,7 @@ board.addEventListener('pointermove',event=>{
     gesture.last=p;requestDraw();scheduleViewSave();
   }else if(pointers.size===1&&gesture.kind==='select'){
     if(pointerDistance(p,gesture.last)>0.5)gesture.moved=true;
+    if(pointerDistance(p,gesture.start)>TAP_MOVE_TOLERANCE)gesture.tapMoved=true;
     extendSelection(dragCellIndices(previous,p,camera,puzzle));
     gesture.last=p;
   }else if(pointers.size===1&&gesture.kind==='pen'){
@@ -890,6 +917,22 @@ function endPointer(event){
   if(!pointers.has(event.pointerId))return;
   if(pointers.size===1&&gesture?.kind==='pen')
     finishPenGesture(gesture,locationInFrame(event),event.type==='pointercancel');
+  if(pointers.size===1&&gesture?.kind==='select'){
+    const p=locationInFrame(event),index=gridIndex(p.x,p.y);
+    if(event.type==='pointerup' && !gesture.tapMoved &&
+       pointerDistance(p,gesture.start)<=TAP_MOVE_TOLERANCE &&
+       index>=0 && index===gesture.startIndex &&
+       selectedCells.length===1 && selected===index){
+      const tap={index,x:p.x,y:p.y,time:event.timeStamp,
+        pointerType:event.pointerType,value:cellLargeValue(puzzle,progress,index)};
+      const result=advanceNumberHighlight(lastBoardTap,tap,highlightedNumber);
+      lastBoardTap=result.previousTap;
+      if(result.changed){
+        highlightedNumber=result.selectedNumber;
+        updateSelection();requestDraw();
+      }
+    }else lastBoardTap=null;
+  }else lastBoardTap=null;
   pointers.delete(event.pointerId);
   if(pointers.size===1)gesture={kind:'ignore'};
   else if(pointers.size===0)gesture=null;
@@ -943,7 +986,7 @@ $('alphabetButton').addEventListener('click',()=>{alphabet=!alphabet;letterPage=
 $('letterPage').addEventListener('click',()=>{letterPage=(letterPage+1)%3;updateControls();});
 $('modeBar').addEventListener('click',event=>{
   const button=event.target.closest('button[data-mode]');
-  if(button){mode=button.dataset.mode;updateControls();}
+  if(button){mode=button.dataset.mode;lastBoardTap=null;updateControls();}
 });
 $('penTools').addEventListener('click',event=>{
   const swatch=event.target.closest('button[data-pen-color]');
@@ -1109,7 +1152,9 @@ $('importCheckpoint').addEventListener('click',async()=>{
     undoStack=[];redoStack=[];
     refreshConflicts();
     save();lastCompletion=Boolean(progress.solved);
-    selected=-1;selectedCells=[];updateControls();requestDraw();
+    selected=-1;selectedCells=[];
+    highlightedNumber=null;lastBoardTap=null;
+    updateControls();requestDraw();
     $('checkpointDialog').close();
     showGame();
     updateHomeCard();
