@@ -308,11 +308,19 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
         })
     boss_gates = attach_boss_dependencies(
         world, bosses, seed, POSITIONS, boss_cells)
+    from fog_progression import add_progressive_fog
+    fog_plans = add_progressive_fog(
+        world, clues, solutions, boss_cells, POSITIONS, rng,
+        shared_solved_cells, count_solutions, singles, PEERS, UNITS)
     report = {
         'seed': seed, 'attempt': attempt + 1, 'world': [H, W],
         'grid_positions': [list(position) for position in POSITIONS],
         'overlaps': [len(overlap(g, g+1)) for g in range(3)],
         'grid_givens': [len(c) for c in clues],
+        'initial_fog_count': len(world['foglight']),
+        'fog_seed_sizes': [len(plan['seed']) for plan in fog_plans],
+        'fog_starter_counts': [len(plan['milestones']) for plan in fog_plans],
+        'fog_rule_count': len(world['metadata']['generatedFogRules']),
         # Supply even the full shared region from every neighbor: the
         # embedded boss digit must remain indispensable.
         'grid_solutions_without_boss': [
@@ -353,8 +361,19 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
     assert report['grid_solutions_with_boss'] == [1] * 4
     assert report['boss_solution_counts'] == [1] * 4
     assert max(report['boss_singles_resolved']) <= 55
-    assert len(world['foglight']) == 81
+    assert 2 <= len(world['foglight']) < 40
     assert len(world['triggereffect']) == 0
+    assert len(world['metadata']['generatedFogRules']) >= 100
+    assert all(2 <= size < 40 for size in report['fog_seed_sizes'])
+    assert all(count == 3 for count in report['fog_starter_counts'])
+    from fog_progression import validate_fog_walk
+    assert validate_fog_walk(world, POSITIONS, [
+        [int(world['metadata']['solution'][global_index(g,i)])
+         for i in range(81)] for g in range(4)], [
+        (gate['cell'][0] - POSITIONS[g][0])*9 +
+        gate['cell'][1] - POSITIONS[g][1]
+        for g, gate in enumerate(world['metadata']['bossGates'])
+    ], PEERS, UNITS)
     gates = world['metadata']['bossGates']
     assert len(gates) == len(bosses) == 4
     for gate, boss in zip(gates, bosses):
@@ -369,7 +388,7 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
         assert gate['reward'] == completed_boss_reward(
             boss['metadata']['solution'], boss['id'], gate['seed'])
         assert gate['reward'] != boss['metadata']['solution'][40]
-    assert [len(gate['reveals']) for gate in gates] == [81, 81, 81, 0]
+    assert [len(gate['reveals']) for gate in gates] == report['fog_seed_sizes'][1:] + [0]
     for i, boss in enumerate(bosses):
         assert boss['id'].endswith(f'-boss-{i+1}')
     for row in world['cells']:

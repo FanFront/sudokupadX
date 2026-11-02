@@ -55,25 +55,52 @@ export function lockedBossGate(puzzle,index,storage) {
   return Boolean(gate&&!isBossCleared(puzzle,gate,storage));
 }
 
-/** Apply map visibility AFTER Rust restores/recomputes its standard fog.
- * Reveals are cumulative within one snapshot but contingent on every
- * preceding boss completion and correctly entered gate value. The gate
- * belongs to the Sudoku, but remains logically ambiguous even after
- * all overlapping cells are given. The boss supplies the missing digit.
+/** Compute chapter-unlock and deduction-based fog as a monotone fixed point.
+ * A hidden entry never triggers a reveal, and a later chapter's rules are
+ * inert until its boss has been completed and the earned digit entered.
+ * This intentionally leaves other SudokuPad puzzles unchanged.
  */
 export function applyBossReveals(puzzle,progress,storage) {
   if(!puzzle||!progress||!Array.isArray(progress.visible)||
      !Array.isArray(puzzle.bossGates)||!puzzle.bossGates.length)return progress;
   const visible=[...progress.visible];
-  for(const gate of puzzle.bossGates){
-    const index=indexAt(puzzle,gate.cell);
-    if(index<0 || !visible[index] || !isBossCleared(puzzle,gate,storage) ||
-       !/^[1-9]$/.test(String(gate.reward??'')) ||
-       String(progress.cells?.[index]?.value ??
-         puzzle.cells?.[index]?.given ?? '')!==String(gate.reward))break;
-    for(const point of gate.reveals||[]){
-      const target=indexAt(puzzle,point);
-      if(target>=0)visible[target]=true;
+  const unlocked=new Set([0]);
+  const rules=Array.isArray(puzzle.fogRules)?puzzle.fogRules:[];
+  const readValue=index=>String(progress.cells?.[index]?.value ??
+    puzzle.cells?.[index]?.given ?? '');
+  let changed=true,iterations=0;
+  while(changed && iterations++ < puzzle.cells.length+8){
+    changed=false;
+    // A completed and correctly filled boss cell starts only a small new
+    // chapter pocket, not an entire Sudoku.
+    for(let i=0;i<puzzle.bossGates.length;i++){
+      if(!unlocked.has(i))break;
+      const gate=puzzle.bossGates[i];
+      const index=indexAt(puzzle,gate.cell);
+      if(index<0||!visible[index]||!isBossCleared(puzzle,gate,storage)||
+        !/^[1-9]$/.test(String(gate.reward??''))||
+        readValue(index)!==String(gate.reward))break;
+      if(i+1<puzzle.bossGates.length)unlocked.add(i+1);
+      for(const point of gate.reveals||[]){
+        const target=indexAt(puzzle,point);
+        if(target>=0&&!visible[target]){visible[target]=true;changed=true;}
+      }
+    }
+    for(const rule of rules){
+      if(!unlocked.has(rule.chapter)||!Array.isArray(rule.cells)||
+        !Array.isArray(rule.values)||!Array.isArray(rule.reveals)||
+        !rule.cells.length||rule.cells.length!==rule.values.length)continue;
+      const active=rule.cells.every((point,j)=>{
+        const index=indexAt(puzzle,point);
+        return index>=0&&visible[index]&&
+          puzzle.cells?.[index]?.given==null &&
+          readValue(index)===String(rule.values[j]);
+      });
+      if(!active)continue;
+      for(const point of rule.reveals){
+        const target=indexAt(puzzle,point);
+        if(target>=0&&!visible[target]){visible[target]=true;changed=true;}
+      }
     }
   }
   progress.visible=visible;

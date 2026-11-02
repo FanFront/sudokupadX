@@ -35,6 +35,9 @@ pub struct Puzzle {
     /// Generated adventure boss gates (data-only, validated in the UI).
     #[serde(default)]
     pub boss_gates: Vec<Value>,
+    /// Generated chapter-local, correctness-triggered fog reveals.
+    #[serde(default)]
+    pub fog_rules: Vec<Value>,
     /// A generated boss's link to its map and seed.
     #[serde(default)]
     pub boss_link: Option<Value>,
@@ -297,6 +300,8 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         sectors,
         boss_gates: meta.get("bossGates").and_then(Value::as_array)
             .map(|gates| gates.iter().take(32).cloned().collect()).unwrap_or_default(),
+        fog_rules: meta.get("generatedFogRules").and_then(Value::as_array)
+            .map(|rules| rules.iter().take(1500).cloned().collect()).unwrap_or_default(),
         boss_link: meta.get("bossLink").cloned(),
         foglight, triggers, solution,
         completion_text: meta.get("msgcorrect").and_then(Value::as_str).map(str::to_owned),
