@@ -86,6 +86,8 @@ class GeneratorTests(unittest.TestCase):
     def test_reproducible_and_export(self):
         other, bosses, report = gen.build(20261102)
         self.assertEqual((self.world, self.bosses, self.report), (other, bosses, report))
+        self.assertEqual(report['grid_positions'], [list(position) for position in gen.POSITIONS])
+        self.assertEqual(json.loads(json.dumps(report)), report)
         with tempfile.TemporaryDirectory() as dirname:
             out = Path(dirname)
             gen.export(out, other, bosses, report)
