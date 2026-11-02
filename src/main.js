@@ -10,6 +10,7 @@ import {TAP_MOVE_TOLERANCE,cellLargeValue,isHighlightedNumber,advanceNumberHighl
 import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
 import {markBossCleared,lockedBossGate,bossGateAt,applyBossReveals} from './boss-gates.js';
+import {editableCellIndices} from './fog-editing.js';
 import {setupOnlineLibrary} from './online-ui.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
@@ -724,16 +725,21 @@ function applyChange(change) {
 async function edit(action,symbol='') {
   clearNumberHighlight();
   if(pending||!puzzle)return;
-  // A map gate is a reward, not a Sudoku digit: the linked boss must
-  // actually be finished before any value or note can be entered here.
-  if(selectedCells.some(index=>bossGateAt(puzzle,index) && !isVisible(progress,index))){
+  // Boss reward digits still require completing the linked puzzle, but
+  // ordinary pencil marks/colours/erasure are never locked by the boss or
+  // fog. A concealed authored clue behaves like an empty editable cell.
+  if(action==='value'&&selectedCells.some(index=>bossGateAt(puzzle,index) &&
+      !isVisible(progress,index))){
     toast('该首领入口尚未探索');return;
   }
-  if(selectedCells.some(index=>lockedBossGate(puzzle,index,localStorage))){
+  if(action==='value'&&selectedCells.some(index=>lockedBossGate(puzzle,index,localStorage))){
     toast('请先完成关联首领谜题，取得通关数字');return;
   }
-  const indices=selectedCells.filter(index=>puzzle.cells[index]?.given==null);
-  if(!indices.length){toast(selectedCells.length?'提示数字不可修改':'请先选择格子');return;}
+  const indices=editableCellIndices(puzzle,progress,selectedCells);
+  if(!indices.length){
+    if(!selectedCells.length)toast('请先选择格子');
+    return;
+  }
   pending=true;
   try {
     const before=indices.map(index=>JSON.stringify(progress.cells[index]));
