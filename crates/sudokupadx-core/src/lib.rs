@@ -32,6 +32,12 @@ pub struct Puzzle {
     pub cages: Vec<Value>,
     pub arrows: Vec<Value>,
     pub sectors: Vec<Sector>,
+    /// Generated adventure boss gates (data-only, validated in the UI).
+    #[serde(default)]
+    pub boss_gates: Vec<Value>,
+    /// A generated boss's link to its map and seed.
+    #[serde(default)]
+    pub boss_link: Option<Value>,
     #[serde(skip)]
     pub foglight: Option<Vec<usize>>,
     #[serde(skip)]
@@ -288,7 +294,11 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         overlays: marks(&root, "overlays", "o", &mut warnings),
         cages: marks(&root, "cages", "ca", &mut warnings),
         arrows: marks(&root, "arrows", "a", &mut warnings),
-        sectors, foglight, triggers, solution,
+        sectors,
+        boss_gates: meta.get("bossGates").and_then(Value::as_array)
+            .map(|gates| gates.iter().take(32).cloned().collect()).unwrap_or_default(),
+        boss_link: meta.get("bossLink").cloned(),
+        foglight, triggers, solution,
         completion_text: meta.get("msgcorrect").and_then(Value::as_str).map(str::to_owned),
         warnings,
     })

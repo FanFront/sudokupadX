@@ -28,3 +28,17 @@ test('fog hides generated boss entrances until the sector is visible',()=>{
   progress.visible[0]=true;
   assert.deepEqual(linksAtCell(puzzle,progress,0,catalog,main).map(x=>x.id),[boss]);
 });
+
+test('off-grid BOSS gate is the directly selectable entrance, and fog hides it',()=>{
+  const puzzle={
+    rows:27,cols:27,rules:'Explore',
+    cells:Array.from({length:729},()=>({given:null})),
+    sectors:[],
+    bossGates:[{bossId:boss,cell:[4,9],reward:'7',seed:20261102,reveals:[]}]
+  };
+  const progress={visible:Array(729).fill(false)};
+  const index=4*27+9;
+  assert.deepEqual(linksAtCell(puzzle,progress,index,catalog,main),[]);
+  progress.visible[index]=true;
+  assert.deepEqual(linksAtCell(puzzle,progress,index,catalog,main).map(x=>x.id),[boss]);
+});

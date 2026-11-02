@@ -2,8 +2,9 @@
 """Generate a seeded 4-grid, 4-boss SudokuPadX adventure using Python's stdlib.
 
 The first three grids are intentionally ambiguous until the overlapping
-values from the following grid are available. Output is SudokuPad JSON and a
-catalog fragment consumed by SudokuPadX at startup.
+values from the following grid are available. Four independent boss puzzles
+award digits to off-grid gates; progression requires their completion. Output
+is SudokuPad JSON and a catalog fragment consumed by SudokuPadX at startup.
 """
 from __future__ import annotations
 
@@ -289,7 +290,9 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
     for i in range(4):
         for boss_attempt in range(100):
             solved = make_solution(rng)
-            given = dig(rng, solved, set(), min_clues=22)
+            # R5C5 is always an empty clue: completing the boss reveals its
+            # previously unknown value as the separate map-gate reward.
+            given = dig(rng, solved, {40}, min_clues=22)
             if len(singles(given)) <= 55:
                 break
         else:
@@ -308,6 +311,8 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
                 'msgcorrect': f'Gatekeeper {i+1} defeated. Return to the map.'
             }
         })
+    from boss_dependencies import attach_boss_dependencies
+    boss_gates = attach_boss_dependencies(world, bosses, seed, POSITIONS)
     report = {
         'seed': seed, 'attempt': attempt + 1, 'world': [H, W],
         'grid_positions': [list(position) for position in POSITIONS],
@@ -327,13 +332,16 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
                          for r, row in enumerate(b['cells'])
                          for c, cell in enumerate(row) if cell}))
             for b in bosses],
+        'boss_gates': [
+            {'bossId': gate['bossId'], 'cell': gate['cell'],
+             'revealCount': len(gate['reveals'])}
+            for gate in boss_gates
+        ],
         'boss_solution_counts': [
             count_solutions({r*9+c: int(cell['value'])
                              for r, row in enumerate(b['cells'])
                              for c, cell in enumerate(row) if cell})
             for b in bosses],
-        'beacons': [f'r{global_index(g, loc)//W+1}c{global_index(g, loc)%W+1}'
-                    for g, loc in enumerate(gates)],
         'label': 'Hard target: low givens, singles-resistant bosses, and '
                  'cross-grid gates; not a calibrated human difficulty grade'
     }
@@ -348,8 +356,20 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
     assert report['grid_solutions_with_next'] == [1, 1, 1]
     assert report['boss_solution_counts'] == [1] * 4
     assert max(report['boss_singles_resolved']) <= 55
-    assert len(world['foglight']) == 81
-    assert len(world['triggereffect']) == 3
+    assert len(world['foglight']) == 82
+    assert len(world['triggereffect']) == 0
+    gates = world['metadata']['bossGates']
+    assert len(gates) == len(bosses) == 4
+    for gate, boss in zip(gates, bosses):
+        r, c = gate['cell']
+        assert all(not (top <= r < top+9 and left <= c < left+9)
+                   for top, left in POSITIONS)
+        assert gate['reward'] == boss['metadata']['solution'][40]
+        assert world['metadata']['solution'][r*W+c] == gate['reward']
+        assert world['cells'][r][c] == {}
+        assert boss['metadata']['bossLink']['bossId'] == boss['id']
+        assert boss['cells'][4][4] == {}
+    assert [len(gate['reveals']) for gate in gates] == [82, 82, 82, 0]
     for i, boss in enumerate(bosses):
         assert boss['id'].endswith(f'-boss-{i+1}')
     for row in world['cells']:
