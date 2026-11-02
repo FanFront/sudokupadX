@@ -7,6 +7,7 @@ on:
       - 'scripts/boss_dependencies.py'
       - 'tests/test_generate_adventure.py'
       - 'tests/boss-gates.test.mjs'
+      - 'tests/fog-progression.test.mjs'
       - 'tests/generated-adventure.test.mjs'
       - 'src/boss-gates.js'
       - '.github/workflows/procedural-adventure.yml'
@@ -16,6 +17,7 @@ on:
       - 'scripts/boss_dependencies.py'
       - 'tests/test_generate_adventure.py'
       - 'tests/boss-gates.test.mjs'
+      - 'tests/fog-progression.test.mjs'
       - 'tests/generated-adventure.test.mjs'
       - 'src/boss-gates.js'
       - '.github/workflows/procedural-adventure.yml'
@@ -40,4 +42,4 @@ jobs:
           python3 scripts/generate_adventure.py --seed 20261102
           python3 -m unittest discover -s tests -p 'test_generate_adventure.py'
       - name: Check boss completion, fog ordering and linked navigation
-        run: node --test tests/boss-gates.test.mjs tests/generated-adventure.test.mjs
+        run: node --test tests/boss-gates.test.mjs tests/generated-adventure.test.mjs tests/fog-progression.test.mjs
