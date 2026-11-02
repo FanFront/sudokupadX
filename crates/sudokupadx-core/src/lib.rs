@@ -488,7 +488,13 @@ impl Session {
             return Err("Save has different board dimensions.".into());
         }
         for (index, value) in cells.iter().enumerate() {
-            if self.puzzle.cells[index].given.is_some() && *value != InputCell::default() {
+            // Notes/values entered while a clue was concealed by fog may
+            // outlive its reveal. Keep them in saves; the authored clue
+            // always takes precedence when rendering/checking correctness.
+            if self.puzzle.cells[index].given.is_some()
+                && self.puzzle.foglight.is_none()
+                && *value != InputCell::default()
+            {
                 return Err("Save tried to modify a given cell.".into());
             }
             if value.value.as_deref().is_some_and(|s| !valid_symbol(s))
@@ -508,8 +514,8 @@ impl Session {
     }
     pub fn apply(&mut self, index: usize, mode: &str, symbol: &str) -> Result<EditResult, String> {
         if index >= self.cells.len() { return Err("Cell is outside the board.".into()); }
-        if self.puzzle.cells[index].given.is_some() {
-            return Err("Given cells cannot be edited.".into());
+        if self.puzzle.cells[index].given.is_some() && self.visible[index] {
+            return Err("Visible given cells cannot be edited.".into());
         }
         self.apply_many(&[index], mode, symbol)
     }
@@ -532,7 +538,13 @@ impl Session {
         let mut selected = Vec::new();
         for &index in indices {
             if index >= self.cells.len() { return Err("Cell is outside the board.".into()); }
-            if self.puzzle.cells[index].given.is_none() && !selected.contains(&index) {
+            // Fog-covered givens are visually unknown to the player, so
+            // they must accept candidate marks just like ordinary cells.
+            // Revealed givens remain immutable. The UI additionally knows
+            // about dynamically revealed procedural fog.
+            if (self.puzzle.cells[index].given.is_none() || !self.visible[index])
+                && !selected.contains(&index)
+            {
                 selected.push(index);
             }
         }
