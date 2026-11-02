@@ -53,6 +53,9 @@ jobs:
           test -s dist/puzzles/catalog.json
           test -s dist/puzzles/digits-of-despair.scl
           test -s dist/puzzles/super-sudokoid-1.scl
+          test -s dist/puzzles/generated/generated-adventure-1.json
+          test -s dist/puzzles/generated/generated-adventure-1-boss-1.json
+          test -s dist/puzzles/generated/catalog-entries.json
           grep -q '/sudokupadX/assets/' dist/index.html
       - name: Install Chromium browser checks
         run: |
