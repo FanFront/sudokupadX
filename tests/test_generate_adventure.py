@@ -42,43 +42,50 @@ class GeneratorTests(unittest.TestCase):
                 for i, j in gen.overlap(g, other):
                     self.assertEqual(answer[i], other_answer[j])
 
-    def test_inductive_global_uniqueness(self):
-        for g in reversed(range(4)):
-            clues, answer = self.local(g)
-            if g < 3:
-                downstream = {i: answer[i] for i, _ in gen.overlap(g, g+1)}
-                previous = {i: answer[i] for i, _ in gen.overlap(g, g-1)} if g else {}
-                self.assertEqual(gen.count_solutions(clues | previous), 2)
-                self.assertEqual(gen.count_solutions(clues | downstream), 1)
-            else:
-                self.assertEqual(gen.count_solutions(clues), 1)
-
-    def test_boss_codes_are_outside_sudoku_and_unlock_fog_in_order(self):
-        self.assertEqual(len(self.world['foglight']), 82)
+    def test_boss_cells_are_essential_and_inside_their_sudoku(self):
+        gates = self.world['metadata']['bossGates']
+        self.assertEqual(self.report['grid_solutions_without_boss'], [2]*4)
+        self.assertEqual(self.report['grid_solutions_with_boss'], [1]*4)
+        self.assertEqual(len(self.world['foglight']), 81)
         self.assertEqual(len(self.world['triggereffect']), 0)
         self.assertEqual(len(self.world['underlays']), 4)
-        gates = self.world['metadata']['bossGates']
-        self.assertEqual(len(gates), 4)
         for i, gate in enumerate(gates):
-            r,c = gate['cell']
-            self.assertTrue(all(
-                not (top <= r < top+9 and left <= c < left+9)
-                for top,left in gen.POSITIONS
-            ), 'Gate is accidentally deducible inside a Sudoku grid')
+            r, c = gate['cell']
+            # This is a normal Sudoku cell of exactly one grid; not a
+            # special off-grid unlock token, and not an overlap shortcut.
+            self.assertEqual(sum(
+                top <= r < top+9 and left <= c < left+9
+                for top, left in gen.POSITIONS), 1)
+            top, left = gen.POSITIONS[i]
+            self.assertTrue(top <= r < top+9 and left <= c < left+9)
+            cell = (r-top)*9 + c-left
+            self.assertNotIn(cell, gen.shared_solved_cells(
+                [self.local(g)[1] for g in range(4)], i))
             self.assertEqual(self.world['cells'][r][c], {})
+
+            clues, answer = self.local(i)
+            all_overlaps = {j: answer[j] for other in range(4)
+                            if other != i for j, _ in gen.overlap(i,other)}
+            self.assertEqual(gen.count_solutions(clues | all_overlaps), 2,
+                'Boss cell must remain ambiguous even if all other '
+                'grid overlaps and givens are known')
+            self.assertEqual(gen.count_solutions(
+                clues | all_overlaps | {cell: answer[cell]}), 1)
+            self.assertEqual(gen.count_solutions(
+                clues | {cell: answer[cell]}), 1,
+                'Supplying the boss digit must complete this unique Sudoku')
+
             boss = self.bosses[i]
-            solved_grid = boss['metadata']['solution']
-            reward = completed_boss_reward(solved_grid, boss['id'], gate['seed'])
+            reward = completed_boss_reward(
+                boss['metadata']['solution'], boss['id'], gate['seed'])
             self.assertEqual(gate['reward'], reward)
-            self.assertNotEqual(reward, solved_grid[40],
-                                'Reward must not appear to be R5C5')
-            self.assertEqual(gate['rewardVersion'], 2)
+            self.assertEqual(str(answer[cell]), reward)
             self.assertEqual(self.world['metadata']['solution'][r*gen.W+c], reward)
-            self.assertEqual(boss['metadata']['bossLink']['bossId'], boss['id'])
-            self.assertEqual(boss['metadata']['bossLink']['rewardVersion'], 2)
+            self.assertNotEqual(reward, boss['metadata']['solution'][40])
+            self.assertEqual(gate['rewardVersion'], 3)
+            self.assertEqual(boss['metadata']['bossLink']['rewardVersion'], 3)
             self.assertIn(reward, boss['metadata']['msgcorrect'])
-            self.assertIn('entire', boss['metadata']['rules'])
-            self.assertEqual(len(gate['reveals']), 82 if i < 3 else 0)
+            self.assertEqual(len(gate['reveals']), 81 if i < 3 else 0)
             if i:
                 self.assertIn([r,c], gates[i-1]['reveals'])
         self.assertIn(gates[0]['cell'], self.world['foglight'])
