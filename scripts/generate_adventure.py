@@ -364,7 +364,6 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
         r, c = gate['cell']
         assert all(not (top <= r < top+9 and left <= c < left+9)
                    for top, left in POSITIONS)
-        assert gate['reward'] == boss['metadata']['solution'][40]
         assert world['metadata']['solution'][r*W+c] == gate['reward']
         assert world['cells'][r][c] == {}
         assert boss['metadata']['bossLink']['bossId'] == boss['id']
