@@ -15,9 +15,10 @@ export function isHighlightedNumber(puzzle,progress,index,number) {
   return number!==null && cellLargeValue(puzzle,progress,index)===number;
 }
 
-// Call only for completed, stationary taps in selection mode. A second tap
-// on the same cell selects its large digit (including a visible given), or
-// clears an existing highlight. Blank-cell double taps clear the highlight.
+// Call only for completed, stationary taps in selection mode.
+// Any single tap clears an existing highlight. Save what was highlighted
+// before that first tap, so a second tap can still toggle the same number off
+// or switch to a new digit without restoring an unwanted highlight.
 export function advanceNumberHighlight(previousTap,tap,selectedNumber) {
   const doubleTap=previousTap!==null &&
     previousTap.index===tap.index &&
@@ -25,7 +26,12 @@ export function advanceNumberHighlight(previousTap,tap,selectedNumber) {
     tap.time>=previousTap.time &&
     tap.time-previousTap.time<=DOUBLE_TAP_INTERVAL &&
     Math.hypot(tap.x-previousTap.x,tap.y-previousTap.y)<=DOUBLE_TAP_DISTANCE;
-  if(!doubleTap) return {previousTap:tap,selectedNumber,changed:false};
-  const next=tap.value===selectedNumber?null:tap.value;
+  if(!doubleTap) return {
+    previousTap:{...tap,highlightBeforeTap:selectedNumber},
+    selectedNumber:null,changed:selectedNumber!==null
+  };
+  const before=Object.hasOwn(previousTap,'highlightBeforeTap')
+    ?previousTap.highlightBeforeTap:selectedNumber;
+  const next=tap.value===before?null:tap.value;
   return {previousTap:null,selectedNumber:next,changed:next!==selectedNumber};
 }
