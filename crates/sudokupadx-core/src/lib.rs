@@ -736,16 +736,61 @@ mod tests {
     }
 
     #[test]
-    fn visible_given_rejects_marks_even_when_other_cells_are_in_fog() {
+    fn visible_givens_accept_notes_but_never_overwrite_the_clue() {
         let raw = r#"{"cells":[[{"value":1},{}],[{},{}]],
             "foglight":[[0,0],[0,1]]}"#;
         let mut session = Session::new(load(raw).unwrap());
         assert!(session.snapshot().visible[0]);
-        assert!(session.apply(0, "corner", "2").is_err());
+        assert_eq!(session.puzzle.cells[0].given.as_deref(), Some("1"));
+
+        session.apply(0, "corner", "2").unwrap();
+        session.apply(0, "center", "3").unwrap();
+        assert_eq!(session.snapshot().cells[0].corner, vec!["2"]);
+        assert_eq!(session.snapshot().cells[0].center, vec!["3"]);
         assert!(session.apply(0, "value", "8").is_err());
-        assert!(session.apply_many(&[0, 1], "corner", "2").is_ok());
-        assert!(session.snapshot().cells[0].corner.is_empty());
-        assert_eq!(session.snapshot().cells[1].corner, vec!["2"]);
+        assert!(session.snapshot().cells[0].value.is_none());
+
+        // Dragged selection includes a clue; every cell receives the mark.
+        let result = session.apply_many(&[0, 1, 2], "corner", "5").unwrap();
+        assert_eq!(result.changes.len(), 3);
+        for i in [0, 1, 2] {
+            assert_eq!(session.snapshot().cells[i].corner, vec!["2", "5"]
+                .into_iter().filter(|v| i==0 || *v=="5")
+                .map(str::to_string).collect::<Vec<_>>());
+        }
+        session.undo().unwrap();
+        assert_eq!(session.snapshot().cells[0].corner, vec!["2"]);
+        assert!(session.snapshot().cells[1].corner.is_empty());
+        session.redo().unwrap();
+        assert!(session.snapshot().cells[0].corner.contains(&"5".to_string()));
+
+        // Candidate marks survive saved-state restoration even on givens.
+        let saved=session.snapshot().cells;
+        let mut restored=Session::new(load(raw).unwrap());
+        restored.restore(saved).unwrap();
+        assert_eq!(restored.snapshot().cells[0].center, vec!["3"]);
+        assert_eq!(restored.snapshot().cells[0].corner, vec!["2", "5"]);
+        restored.apply(0, "erase", "").unwrap();
+        assert_eq!(restored.snapshot().cells[0], InputCell::default());
+        assert_eq!(restored.puzzle.cells[0].given.as_deref(), Some("1"));
+    }
+
+    #[test]
+    fn visible_given_candidate_notes_survive_nonfog_checkpoint() {
+        let raw = r#"{"cells":[[{"value":1},{}],[{},{}]]}"#;
+        let mut session = Session::new(load(raw).unwrap());
+        session.apply_many(&[0, 1], "center", "4").unwrap();
+        assert_eq!(session.snapshot().cells[0].center, vec!["4"]);
+        assert_eq!(session.snapshot().cells[1].center, vec!["4"]);
+        let saved=session.snapshot().cells;
+        let mut restored=Session::new(load(raw).unwrap());
+        restored.restore(saved).unwrap();
+        assert_eq!(restored.snapshot().cells[0].center, vec!["4"]);
+        assert!(restored.apply(0, "value", "9").is_err());
+        assert!(restored.snapshot().cells[0].value.is_none());
+        let mut invalid=restored.snapshot().cells;
+        invalid[0].value=Some("9".to_owned());
+        assert!(restored.restore(invalid).is_err());
     }
 
     #[test]
