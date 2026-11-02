@@ -8,7 +8,7 @@ the boss to have been marked complete before accepting a reward code.
 import hashlib
 
 
-REWARD_VERSION = 2
+REWARD_VERSION = 3
 
 
 def completed_boss_reward(solution: str, boss_id: str, seed: int) -> str:
