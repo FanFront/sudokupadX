@@ -310,7 +310,7 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
         })
     report = {
         'seed': seed, 'attempt': attempt + 1, 'world': [H, W],
-        'grid_positions': POSITIONS,
+        'grid_positions': [list(position) for position in POSITIONS],
         'overlaps': [len(overlap(g, g+1)) for g in range(3)],
         'grid_givens': [len(c) for c in clues],
         'grid_solutions_before_next': [
