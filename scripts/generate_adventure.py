@@ -240,13 +240,17 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
             for bc in range(0, 9, 3):
                 regions.append([[top + br + dr, left + bc + dc]
                                 for dr in range(3) for dc in range(3)])
+        beacon = (f'The highlighted beacon is global R{global_index(g, gates[g])//W+1}'
+                  f'C{global_index(g, gates[g])%W+1}; enter its correct digit to reveal '
+                  'the next chapter.' if g < 3 else 'Final chapter. Complete the map.')
         grids.append({'top': top, 'left': left, 'width': 9, 'height': 9,
                       'title': f'Chapter {g+1}: {names[g]}',
                       'author': 'SudokuPadX Generator',
                       'rules': ('Normal Sudoku. Each row, column and outlined 3x3 box '
                                 'contains 1-9. Neighboring grids share their overlapping '
                                 'cells. Some chapters require deductions from the next.\n'
-                                f'Boss entrance: sudokupadx:puzzle/{WORLD_ID}-boss-{g+1}')})
+                                + beacon + '\n'
+                                + f'Boss entrance: sudokupadx:puzzle/{WORLD_ID}-boss-{g+1}')})
     initial = [[r, c] for r in range(9) for c in range(9)]
     effects = []
     for g, local in enumerate(gates):
@@ -258,10 +262,16 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
             'effect': {'type': 'foglight', 'cells': ''.join(
                 f'r{p//W+1}c{p%W+1}' for p in target)}
         })
+    beacons = [divmod(global_index(g, loc), W) for g, loc in enumerate(gates)]
+    # Draw behind the user's digit; the fog hides later chapter beacons.
+    highlights = [{'center': [r + .5, c + .5], 'width': .92, 'height': .92,
+                   'rounded': True, 'backgroundColor': '#f8e2a0'}
+                  for r, c in beacons]
     world = {
         'id': WORLD_ID,
         'cells': world_cells,
         'regions': regions,
+        'underlays': highlights,
         'foglight': initial,
         'triggereffect': effects,
         'metadata': {
