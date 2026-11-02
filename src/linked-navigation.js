@@ -10,8 +10,10 @@ export function linksAtCell(puzzle,progress,index,catalog,currentId=null) {
   const sectors=getSectors(puzzle,index);
   const sources=[puzzle.rules,...sectors.map(sector=>sector.rules)];
   const result=[],seen=new Set();
-  // Procedural bosses have a dedicated map cell OUTSIDE every Sudoku sector.
-  // The gate itself must also be a clickable entrance, not only the region.
+  // Generated bosses are discovered ONLY at their embedded, visible
+  // BOSS cell. Ordinary chapter cells must not bypass the fog milestone
+  // by exposing the chapter's boss link from its rules text.
+  const generated=Array.isArray(puzzle.bossGates)&&puzzle.bossGates.length>0;
   for(const gate of puzzle.bossGates||[]){
     const [r,c]=Array.isArray(gate?.cell)?gate.cell:[-1,-1];
     if(!Number.isInteger(r)||!Number.isInteger(c)||r*puzzle.cols+c!==index)continue;
@@ -20,6 +22,7 @@ export function linksAtCell(puzzle,progress,index,catalog,currentId=null) {
       seen.add(entry.id);result.push(entry);
     }
   }
+  if(generated)return result;
   for(const rules of sources){
     for(const entry of getLinkedPuzzles(rules,catalog)){
       if(!entry?.file || entry.id===currentId || seen.has(entry.id))continue;
