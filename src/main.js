@@ -8,7 +8,7 @@ import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
 import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
-import {markBossCleared,lockedBossGate,applyBossReveals} from './boss-gates.js';
+import {markBossCleared,lockedBossGate,bossGateAt,applyBossReveals} from './boss-gates.js';
 import {setupOnlineLibrary} from './online-ui.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
@@ -703,6 +703,9 @@ async function edit(action,symbol='') {
   if(pending||!puzzle)return;
   // A map gate is a reward, not a Sudoku digit: the linked boss must
   // actually be finished before any value or note can be entered here.
+  if(selectedCells.some(index=>bossGateAt(puzzle,index) && !isVisible(progress,index))){
+    toast('该首领入口尚未探索');return;
+  }
   if(selectedCells.some(index=>lockedBossGate(puzzle,index,localStorage))){
     toast('请先完成关联首领谜题，取得通关数字');return;
   }
