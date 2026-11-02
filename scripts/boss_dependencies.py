@@ -1,9 +1,35 @@
-"""Attach boss-dependent map gates outside classic Sudoku houses.
+"""Attach full-boss-solution reward codes to gates outside Sudoku houses.
 
-All authored boss rewards are independent of the map's row/column/box
-constraints. Fog changes only after the player has *finished* the boss and
-entered the reward digit in the corresponding map gate.
+Rewards are derived from a cryptographic digest of all 81 solved digits,
+not the digit in any designated boss cell. The game additionally requires
+the boss to have been marked complete before accepting a reward code.
 """
+
+import hashlib
+
+
+REWARD_VERSION = 2
+
+
+def completed_boss_reward(solution: str, boss_id: str, seed: int) -> str:
+    """Deterministically turn an entire solved 9x9 grid into a one-digit reward.
+
+    This is a *non-secret* code; its purpose is to make an individual cell
+    insufficient to determine the reward, not to provide cryptographic DRM.
+    The replayed SHA-256 hash also avoids accidentally returning R5C5, which
+    would misleadingly suggest that the reward still came from that cell.
+    """
+    if (len(solution) != 81 or any(d not in '123456789' for d in solution)
+            or not isinstance(seed, int) or not isinstance(boss_id, str)
+            or not boss_id):
+        raise ValueError('Expected a complete 81-digit boss solution, ID and seed')
+    payload = f'SudokuPadX|boss-reward-v{REWARD_VERSION}|{seed}|{boss_id}|{solution}'
+    for nonce in range(256):
+        digest = hashlib.sha256(f'{payload}|{nonce}'.encode('ascii')).digest()
+        digit = str(int.from_bytes(digest, 'big') % 9 + 1)
+        if digit != solution[40]:
+            return digit
+    raise RuntimeError('Unable to derive a distinct boss reward')
 
 def attach_boss_dependencies(world, bosses, seed, positions):
     rows = len(world['cells'])
@@ -26,14 +52,14 @@ def attach_boss_dependencies(world, bosses, seed, positions):
 
         boss_solution = boss['metadata']['solution']
         assert len(boss_solution) == 81
-        reward = boss_solution[40]  # R5C5, explicitly withheld as a given
-        assert boss['cells'][4][4] == {}
-        assert reward in '123456789'
-
         boss_id = boss['id']
+        reward = completed_boss_reward(boss_solution, boss_id, seed)
+        assert reward in '123456789' and reward != boss_solution[40]
+
         gates.append({
             'bossId': boss_id,
             'seed': seed,
+            'rewardVersion': REWARD_VERSION,
             'cell': [r, c],
             'reward': reward,
             'reveals': ([[rr, cc] for rr in range(positions[i+1][0], positions[i+1][0] + 9)
@@ -42,16 +68,19 @@ def attach_boss_dependencies(world, bosses, seed, positions):
         })
         solution[r*cols+c] = reward
         boss['metadata']['bossLink'] = {
-            'bossId': boss_id, 'parent': world['id'], 'seed': seed
+            'bossId': boss_id, 'parent': world['id'], 'seed': seed,
+            'rewardVersion': REWARD_VERSION
         }
         boss['metadata']['rules'] = (
             'Classic 9x9 Sudoku. Complete this entire puzzle to earn your '
-            'map gate code. Its digit is the value of R5C5. '
+            'map gate code. It is derived from the entire completed '
+            '81-cell grid, not from a single cell. '
             'Return to the world map and enter it in the marked BOSS cell.'
         )
         boss['metadata']['msgcorrect'] = (
             f'{chapter_names[i]} guardian defeated! Your map gate code is '
-            f'{reward} (the value of R5C5). Return to the world map, '
+            f'{reward} (calculated from the whole solved grid). '
+            'Return to the world map, '
             'find the orange BOSS gate next to this chapter, and enter it.'
         )
         chapter_top, chapter_left = positions[i]
@@ -61,8 +90,8 @@ def attach_boss_dependencies(world, bosses, seed, positions):
             f'Chapter {i+1}: {chapter_names[i]}. '
             f'The BOSS gate is outside this grid at R{r+1}C{c+1}. '
             'It is not constrained by Sudoku rows, columns or boxes. '
-            'Complete the linked boss to obtain its code (R5C5 in the '
-            'boss puzzle), then enter it in the BOSS gate. '
+            'Complete the linked boss to obtain its code, derived from '
+            'the complete solution. Enter that reward in the BOSS gate. '
             'A code cannot open the gate before the boss is completed.\n'
             f'Boss entrance: sudokupadx:puzzle/{boss_id}'
         )
@@ -73,7 +102,8 @@ def attach_boss_dependencies(world, bosses, seed, positions):
         'Four overlapping Sudoku chapters and four guardian bosses. '
         'The orange BOSS cells are OUTSIDE the Sudoku grids and have no '
         'row, column or box constraints. Solve each linked boss completely '
-        'to earn its R5C5 gate code, then enter it in the corresponding '
+        'to earn a code derived from the entire finished boss, then enter '
+        'that digit in the corresponding '
         'orange BOSS cell to reveal the next chapter. The fourth guardian '
         'completes the world. Selecting a visible chapter opens its boss.'
     )
