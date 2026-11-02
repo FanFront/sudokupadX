@@ -290,7 +290,9 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
     for i in range(4):
         for boss_attempt in range(100):
             solved = make_solution(rng)
-            given = dig(rng, solved, set(), min_clues=22)
+            # R5C5 is always an empty clue: completing the boss reveals its
+            # previously unknown value as the separate map-gate reward.
+            given = dig(rng, solved, {40}, min_clues=22)
             if len(singles(given)) <= 55:
                 break
         else:
@@ -340,8 +342,6 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
                              for r, row in enumerate(b['cells'])
                              for c, cell in enumerate(row) if cell})
             for b in bosses],
-        'beacons': [f'r{global_index(g, loc)//W+1}c{global_index(g, loc)%W+1}'
-                    for g, loc in enumerate(gates)],
         'label': 'Hard target: low givens, singles-resistant bosses, and '
                  'cross-grid gates; not a calibrated human difficulty grade'
     }
