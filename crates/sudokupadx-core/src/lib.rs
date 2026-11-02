@@ -488,14 +488,15 @@ impl Session {
             return Err("Save has different board dimensions.".into());
         }
         for (index, value) in cells.iter().enumerate() {
-            // Notes/values entered while a clue was concealed by fog may
-            // outlive its reveal. Keep them in saves; the authored clue
-            // always takes precedence when rendering/checking correctness.
+            // All visible givens may carry player pencil marks/colour.
+            // For non-fog puzzles they must not carry a player large value;
+            // in fog puzzles a digit entered while hidden survives a reveal.
+            // In both cases the authored given remains authoritative.
             if self.puzzle.cells[index].given.is_some()
                 && self.puzzle.foglight.is_none()
-                && *value != InputCell::default()
+                && value.value.is_some()
             {
-                return Err("Save tried to modify a given cell.".into());
+                return Err("Save tried to overwrite a given digit.".into());
             }
             if value.value.as_deref().is_some_and(|s| !valid_symbol(s))
                 || value.corner.len() > 26 || value.center.len() > 26
@@ -514,8 +515,10 @@ impl Session {
     }
     pub fn apply(&mut self, index: usize, mode: &str, symbol: &str) -> Result<EditResult, String> {
         if index >= self.cells.len() { return Err("Cell is outside the board.".into()); }
-        if self.puzzle.cells[index].given.is_some() && self.visible[index] {
-            return Err("Visible given cells cannot be edited.".into());
+        if self.puzzle.cells[index].given.is_some() && self.visible[index]
+            && mode == "value"
+        {
+            return Err("Visible given digits cannot be overwritten.".into());
         }
         self.apply_many(&[index], mode, symbol)
     }
@@ -538,13 +541,14 @@ impl Session {
         let mut selected = Vec::new();
         for &index in indices {
             if index >= self.cells.len() { return Err("Cell is outside the board.".into()); }
-            // Fog-covered givens are visually unknown to the player, so
-            // they must accept candidate marks just like ordinary cells.
-            // Revealed givens remain immutable. The UI additionally knows
-            // about dynamically revealed procedural fog.
-            if (self.puzzle.cells[index].given.is_none() || !self.visible[index])
-                && !selected.contains(&index)
-            {
+            // Player annotations are allowed on fixed givens, including
+            // when a drag selection crosses a clue. Only value mode must
+            // skip visible givens; erasing annotations never erases a clue.
+            // UI may know about additional procedurally revealed fog.
+            let can_edit = mode != "value"
+                || self.puzzle.cells[index].given.is_none()
+                || !self.visible[index];
+            if can_edit && !selected.contains(&index) {
                 selected.push(index);
             }
         }
@@ -732,16 +736,59 @@ mod tests {
     }
 
     #[test]
-    fn visible_given_rejects_marks_even_when_other_cells_are_in_fog() {
+    fn visible_givens_accept_notes_but_never_overwrite_the_clue() {
         let raw = r#"{"cells":[[{"value":1},{}],[{},{}]],
             "foglight":[[0,0],[0,1]]}"#;
         let mut session = Session::new(load(raw).unwrap());
         assert!(session.snapshot().visible[0]);
-        assert!(session.apply(0, "corner", "2").is_err());
+        assert_eq!(session.puzzle.cells[0].given.as_deref(), Some("1"));
+
+        session.apply(0, "corner", "2").unwrap();
+        session.apply(0, "center", "3").unwrap();
+        assert_eq!(session.snapshot().cells[0].corner, vec!["2"]);
+        assert_eq!(session.snapshot().cells[0].center, vec!["3"]);
         assert!(session.apply(0, "value", "8").is_err());
-        assert!(session.apply_many(&[0, 1], "corner", "2").is_ok());
-        assert!(session.snapshot().cells[0].corner.is_empty());
-        assert_eq!(session.snapshot().cells[1].corner, vec!["2"]);
+        assert!(session.snapshot().cells[0].value.is_none());
+
+        // Dragged selection includes a clue; every cell receives the mark.
+        let result = session.apply_many(&[0, 1, 2], "corner", "5").unwrap();
+        assert_eq!(result.changes.len(), 3);
+        assert_eq!(session.snapshot().cells[0].corner, vec!["2", "5"]);
+        assert_eq!(session.snapshot().cells[1].corner, vec!["5"]);
+        assert_eq!(session.snapshot().cells[2].corner, vec!["5"]);
+        session.undo().unwrap();
+        assert_eq!(session.snapshot().cells[0].corner, vec!["2"]);
+        assert!(session.snapshot().cells[1].corner.is_empty());
+        session.redo().unwrap();
+        assert!(session.snapshot().cells[0].corner.contains(&"5".to_string()));
+
+        // Candidate marks survive saved-state restoration even on givens.
+        let saved=session.snapshot().cells;
+        let mut restored=Session::new(load(raw).unwrap());
+        restored.restore(saved).unwrap();
+        assert_eq!(restored.snapshot().cells[0].center, vec!["3"]);
+        assert_eq!(restored.snapshot().cells[0].corner, vec!["2", "5"]);
+        restored.apply(0, "erase", "").unwrap();
+        assert_eq!(restored.snapshot().cells[0], InputCell::default());
+        assert_eq!(restored.puzzle.cells[0].given.as_deref(), Some("1"));
+    }
+
+    #[test]
+    fn visible_given_candidate_notes_survive_nonfog_checkpoint() {
+        let raw = r#"{"cells":[[{"value":1},{}],[{},{}]]}"#;
+        let mut session = Session::new(load(raw).unwrap());
+        session.apply_many(&[0, 1], "center", "4").unwrap();
+        assert_eq!(session.snapshot().cells[0].center, vec!["4"]);
+        assert_eq!(session.snapshot().cells[1].center, vec!["4"]);
+        let saved=session.snapshot().cells;
+        let mut restored=Session::new(load(raw).unwrap());
+        restored.restore(saved).unwrap();
+        assert_eq!(restored.snapshot().cells[0].center, vec!["4"]);
+        assert!(restored.apply(0, "value", "9").is_err());
+        assert!(restored.snapshot().cells[0].value.is_none());
+        let mut invalid=restored.snapshot().cells;
+        invalid[0].value=Some("9".to_owned());
+        assert!(restored.restore(invalid).is_err());
     }
 
     #[test]
