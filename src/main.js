@@ -284,7 +284,15 @@ async function loadCatalog(){
     fetch('puzzles/catalog.json').then(r=>{if(!r.ok)throw Error('Missing catalog');return r.json();}),
     fetch('puzzles/locale-zh.json').then(r=>{if(!r.ok)throw Error('Missing translation metadata');return r.json();})
   ]);
-  catalog=items.items||[];localeZh=translations;renderLibrary();
+  // Generated adventures are produced by scripts/generate_adventure.py
+  // during dev/build/test. Keep the original bundled catalog immutable.
+  let generated={items:[]};
+  try {
+    const response=await fetch('puzzles/generated/catalog-entries.json');
+    if(response.ok)generated=await response.json();
+  } catch {}
+  catalog=[...(items.items||[]),...(generated.items||[])];
+  localeZh=translations;renderLibrary();
 }
 async function openBundled(id,push=false,backState=null){
   if(pending)return;
