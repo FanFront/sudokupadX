@@ -10,6 +10,16 @@ export function linksAtCell(puzzle,progress,index,catalog,currentId=null) {
   const sectors=getSectors(puzzle,index);
   const sources=[puzzle.rules,...sectors.map(sector=>sector.rules)];
   const result=[],seen=new Set();
+  // Procedural bosses have a dedicated map cell OUTSIDE every Sudoku sector.
+  // The gate itself must also be a clickable entrance, not only the region.
+  for(const gate of puzzle.bossGates||[]){
+    const [r,c]=Array.isArray(gate?.cell)?gate.cell:[-1,-1];
+    if(!Number.isInteger(r)||!Number.isInteger(c)||r*puzzle.cols+c!==index)continue;
+    const entry=catalog.find(item=>item.id===gate.bossId&&item.file);
+    if(entry?.id!==currentId && entry && !seen.has(entry.id)){
+      seen.add(entry.id);result.push(entry);
+    }
+  }
   for(const rules of sources){
     for(const entry of getLinkedPuzzles(rules,catalog)){
       if(!entry?.file || entry.id===currentId || seen.has(entry.id))continue;
