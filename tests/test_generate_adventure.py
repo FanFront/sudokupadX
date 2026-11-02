@@ -1,6 +1,5 @@
 """Regression tests for the deterministic SudokuPadX adventure generator."""
 import json
-import re
 import sys
 import tempfile
 import unittest
@@ -53,25 +52,29 @@ class GeneratorTests(unittest.TestCase):
             else:
                 self.assertEqual(gen.count_solutions(clues), 1)
 
-    def test_fog_and_no_guessing_beacons(self):
-        self.assertEqual(len(self.world['foglight']), 81)
-        self.assertEqual(len(self.world['triggereffect']), 3)
-        self.assertEqual(len(self.world['underlays']), 3)
-        for g, rule in enumerate(self.world['triggereffect']):
-            clues, solution = self.local(g)
-            cell = rule['trigger']['cell']
-            self.assertEqual(cell, self.report['beacons'][g])
-            match = re.fullmatch(r'r(\d+)c(\d+)', cell)
-            self.assertIsNotNone(match)
-            r, c = (int(match.group(i)) - 1 for i in (1, 2))
-            top, left = gen.POSITIONS[g]
-            local = (r-top)*9+c-left
-            self.assertNotIn(local, clues)
-            self.assertEqual(gen.singles(clues)[local], solution[local])
-            coords = re.findall(r'r(\d+)c(\d+)', rule['effect']['cells'])
-            self.assertEqual(len(coords), 81)
-            target = {gen.global_index(g+1, i) for i in range(81)}
-            self.assertEqual({(int(y)-1)*gen.W+int(x)-1 for y,x in coords}, target)
+    def test_boss_codes_are_outside_sudoku_and_unlock_fog_in_order(self):
+        self.assertEqual(len(self.world['foglight']), 82)
+        self.assertEqual(len(self.world['triggereffect']), 0)
+        self.assertEqual(len(self.world['underlays']), 4)
+        gates = self.world['metadata']['bossGates']
+        self.assertEqual(len(gates), 4)
+        for i, gate in enumerate(gates):
+            r,c = gate['cell']
+            self.assertTrue(all(
+                not (top <= r < top+9 and left <= c < left+9)
+                for top,left in gen.POSITIONS
+            ), 'Gate is accidentally deducible inside a Sudoku grid')
+            self.assertEqual(self.world['cells'][r][c], {})
+            reward = self.bosses[i]['metadata']['solution'][40]
+            self.assertEqual(gate['reward'], reward)
+            self.assertEqual(self.world['metadata']['solution'][r*gen.W+c], reward)
+            self.assertEqual(self.bosses[i]['metadata']['bossLink']['bossId'],
+                             self.bosses[i]['id'])
+            self.assertEqual(self.bosses[i]['cells'][4][4], {})
+            self.assertEqual(len(gate['reveals']), 82 if i < 3 else 0)
+            if i:
+                self.assertIn([r,c], gates[i-1]['reveals'])
+        self.assertIn(gates[0]['cell'], self.world['foglight'])
 
     def test_boss_uniqueness_and_singles_resistance(self):
         self.assertEqual(len(self.bosses), 4)
