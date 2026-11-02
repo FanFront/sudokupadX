@@ -753,11 +753,9 @@ mod tests {
         // Dragged selection includes a clue; every cell receives the mark.
         let result = session.apply_many(&[0, 1, 2], "corner", "5").unwrap();
         assert_eq!(result.changes.len(), 3);
-        for i in [0, 1, 2] {
-            assert_eq!(session.snapshot().cells[i].corner, vec!["2", "5"]
-                .into_iter().filter(|v| i==0 || *v=="5")
-                .map(str::to_string).collect::<Vec<_>>());
-        }
+        assert_eq!(session.snapshot().cells[0].corner, vec!["2", "5"]);
+        assert_eq!(session.snapshot().cells[1].corner, vec!["5"]);
+        assert_eq!(session.snapshot().cells[2].corner, vec!["5"]);
         session.undo().unwrap();
         assert_eq!(session.snapshot().cells[0].corner, vec!["2"]);
         assert!(session.snapshot().cells[1].corner.is_empty());
