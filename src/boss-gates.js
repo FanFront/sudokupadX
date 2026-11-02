@@ -10,12 +10,16 @@ function validLink(link) {
 
 function completionKey(link) {
   if(!validLink(link))return null;
-  return 'sudokupadx:boss-cleared:v1:'+link.parent+':'+link.seed+':'+link.bossId;
+  // Reward algorithm changes invalidate old completion flags. A v1 boss
+  // completion cannot silently unlock a v2 whole-grid-code gate.
+  const version=link.rewardVersion===2?'v2':'v1';
+  return 'sudokupadx:boss-cleared:'+version+':'+link.parent+':'+link.seed+':'+link.bossId;
 }
 
 function gateLink(puzzle,gate) {
   if(!puzzle || !gate || typeof gate.bossId!=='string')return null;
-  return {parent:puzzle.key,bossId:gate.bossId,seed:gate.seed};
+  return {parent:puzzle.key,bossId:gate.bossId,seed:gate.seed,
+    rewardVersion:gate.rewardVersion};
 }
 
 export function markBossCleared(puzzle,progress,storage) {

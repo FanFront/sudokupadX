@@ -290,9 +290,9 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
     for i in range(4):
         for boss_attempt in range(100):
             solved = make_solution(rng)
-            # R5C5 is always an empty clue: completing the boss reveals its
-            # previously unknown value as the separate map-gate reward.
-            given = dig(rng, solved, {40}, min_clues=22)
+            # The reward is calculated from all 81 solved digits, not from
+            # any designated cell or clue. No special empty R5C5 is needed.
+            given = dig(rng, solved, set(), min_clues=22)
             if len(singles(given)) <= 55:
                 break
         else:
@@ -364,11 +364,14 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
         r, c = gate['cell']
         assert all(not (top <= r < top+9 and left <= c < left+9)
                    for top, left in POSITIONS)
-        assert gate['reward'] == boss['metadata']['solution'][40]
         assert world['metadata']['solution'][r*W+c] == gate['reward']
         assert world['cells'][r][c] == {}
         assert boss['metadata']['bossLink']['bossId'] == boss['id']
-        assert boss['cells'][4][4] == {}
+        assert gate['rewardVersion'] == boss['metadata']['bossLink']['rewardVersion'] == 2
+        from boss_dependencies import completed_boss_reward
+        assert gate['reward'] == completed_boss_reward(
+            boss['metadata']['solution'], boss['id'], gate['seed'])
+        assert gate['reward'] != boss['metadata']['solution'][40]
     assert [len(gate['reveals']) for gate in gates] == [82, 82, 82, 0]
     for i, boss in enumerate(bosses):
         assert boss['id'].endswith(f'-boss-{i+1}')

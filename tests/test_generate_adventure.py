@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import generate_adventure as gen
+from boss_dependencies import completed_boss_reward
 
 
 class GeneratorTests(unittest.TestCase):
@@ -65,16 +66,45 @@ class GeneratorTests(unittest.TestCase):
                 for top,left in gen.POSITIONS
             ), 'Gate is accidentally deducible inside a Sudoku grid')
             self.assertEqual(self.world['cells'][r][c], {})
-            reward = self.bosses[i]['metadata']['solution'][40]
+            boss = self.bosses[i]
+            solved_grid = boss['metadata']['solution']
+            reward = completed_boss_reward(solved_grid, boss['id'], gate['seed'])
             self.assertEqual(gate['reward'], reward)
+            self.assertNotEqual(reward, solved_grid[40],
+                                'Reward must not appear to be R5C5')
+            self.assertEqual(gate['rewardVersion'], 2)
             self.assertEqual(self.world['metadata']['solution'][r*gen.W+c], reward)
-            self.assertEqual(self.bosses[i]['metadata']['bossLink']['bossId'],
-                             self.bosses[i]['id'])
-            self.assertEqual(self.bosses[i]['cells'][4][4], {})
+            self.assertEqual(boss['metadata']['bossLink']['bossId'], boss['id'])
+            self.assertEqual(boss['metadata']['bossLink']['rewardVersion'], 2)
+            self.assertIn(reward, boss['metadata']['msgcorrect'])
+            self.assertIn('entire', boss['metadata']['rules'])
             self.assertEqual(len(gate['reveals']), 82 if i < 3 else 0)
             if i:
                 self.assertIn([r,c], gates[i-1]['reveals'])
         self.assertIn(gates[0]['cell'], self.world['foglight'])
+
+    def test_reward_requires_complete_boss_solution_not_one_cell(self):
+        boss = self.bosses[0]
+        complete = boss['metadata']['solution']
+        identifier = boss['id']
+        code = completed_boss_reward(complete, identifier, 20261102)
+        self.assertIn(code, '123456789')
+        with self.assertRaises(ValueError):
+            completed_boss_reward(complete[:-1], identifier, 20261102)
+        with self.assertRaises(ValueError):
+            completed_boss_reward(complete[:20] + '.' + complete[21:],
+                                  identifier, 20261102)
+        # Changing digits outside R5C5 affects the digest and eventually
+        # affects the code. A direct-cell-only reward fails this test.
+        alternative_codes = set()
+        for i in range(0, 81, 3):
+            if i == 40:
+                continue
+            modified = list(complete)
+            modified[i] = str(int(modified[i]) % 9 + 1)
+            alternative_codes.add(completed_boss_reward(
+                ''.join(modified), identifier, 20261102))
+        self.assertGreater(len(alternative_codes), 1)
 
     def test_boss_uniqueness_and_singles_resistance(self):
         self.assertEqual(len(self.bosses), 4)

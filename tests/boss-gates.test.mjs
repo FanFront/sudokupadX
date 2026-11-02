@@ -87,3 +87,24 @@ test('completion is scoped to parent and seed',()=>{
   assert.equal(markBossCleared({bossLink:{parent:group,bossId:'../other',seed:1}},
     {solved:true},storage),false);
 });
+
+test('full-grid reward v2 never reuses an old R5C5 completion flag',()=>{
+  const storage=memoryStorage();
+  const oldGate={...gate0};
+  const freshGate={...gate0,rewardVersion:2,reward:'8'};
+  const {puzzle,progress}=world();
+  puzzle.bossGates=[freshGate];
+  const clearedV1=boss(oldGate,true);
+  assert.equal(markBossCleared(clearedV1.puzzle,clearedV1.progress,storage),true);
+  assert.equal(isBossCleared(puzzle,freshGate,storage),false);
+  assert.equal(lockedBossGate(puzzle,4*27+9,storage),true);
+  progress.cells[4*27+9].value='8';
+  applyBossReveals(puzzle,progress,storage);
+  assert.equal(progress.visible[6*27+6],false);
+  const clearedV2=boss(freshGate,true);
+  clearedV2.puzzle.bossLink.rewardVersion=2;
+  assert.equal(markBossCleared(clearedV2.puzzle,clearedV2.progress,storage),true);
+  assert.equal(isBossCleared(puzzle,freshGate,storage),true);
+  applyBossReveals(puzzle,progress,storage);
+  assert.equal(progress.visible[6*27+6],true);
+});
