@@ -1,4 +1,4 @@
-"""Attach full-boss-solution reward codes to gates outside Sudoku houses.
+"""Attach full-boss-solution reward digits to cells inside Sudoku houses.
 
 Rewards are derived from a cryptographic digest of all 81 solved digits,
 not the digit in any designated boss cell. The game additionally requires
@@ -95,13 +95,13 @@ def attach_boss_dependencies(world, bosses, seed, positions, boss_cells):
         )
         world['metadata']['grids'][i]['rules'] = (
             'Standard Sudoku: rows, columns and 3x3 boxes each contain '
-            'digits 1–9. Adjacent grids share their overlapping cells.\\n'
+            'digits 1–9. Adjacent grids share their overlapping cells.\n'
             f'Chapter {i+1}: {chapter_names[i]}. '
             f'The highlighted BOSS cell is R{r+1}C{c+1}, INSIDE '
             'this 9x9 Sudoku. Its value is deliberately ambiguous '
             'under the main Sudoku constraints alone, even with all '
             'overlapping cells known. Complete the linked boss '
-            'puzzle to learn its essential missing digit.\\n'
+            'puzzle to learn its essential missing digit.\n'
             f'Boss entrance: sudokupadx:puzzle/{boss_id}'
         )
 
