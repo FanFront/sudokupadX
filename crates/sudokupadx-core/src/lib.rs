@@ -704,6 +704,47 @@ mod tests {
     }
 
     #[test]
+    fn fogged_authored_clue_accepts_player_notes_and_survives_restore() {
+        let raw = r#"{"metadata":{"solution":"1234"},
+            "cells":[[{"value":1},{}],[{},{}]],
+            "foglight":[[0,1]]}"#;
+        let mut session = Session::new(load(raw).unwrap());
+        assert!(!session.snapshot().visible[0]);
+        assert_eq!(session.puzzle.cells[0].given.as_deref(), Some("1"));
+
+        session.apply(0, "corner", "2").unwrap();
+        session.apply(0, "center", "3").unwrap();
+        session.apply(0, "value", "8").unwrap();
+        assert_eq!(session.snapshot().cells[0].corner, vec!["2"]);
+        assert_eq!(session.snapshot().cells[0].center, vec!["3"]);
+        assert_eq!(session.snapshot().cells[0].value.as_deref(), Some("8"));
+        assert_eq!(session.puzzle.cells[0].given.as_deref(), Some("1"));
+
+        session.undo().unwrap();
+        assert!(session.snapshot().cells[0].value.is_none());
+        let saved = session.snapshot().cells;
+        let mut restored = Session::new(load(raw).unwrap());
+        restored.restore(saved).unwrap();
+        assert_eq!(restored.snapshot().cells[0].corner, vec!["2"]);
+        assert_eq!(restored.snapshot().cells[0].center, vec!["3"]);
+        restored.apply(0, "erase", "").unwrap();
+        assert_eq!(restored.snapshot().cells[0], InputCell::default());
+    }
+
+    #[test]
+    fn visible_given_rejects_marks_even_when_other_cells_are_in_fog() {
+        let raw = r#"{"cells":[[{"value":1},{}],[{},{}]],
+            "foglight":[[0,0],[0,1]]}"#;
+        let mut session = Session::new(load(raw).unwrap());
+        assert!(session.snapshot().visible[0]);
+        assert!(session.apply(0, "corner", "2").is_err());
+        assert!(session.apply(0, "value", "8").is_err());
+        assert!(session.apply_many(&[0, 1], "corner", "2").is_ok());
+        assert!(session.snapshot().cells[0].corner.is_empty());
+        assert_eq!(session.snapshot().cells[1].corner, vec!["2"]);
+    }
+
+    #[test]
     fn manual_progress_check_reports_counts_without_mutating_fog_or_history() {
         let raw = r#"{"metadata":{"solution":"1234"},"cells":[[{"value":1},{}],[{},{}]],
           "foglight":[[0,1]]}"#;
