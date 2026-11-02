@@ -42,3 +42,24 @@ test('embedded BOSS cell is the directly selectable entrance, and fog hides it',
   progress.visible[index]=true;
   assert.deepEqual(linksAtCell(puzzle,progress,index,catalog,main).map(x=>x.id),[boss]);
 });
+
+test('boss stays undiscovered until the embedded cell emerges from fog',()=>{
+  const puzzle={
+    rows:27,cols:27,rules:'Explore',
+    cells:Array.from({length:729},()=>({given:null})),
+    sectors:[{title:'Gate',left:0,top:0,width:9,height:9,
+      cells:Array.from({length:81},(_,i)=>Math.floor(i/9)*27+i%9),
+      rules:'Boss: sudokupadx:puzzle/'+boss}],
+    bossGates:[{bossId:boss,cell:[2,1],seed:20261102,rewardVersion:3,
+      reward:'7',reveals:[]}]
+  };
+  const progress={visible:Array(729).fill(false)};
+  progress.visible[0]=true;
+  const bossIndex=2*27+1;
+  assert.deepEqual(linksAtCell(puzzle,progress,0,catalog,main),[],
+    'a visible ordinary cell must not expose the boss link from sector rules');
+  assert.deepEqual(linksAtCell(puzzle,progress,bossIndex,catalog,main),[]);
+  progress.visible[bossIndex]=true;
+  assert.deepEqual(linksAtCell(puzzle,progress,bossIndex,catalog,main)
+    .map(x=>x.id),[boss]);
+});
