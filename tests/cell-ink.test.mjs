@@ -70,3 +70,36 @@ test('ordinary puzzles with no explicit fog flags keep rendering normally',()=>{
   assert.equal(cellInk(puzzle,progress,2).fogged,false);
   assert.equal(cellInk(puzzle,progress,0).value,'9');
 });
+
+test('fogged authored clues show player candidates without leaking their givens',()=>{
+  const {puzzle,progress}=fixture();
+  progress.cells[0].corner=['2','5'];
+  progress.cells[0].center=['4'];
+  assert.deepEqual(cellInk(puzzle,progress,0),{
+    fogged:true,given:false,value:null,corner:['2','5'],center:['4']
+  });
+  // The clue was only concealed: revealing it displays the fixed given
+  // and hides user notes without deleting them from the saved progress.
+  progress.visible[0]=true;
+  assert.deepEqual(cellInk(puzzle,progress,0),{
+    fogged:false,given:true,value:'9',corner:[],center:[]
+  });
+  assert.deepEqual(progress.cells[0].corner,['2','5']);
+  progress.visible[0]=false;
+  assert.deepEqual(cellInk(puzzle,progress,0).corner,['2','5']);
+});
+
+test('a large user digit on a fogged given temporarily hides notes, not the given itself',()=>{
+  const {puzzle,progress}=fixture();
+  progress.cells[0].corner=['1'];
+  progress.cells[0].value='4';
+  assert.deepEqual(cellInk(puzzle,progress,0),{
+    fogged:true,given:false,value:'4',corner:[],center:[]
+  });
+  progress.visible[0]=true;
+  assert.equal(cellInk(puzzle,progress,0).value,'9');
+  assert.equal(cellInk(puzzle,progress,0).given,true);
+  progress.cells[0].value=null;
+  progress.visible[0]=false;
+  assert.deepEqual(cellInk(puzzle,progress,0).corner,['1']);
+});
