@@ -823,10 +823,12 @@ mod tests {
         let mut session = Session::new(load(raw).unwrap());
         session.apply(1, "value", "2").unwrap();
         let result = session.apply_many(&[0,1,2,2], "value", "2").unwrap();
-        assert_eq!(result.changes.len(), 1); // Given and already-correct values skipped.
+        assert_eq!(result.changes.len(), 2); // Hidden given is editable; matching value skipped.
+        assert_eq!(session.snapshot().cells[0].value.as_deref(), Some("2"));
         assert_eq!(session.snapshot().cells[1].value.as_deref(), Some("2"));
         assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("2"));
         session.undo().unwrap();
+        assert!(session.snapshot().cells[0].value.is_none());
         assert!(session.snapshot().cells[2].value.is_none());
         assert_eq!(session.snapshot().cells[1].value.as_deref(), Some("2"));
         // Set two cells in a single transaction, then undo both at once.
