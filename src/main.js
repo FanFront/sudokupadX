@@ -8,6 +8,7 @@ import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {cellInk} from './cell-ink.js';
 import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
+import {markBossCleared,lockedBossGate,applyBossReveals} from './boss-gates.js';
 import {setupOnlineLibrary} from './online-ui.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
@@ -393,6 +394,9 @@ async function openResult(result) {
   buildRegions();
   updateInfo();
   await restoreSaved();
+  // A restored completed boss must still award its permanent gate code.
+  markBossCleared(puzzle,progress,localStorage);
+  applyBossReveals(puzzle,progress,localStorage);
   conflictHouses=buildConflictHouses(puzzle);
   refreshConflicts();
   lastCompletion=Boolean(progress.solved);
@@ -677,6 +681,7 @@ function draw() {
 function showCompletionIfNew(){
   const solved=Boolean(progress?.solved);
   if(solved&&!lastCompletion){
+    markBossCleared(puzzle,progress,localStorage);
     displayBilingual($('completionText'),progress.completion||'已完成当前谜题。',
       localeZh[currentEntry?.id]?.msgcorrectOriginal);
     $('completionBack').hidden=!returnDestination(currentEntry,catalog,navigationStack);
@@ -689,12 +694,18 @@ function applyChange(change) {
   for(const entry of changed)progress.cells[entry.index]=entry.cell;
   progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
   if(Array.isArray(change.visible))progress.visible=change.visible;
+  applyBossReveals(puzzle,progress,localStorage);
   progress.solved=Boolean(change.solved);
   progress.completion=change.completion??null;
   refreshConflicts();
 }
 async function edit(action,symbol='') {
   if(pending||!puzzle)return;
+  // A map gate is a reward, not a Sudoku digit: the linked boss must
+  // actually be finished before any value or note can be entered here.
+  if(selectedCells.some(index=>lockedBossGate(puzzle,index,localStorage))){
+    toast('请先完成关联首领谜题，取得通关数字');return;
+  }
   const indices=selectedCells.filter(index=>puzzle.cells[index]?.given==null);
   if(!indices.length){toast(selectedCells.length?'提示数字不可修改':'请先选择格子');return;}
   pending=true;
@@ -1088,6 +1099,8 @@ $('importCheckpoint').addEventListener('click',async()=>{
     // cells and given-cell edits without mutating the current session.
     save();
     progress=await call('restore_progress',{cells});
+    markBossCleared(puzzle,progress,localStorage);
+    applyBossReveals(puzzle,progress,localStorage);
     penLines=cp.penLines;
     penMarks=cp.penMarks;
     undoStack=[];redoStack=[];
