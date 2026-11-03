@@ -39,6 +39,9 @@ class VariantGeneratorTests(unittest.TestCase):
                               game["metadata"]["rules"])
         base = {"killer", "thermo", "kropki", "renban", "arrow", "xv"}
         self.assertEqual(kinds, [base, base, base | {"whisper"}])
+        for detail in self.report["puzzles"][1:]:
+            self.assertGreaterEqual(len(detail["structural"]), 2)
+            self.assertGreater(detail["techniques"].get("killer_outie", 0), 0)
         self.assertGreater(self.report["puzzles"][2]["techniques"].get(
             "kropki_partition", 0), 0)
 
@@ -60,6 +63,8 @@ class VariantGeneratorTests(unittest.TestCase):
             self.assertFalse(deduce(n, givens, [])["solved"])
             self.assertGreaterEqual(len(detail["used"]), 2)
             self.assertGreaterEqual(len(detail["necessary"]), 1)
+            self.assertEqual(game["metadata"]["logicProfile"][
+                "structuralMotifs"], detail["structural"])
 
     def test_relation_semantics(self):
         # Valid completed classic 4x4 Sudoku.
@@ -108,6 +113,38 @@ class VariantGeneratorTests(unittest.TestCase):
         self.assertGreater(result["techniques"].get("kropki_partition", 0), 0)
         self.assertTrue(any(step["method"] == "kropki_partition"
                             for step in result["trace"]))
+
+    def test_house_sum_innie_and_outie_are_real_deductions(self):
+        # Box r1-2,c1-2 contains four cells, sum 10. The crossing
+        # cage has one cell outside; total 3+8=11 reveals outie r2c3=1.
+        rules = [
+            {"type": "killer", "cells": [0, 1], "sum": 3},
+            {"type": "killer", "cells": [4, 5, 6], "sum": 8},
+        ]
+        proof = deduce(4, {}, rules)
+        self.assertEqual(proof["domains"][6], {1})
+        self.assertGreater(proof["techniques"].get("killer_outie", 0), 0)
+        # One 2-cell cage inside box implies the complementary two
+        # cells sum to 7, even without an explicit cage there.
+        inside = deduce(4, {}, [rules[0]])
+        self.assertGreater(inside["techniques"].get("killer_innie", 0), 0)
+
+    def test_renban_cage_and_mixed_partitions(self):
+        renban = {"type": "renban", "cells": [0, 1, 2]}
+        killer = {"type": "killer", "cells": [0, 1, 2], "sum": 15}
+        proof = deduce(6, {}, [renban, killer])
+        self.assertTrue(all(proof["domains"][cell] == {4, 5, 6}
+                            for cell in (0, 1, 2)))
+        self.assertGreater(proof["techniques"].get("renban_sum_lock", 0), 0)
+        constraints = [
+            {"type": "kropki", "kind": "white", "cells": [0, 1]},
+            {"type": "kropki", "kind": "white", "cells": [1, 2]},
+            {"type": "renban", "cells": [3, 4, 5]},
+        ]
+        partition = deduce(6, {}, constraints)
+        self.assertEqual(partition["domains"][1], {2, 5})
+        self.assertGreater(partition["techniques"].get(
+            "mixed_consecutive_partition", 0), 0)
 
     def test_export_catalog_and_determinism(self):
         other, report = variants.build(20261103)
