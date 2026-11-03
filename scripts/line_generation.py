@@ -40,9 +40,9 @@ def generate_region_sum(n, solution, rng, constraints, paths, cage):
 
 
 def generate_entropic_modular_cross(n, solution, rng, constraints, paths):
-    # A single placed digit on each line fixes that line's class phase;
-    # the crossing digit is then restricted to the intersection of the
-    # two classes. No answer digits are embedded in solver metadata.
+    # Two different-class givens on each line establish the repeating
+    # cycle order. A single anchor does not distinguish the two remaining
+    # class permutations and is insufficient to fix the crossing value.
     epaths = paths(
         n, solution, 4,
         lambda path: len({line_class(n, solution[i], "entropic")
@@ -69,13 +69,29 @@ def generate_entropic_modular_cross(n, solution, rng, constraints, paths):
             for mpath in modular_by_cell.get(crossing, []):
                 if len(set(epath) & set(mpath)) != 1:
                     continue
-                ea = next((i for i in epath if i != crossing), None)
-                ma = next((i for i in mpath if i != crossing
-                           and i != ea), None)
-                if ea is None or ma is None:
+                eanchors = []
+                for pos, cell in enumerate(epath):
+                    if cell == crossing:
+                        continue
+                    if all(epath.index(p) % 3 != pos % 3
+                           for p in eanchors):
+                        eanchors.append(cell)
+                    if len(eanchors) == 2:
+                        break
+                manchors = []
+                for pos, cell in enumerate(mpath):
+                    if cell == crossing:
+                        continue
+                    if all(mpath.index(p) % 3 != pos % 3
+                           for p in manchors):
+                        manchors.append(cell)
+                    if len(manchors) == 2:
+                        break
+                if len(eanchors) != 2 or len(manchors) != 2:
                     continue
-                # Bias towards paths with visually clear right-angle crossings.
-                choices.append((epath, mpath, crossing, ea, ma))
+                # Two different group positions fix the ordering of all
+                # three classes; one anchor alone would NOT be sufficient.
+                choices.append((epath, mpath, crossing, eanchors, manchors))
                 if len(choices) == 500:
                     break
             if len(choices) >= 500:
@@ -84,14 +100,14 @@ def generate_entropic_modular_cross(n, solution, rng, constraints, paths):
             break
     if not choices:
         raise ValueError("No entropic-modular crossing")
-    epath, mpath, crossing, ea, ma = rng.choice(choices)
+    epath, mpath, crossing, eanchors, manchors = rng.choice(choices)
     constraints.extend((
         {"type": "entropic", "cells": list(epath),
          "motif": "entropic_modular_cross",
-         "forcedGivens": [ea], "protectCells": [crossing]},
+         "forcedGivens": eanchors, "protectCells": [crossing]},
         {"type": "modular", "cells": list(mpath),
          "motif": "entropic_modular_cross",
-         "forcedGivens": [ma], "protectCells": [crossing]}
+         "forcedGivens": manchors, "protectCells": [crossing]}
     ))
 
 
