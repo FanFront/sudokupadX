@@ -204,13 +204,15 @@ def add_extra_geometry(n, solution, rng, constraints):
     length = 3 if n < 9 else 4
     runs = paths_matching(
         n, solution, length,
-        lambda p: max(solution[i] for i in p) -
+        lambda p: len({solution[i] for i in p}) == length and
+        max(solution[i] for i in p) -
         min(solution[i] for i in p) == length-1)
     if not runs and length == 4:
         length = 3
         runs = paths_matching(
             n, solution, length,
-            lambda p: max(solution[i] for i in p) -
+            lambda p: len({solution[i] for i in p}) == length and
+            max(solution[i] for i in p) -
             min(solution[i] for i in p) == length-1)
     if not runs:
         raise ValueError("No renban pattern")
