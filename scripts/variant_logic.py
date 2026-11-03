@@ -10,6 +10,8 @@ from collections import Counter
 from itertools import combinations, product
 
 from variant_techniques import EXTRA_VARIANTS, propagate_extra, kropki_triple_partitions
+from variant_structures import (sum_structures, propagate_sum_structures,
+                                mixed_consecutive_partitions)
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
@@ -68,6 +70,15 @@ def deduce(n, givens, constraints, domains=None, trace=True):
     """
     units = houses(n)
     validate_constraints(n, constraints)
+    structural_rules = sum_structures(n, units, constraints)
+    intersections = []
+    for a, first in enumerate(units):
+        for b, second in enumerate(units):
+            if a >= b:
+                continue
+            common = set(first) & set(second)
+            if 1 < len(common) < n:
+                intersections.append((a, b, common))
     if domains is None:
         if any(not isinstance(i, int) or i not in range(n*n) or
                not isinstance(d, int) or d not in range(1, n+1)
@@ -127,6 +138,30 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                             changed |= reduce(i, masks[i] - digits,
                                               "naked_subset", house_id)
 
+        # A candidate confined to a row/box intersection cannot occur
+        # elsewhere in the other house (pointing / claiming).
+        for first_id, second_id, common in intersections:
+            for digit in range(1, n+1):
+                for source_id, destination_id in (
+                    (first_id, second_id), (second_id, first_id)
+                ):
+                    positions = [cell for cell in units[source_id]
+                                 if digit in masks[cell]]
+                    if positions and all(cell in common for cell in positions):
+                        for cell in units[destination_id]:
+                            if cell not in common:
+                                changed |= reduce(
+                                    cell, masks[cell] - {digit},
+                                    "locked_candidate",
+                                    {"sourceHouse": source_id,
+                                     "targetHouse": destination_id,
+                                     "digit": digit})
+
+        # The sum of a complete Sudoku house is always n*(n+1)/2.
+        # Apply reconstructed house-wide and cross-constraint motifs
+        # before local checks so their logical contribution is traceable.
+        changed |= propagate_sum_structures(n, masks, structural_rules, reduce)
+
         for index, clue in enumerate(constraints):
             kind, cells = clue["type"], clue["cells"]
             if kind == "killer":
@@ -159,6 +194,8 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                 changed |= propagate_extra(n, masks, clue, index, reduce)
 
         changed |= kropki_triple_partitions(n, units, masks, constraints, reduce)
+        changed |= mixed_consecutive_partitions(
+            n, units, masks, constraints, reduce)
         if not changed:
             break
     return {"solved": all(len(s) == 1 for s in masks),
