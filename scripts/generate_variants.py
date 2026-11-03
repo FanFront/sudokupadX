@@ -419,6 +419,8 @@ def quality(n, clues, constraints, solution, diagnostic=None):
         return reject("too few variant families")
     if n == 9 and not proof["techniques"].get("kropki_partition"):
         return reject("partition technique unused")
+    if n == 6 and not proof["techniques"].get("mixed_consecutive_partition"):
+        return reject("mixed Kropki-Renban partition unused")
     if not used.intersection({"renban", "whisper", "arrow", "xv"}):
         return reject("new techniques unused")
     structural_names = ("killer_innie", "killer_outie",
@@ -428,6 +430,8 @@ def quality(n, clues, constraints, solution, diagnostic=None):
                   if proof["techniques"].get(name, 0)}
     if n in (6, 9) and len(structural) < 2:
         return reject("structural motifs did not contribute")
+    if n in (6, 9) and not structural.get("killer_outie"):
+        return reject("Killer outie deduction unused")
 
     essential = []
     for kind in VARIANTS:
