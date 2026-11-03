@@ -38,27 +38,26 @@ def make_solution(n, rng):
 
     rows, cols = shuffle_axis(h), shuffle_axis(w)
     numbers = list(range(1, n+1))
-    if n == 9:
-        # Keep three consecutive digit bands, but shuffle their positions
-        # and directions. This constructs a logical Kropki partition
-        # rather than hoping six randomly chosen dots form one.
-        band_order = [0, 1, 2]
-        rng.shuffle(band_order)
-        direction = [rng.choice((1, -1)) for _ in range(3)]
-        numbers = [3*band_order[(i-1)//3] +
-                   ((i-1)%3+1 if direction[(i-1)//3] == 1
-                    else 3-(i-1)%3) for i in range(1, 10)]
-        # The three cells of each column stack must remain consecutive.
-        # Preserve the Latin-square structure by using one monotonic
-        # ordering within each stack instead of arbitrary permutation.
+    if n in (6, 9):
+        # Preserve consecutive three-digit groups across stacks, so
+        # genuinely different partition motifs can be constructed from
+        # Kropki chains and Renban lines instead of random decoration.
+        block_order = list(range(n//3))
+        rng.shuffle(block_order)
+        numbers = []
+        for band in block_order:
+            digits = list(range(3*band+1, 3*band+4))
+            if rng.choice((True, False)):
+                digits.reverse()
+            numbers.extend(digits)
         cols = []
-        stacks = [0, 1, 2]
+        stacks = list(range(n//3))
         rng.shuffle(stacks)
         for stack in stacks:
-            inner = list(range(3))
+            inner = [0, 1, 2]
             if rng.choice((True, False)):
                 inner.reverse()
-            cols.extend(stack*3 + i for i in inner)
+            cols.extend(stack*3+i for i in inner)
     else:
         rng.shuffle(numbers)
     return [numbers[(rows[r]*w + rows[r]//h + cols[c]) % n]
@@ -73,11 +72,142 @@ def neighbors(n, i):
             yield rr*n+cc
 
 
+def cage(n, solution, cells, **extra):
+    if len(set(solution[i] for i in cells)) != len(cells):
+        raise ValueError("Cage contains repeated digits")
+    return {"type": "killer", "cells": list(cells),
+            "sum": sum(solution[i] for i in cells), **extra}
+
+
+def house_sum_geometry(n, solution, rng, constraints, occupied, motif_row=None):
+    """Make actual near-tilings for the house sum rule, not generic cages."""
+    height, width = BOXES[n]
+    boxes = [(r, c) for r in range(0, n, height)
+             for c in range(0, n, width)]
+    rng.shuffle(boxes)
+
+    if n >= 6:
+        # Crossing cage: exactly one cell outside a box. A whole box
+        # covered by disjoint cages reveals the outie by subtraction.
+        candidates = [(r, c) for r, c in boxes if c+width < n
+                      and (motif_row is None or
+                           not r <= motif_row < r+height)]
+        if not candidates:
+            candidates = [(r, c) for r, c in boxes if c+width < n]
+        if not candidates:
+            raise ValueError("No outie box geometry")
+        r0, c0 = rng.choice(candidates)
+        bridge_row = r0 + height//2
+        crossing_cell = bridge_row*n + c0+width-1
+        outie = crossing_cell + 1
+        for r in range(r0, r0+height):
+            cells = [r*n+c for c in range(c0, c0+width)]
+            if r == bridge_row:
+                internal = cells[:-1]
+                crossing = [crossing_cell, outie]
+                constraints.append(cage(n, solution, internal,
+                                        motif="house_outie"))
+                constraints.append(cage(n, solution, crossing,
+                                        motif="house_outie",
+                                        outie=outie))
+                occupied.update(internal+crossing)
+            else:
+                constraints.append(cage(n, solution, cells,
+                                        motif="house_outie"))
+                occupied.update(cells)
+
+    # Innie: cages wholly inside another box cover all but one or two
+    # cells, leaving a known residual sum, i.e. an invisible mini-cage.
+    choices = [(r, c) for r, c in boxes
+               if all((r+dr)*n+c+dc not in occupied
+                      for dr in range(height) for dc in range(width))
+               and (motif_row is None or not r <= motif_row < r+height)]
+    if not choices:
+        choices = [(r, c) for r, c in boxes
+                   if all((r+dr)*n+c+dc not in occupied
+                          for dr in range(height) for dc in range(width))]
+    if not choices:
+        raise ValueError("No free box for innie")
+    r0, c0 = rng.choice(choices)
+    if n == 4:
+        runs = [[r0*n+c0, r0*n+c0+1]]
+    elif n == 6:
+        runs = [[r0*n+c for c in range(c0, c0+3)],
+                [(r0+1)*n+c for c in range(c0, c0+2)]]
+    else:
+        runs = [[r0*n+c for c in range(c0, c0+3)],
+                [(r0+1)*n+c for c in range(c0, c0+2)],
+                [(r0+2)*n+c for c in range(c0, c0+2)]]
+    for cells in runs:
+        constraints.append(cage(n, solution, cells, motif="house_innie"))
+        occupied.update(cells)
+
+
+def add_renban_cage_motif(n, solution, rng, constraints, occupied):
+    """A shared Renban and Killer cage fixes a consecutive interval."""
+    if n == 4:
+        return
+    options = paths_matching(
+        n, solution, 3,
+        lambda path: all(i not in occupied for i in path) and
+        len({solution[i] for i in path}) == 3 and
+        max(solution[i] for i in path)-min(solution[i] for i in path) == 2)
+    if not options:
+        raise ValueError("No free Renban-Killer intersection")
+    choices = [path for path in options
+               if sum(solution[i] for i in path) == (15 if n == 9 else 9)]
+    path = list(rng.choice(choices or options))
+    constraints.append({"type": "renban", "cells": path,
+                        "motif": "renban_cage"})
+    constraints.append(cage(n, solution, path, motif="renban_cage"))
+    occupied.update(path)
+
+
 def make_constraints(n, solution, rng):
-    """Place solution-consistent geometry, with no visually ambiguous dot edge."""
+    """Construct human-solvable structural motifs before local clues."""
     constraints = []
     occupied_cages = set()
-    cage_lengths = {4: (2,), 6: (2, 3), 9: (2, 3, 2)}[n]
+    dot_edges = set()
+    motif_row = None
+
+    if n in (6, 9):
+        candidates = []
+        for r in range(n):
+            chains = [[n*r+3*g+j for j in range(3)]
+                      for g in range(n//3)]
+            if n == 9:
+                valid = all(abs(solution[a]-solution[b]) == 1
+                            for chain in chains
+                            for a, b in zip(chain, chain[1:]))
+            else:
+                first, second = chains
+                valid = (all(abs(solution[a]-solution[b]) == 1
+                             for a, b in zip(first, first[1:]))
+                         and max(solution[i] for i in second)-
+                         min(solution[i] for i in second) == 2
+                         and len({solution[i] for i in second}) == 3)
+            if valid:
+                candidates.append((r, chains))
+        if not candidates:
+            raise ValueError("No consecutive-house motif")
+        motif_row, chains = rng.choice(candidates)
+        chain_count = 3 if n == 9 else 1
+        for chain in chains[:chain_count]:
+            for a, b in zip(chain, chain[1:]):
+                dot_edges.add(frozenset((a, b)))
+                constraints.append({"type": "kropki", "kind": "white",
+                                    "cells": [a, b],
+                                    "protectCell": chain[1]})
+        if n == 6:
+            constraints.append({"type": "renban", "cells": chains[1],
+                                "motif": "mixed_partition"})
+
+    # Reconstructed by the solver directly from the visible cage shapes.
+    house_sum_geometry(n, solution, rng, constraints,
+                       occupied_cages, motif_row)
+    add_renban_cage_motif(n, solution, rng, constraints, occupied_cages)
+
+    cage_lengths = {4: (2,), 6: (2,), 9: (2, 3)}[n]
     for cage_index, length in enumerate(cage_lengths):
         options = []
         for a in range(n*n):
@@ -85,50 +215,25 @@ def make_constraints(n, solution, rng):
                 if b in occupied_cages or a in occupied_cages:
                     continue
                 base = [a, b]
-                choices = [base] if length == 2 else [
+                shapes = [base] if length == 2 else [
                     base + [c] for cell in base for c in neighbors(n, cell)
-                    if c not in base and c not in occupied_cages
-                ]
-                for cells in choices:
+                    if c not in base and c not in occupied_cages]
+                for cells in shapes:
                     if len(set(solution[i] for i in cells)) == len(cells):
                         options.append(cells)
         if cage_index == 0:
-            # Every chapter reuses the exact same two-cell sum-five motif.
             options = [cells for cells in options
                        if sum(solution[i] for i in cells) == 5]
         if not options:
-            raise ValueError("No available killer cage geometry")
+            raise ValueError("No free sum-five killer cage geometry")
         cells = list(rng.choice(options))
         occupied_cages.update(cells)
-        constraints.append({"type": "killer", "cells": cells,
-                            "sum": sum(solution[i] for i in cells)})
-
-    dot_edges = set()
-    motif_row = None
-    if n == 9:
-        # Six actual white dots in one nine-cell house, forming three
-        # disjoint consecutive chains. The solver explicitly recognizes
-        # their {123}, {456}, {789} partition.
-        candidate_rows = []
-        for r in range(9):
-            chains = [[9*r+3*g+j for j in range(3)] for g in range(3)]
-            if all(abs(solution[a]-solution[b]) == 1
-                   for cells in chains for a, b in zip(cells, cells[1:])):
-                candidate_rows.append((r, chains))
-        if not candidate_rows:
-            raise ValueError("No Kropki triple-partition row")
-        motif_row, chains = rng.choice(candidate_rows)
-        for cells in chains:
-            for a, b in zip(cells, cells[1:]):
-                dot_edges.add(frozenset((a, b)))
-                constraints.append({"type": "kropki", "kind": "white",
-                                    "cells": [a, b]})
+        constraints.append(cage(n, solution, cells))
 
     thermo_count = 1 if n < 9 else 2
     used_thermo = set()
     thermo_edges = set()
     for thermometer_index in range(thermo_count):
-        # A three-cell rising line is a repeated visual/rule motif.
         length = 3 if thermometer_index == 0 else 4
         paths = []
 
@@ -143,7 +248,6 @@ def make_constraints(n, solution, rng):
                     solution[next_cell] > solution[path[-1]]
                 ):
                     visit(path + [next_cell])
-
         for start in range(n*n):
             if start not in used_thermo and solution[start] <= n-length+1:
                 visit([start])
@@ -166,12 +270,10 @@ def make_constraints(n, solution, rng):
                     continue
                 x, y = solution[a], solution[b]
                 kind = "white" if abs(x-y) == 1 else (
-                    "black" if max(x, y) == 2*min(x, y) else None
-                )
+                    "black" if max(x, y) == 2*min(x, y) else None)
                 if kind:
                     options.append((a, b, kind))
-        if k == 0:
-            # Every puzzle includes at least one white consecutive dot.
+        if k == 0 and n == 4:
             options = [edge for edge in options if edge[2] == "white"]
         if not options:
             raise ValueError("No available Kropki dot")
