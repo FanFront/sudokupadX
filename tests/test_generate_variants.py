@@ -189,6 +189,27 @@ class VariantGeneratorTests(unittest.TestCase):
         self.assertNotIn(1, proof["domains"][2])
         self.assertNotIn(9, proof["domains"][2])
 
+    def test_sudopedia_hidden_pair_and_x_wing(self):
+        # Only two cells in the first row can hold 1 or 2.
+        domains = [set(range(1, 10)) for _ in range(81)]
+        for cell in range(2, 9):
+            domains[cell].difference_update((1, 2))
+        hidden = deduce(9, {}, [], domains=domains)
+        self.assertEqual(hidden["domains"][0], {1, 2})
+        self.assertEqual(hidden["domains"][1], {1, 2})
+        self.assertGreater(hidden["techniques"].get("hidden_subset", 0), 0)
+        # Rows 2 and 5 can place 9 only in columns 2 and 6,
+        # therefore the other rows cannot put 9 in these columns.
+        domains = [set(range(1, 10)) for _ in range(81)]
+        for row in (1, 4):
+            for col in range(9):
+                if col not in (1, 5):
+                    domains[row*9+col].discard(9)
+        fish = deduce(9, {}, [], domains=domains)
+        self.assertNotIn(9, fish["domains"][0*9+1])
+        self.assertNotIn(9, fish["domains"][8*9+5])
+        self.assertGreater(fish["techniques"].get("x_wing", 0), 0)
+
     def test_other_seeds_preserve_actual_motifs(self):
         for seed in (20261104, 20261105):
             with self.subTest(seed=seed):
