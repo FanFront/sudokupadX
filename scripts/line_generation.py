@@ -123,7 +123,8 @@ def generate_between_renban(n, solution, rng, constraints, paths):
     constraints.append({
         "type": "between", "cells": path,
         "motif": "between_renban",
-        "protectCells": list(path)
+        "forcedGivens": [path[0]],
+        "protectCells": list(path[1:])
     })
 
 
