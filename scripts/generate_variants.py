@@ -55,7 +55,7 @@ def make_constraints(n, solution, rng):
     constraints = []
     occupied_cages = set()
     cage_lengths = {4: (2,), 6: (2, 3), 9: (2, 3, 2)}[n]
-    for length in cage_lengths:
+    for cage_index, length in enumerate(cage_lengths):
         options = []
         for a in range(n*n):
             for b in neighbors(n, a):
@@ -69,6 +69,10 @@ def make_constraints(n, solution, rng):
                 for cells in choices:
                     if len(set(solution[i] for i in cells)) == len(cells):
                         options.append(cells)
+        if cage_index == 0:
+            # Every chapter reuses the exact same two-cell sum-five motif.
+            options = [cells for cells in options
+                       if sum(solution[i] for i in cells) == 5]
         if not options:
             raise ValueError("No available killer cage geometry")
         cells = list(rng.choice(options))
@@ -79,8 +83,9 @@ def make_constraints(n, solution, rng):
     thermo_count = 1 if n < 9 else 2
     used_thermo = set()
     thermo_edges = set()
-    for _ in range(thermo_count):
-        length = 3 if n == 4 else 4
+    for thermometer_index in range(thermo_count):
+        # A three-cell rising line is a repeated visual/rule motif.
+        length = 3 if thermometer_index == 0 else 4
         paths = []
 
         def visit(path):
@@ -118,6 +123,9 @@ def make_constraints(n, solution, rng):
                 )
                 if kind:
                     options.append((a, b, kind))
+        if k == 0:
+            # Every puzzle includes at least one white consecutive dot.
+            options = [edge for edge in options if edge[2] == "white"]
         if not options:
             raise ValueError("No available Kropki dot")
         a, b, kind = rng.choice(options)
