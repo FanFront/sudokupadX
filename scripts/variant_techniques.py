@@ -29,13 +29,23 @@ def propagate_extra(n, masks, clue, index, reduce):
                 supports[0].add(circle)
                 for support, d in zip(supports[1:], digits):
                     support.add(d)
+    elif kind == "whisper":
+        # A whisper is a path, not a single pair. Each neighboring link
+        # propagates the >=5 difference in both directions.
+        changed = False
+        for a, b in zip(cells, cells[1:]):
+            allowed_pairs = [(x, y) for x in masks[a] for y in masks[b]
+                             if abs(x-y) >= 5]
+            changed |= reduce(a, {x for x, _ in allowed_pairs},
+                              "whisper", index)
+            changed |= reduce(b, {y for _, y in allowed_pairs},
+                              "whisper", index)
+        return changed
     else:
         a, b = cells
         for x in masks[a]:
             for y in masks[b]:
-                valid = (abs(x-y) >= 5 if kind == "whisper"
-                         else x+y == clue["sum"])
-                if valid:
+                if x+y == clue["sum"]:
                     supports[0].add(x)
                     supports[1].add(y)
     changed = False
