@@ -62,7 +62,7 @@ def solve(givens: dict[int, int], expected: list[int] | None = None) -> dict:
                 masks[i] &= ~bits
                 if not masks[i]:
                     raise ValueError('Logical contradiction')
-                changes.append((i, tuple(digits(bits))))
+                changes.append([i, list(digits(bits))])
         if not changes:
             return False
         counts[method] += 1
