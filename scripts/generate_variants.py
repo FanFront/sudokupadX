@@ -670,7 +670,13 @@ def validate(puzzles, report):
                  if cell}
         constraints = details["constraints"]
         assert len(solution) == n*n
-        expected = {"killer", "thermo", "kropki", "renban", "arrow", "xv"}
+        expected = {"killer", "thermo", "kropki", "renban", "arrow",
+                    "xv", "region_sum"}
+        if n >= 6:
+            expected.update(("entropic", "modular", "between"))
+            for method in ("region_sum_killer_bridge",
+                           "entropic_modular_cross", "between_renban"):
+                assert details["techniques"].get(method, 0) > 0
         if n == 9:
             expected.add("whisper")
             assert details["techniques"].get("kropki_partition", 0) > 0
