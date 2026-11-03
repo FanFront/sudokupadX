@@ -103,6 +103,7 @@ def make_constraints(n, solution, rng):
                             "sum": sum(solution[i] for i in cells)})
 
     dot_edges = set()
+    motif_row = None
     if n == 9:
         # Six actual white dots in one nine-cell house, forming three
         # disjoint consecutive chains. The solver explicitly recognizes
@@ -115,7 +116,7 @@ def make_constraints(n, solution, rng):
                 candidate_rows.append((r, chains))
         if not candidate_rows:
             raise ValueError("No Kropki triple-partition row")
-        _, chains = rng.choice(candidate_rows)
+        motif_row, chains = rng.choice(candidate_rows)
         for cells in chains:
             for a, b in zip(cells, cells[1:]):
                 dot_edges.add(frozenset((a, b)))
@@ -158,7 +159,9 @@ def make_constraints(n, solution, rng):
         for a in range(n*n):
             for b in neighbors(n, a):
                 edge = frozenset((a, b))
-                if a > b or edge in dot_edges or edge in thermo_edges:
+                if (a > b or edge in dot_edges or edge in thermo_edges or
+                        (motif_row is not None and
+                         a//n == motif_row and b//n == motif_row)):
                     continue
                 x, y = solution[a], solution[b]
                 kind = "white" if abs(x-y) == 1 else (
@@ -202,6 +205,12 @@ def add_extra_geometry(n, solution, rng, constraints):
         n, solution, length,
         lambda p: max(solution[i] for i in p) -
         min(solution[i] for i in p) == length-1)
+    if not runs and length == 4:
+        length = 3
+        runs = paths_matching(
+            n, solution, length,
+            lambda p: max(solution[i] for i in p) -
+            min(solution[i] for i in p) == length-1)
     if not runs:
         raise ValueError("No renban pattern")
     preferred = [p for p in runs if len({i//n for i in p}) > 1]
@@ -278,6 +287,8 @@ def quality(n, clues, constraints, solution):
     if len(used) < (3 if n == 9 else 2):
         return None
     if n == 9 and not proof["techniques"].get("kropki_partition"):
+        return None
+    if not used.intersection({"renban", "whisper", "arrow", "xv"}):
         return None
     essential = []
     for kind in VARIANTS:
