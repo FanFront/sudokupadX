@@ -12,10 +12,13 @@ from itertools import combinations, product
 from variant_techniques import EXTRA_VARIANTS, propagate_extra, kropki_triple_partitions
 from variant_structures import (sum_structures, propagate_sum_structures,
                                 mixed_consecutive_partitions)
+from variant_lines import (LINE_VARIANTS, validate_line, propagate_line,
+                           propagate_cross, propagate_region_killer,
+                           propagate_between_renban)
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
-VARIANTS = ("killer", "thermo", "kropki") + EXTRA_VARIANTS
+VARIANTS = ("killer", "thermo", "kropki") + EXTRA_VARIANTS + LINE_VARIANTS
 
 
 def houses(n):
@@ -40,8 +43,10 @@ def validate_constraints(n, constraints):
         if kind == "killer":
             if not 2 <= len(cells) <= 3 or not isinstance(constraint.get("sum"), int):
                 raise ValueError("Invalid killer sum")
-        elif kind in ("thermo", "renban", "whisper", "arrow"):
-            if not 2 <= len(cells) <= min(5, n):
+        elif kind in ("thermo", "renban", "whisper", "arrow") + LINE_VARIANTS:
+            if kind in LINE_VARIANTS:
+                validate_line(n, constraint)
+            elif not 2 <= len(cells) <= min(5, n):
                 raise ValueError("Invalid variant line")
             if kind == "arrow" and len(cells) < 3:
                 raise ValueError("An arrow needs a circle and at least two shaft cells")
@@ -108,10 +113,14 @@ def deduce(n, givens, constraints, domains=None, trace=True):
         return True
 
     while True:
-        # Global mixed-house structure is a deliberately recognizable
-        # starting deduction; apply it before ordinary local elimination.
+        # Global motifs are recognizable without local candidate guessing.
+        # Resolve these before separate per-line rules so each meaningful
+        # cross-rule breakthrough is recorded in the trace.
         changed = mixed_consecutive_partitions(
             n, units, masks, constraints, reduce)
+        changed |= propagate_cross(n, masks, constraints, reduce)
+        changed |= propagate_region_killer(n, masks, constraints, reduce)
+        changed |= propagate_between_renban(n, masks, constraints, reduce)
         for house_id, unit in enumerate(units):
             fixed = [next(iter(masks[i])) for i in unit if len(masks[i]) == 1]
             if len(set(fixed)) != len(fixed):
@@ -193,6 +202,8 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                     method = "thermo" if kind == "thermo" else "kropki"
                     changed |= reduce(a, {x for x, _ in allowed_pairs}, method, index)
                     changed |= reduce(b, {y for _, y in allowed_pairs}, method, index)
+            elif kind in LINE_VARIANTS:
+                changed |= propagate_line(n, masks, clue, index, reduce)
             else:
                 changed |= propagate_extra(n, masks, clue, index, reduce)
 
