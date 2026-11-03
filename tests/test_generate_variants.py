@@ -23,6 +23,14 @@ class VariantGeneratorTests(unittest.TestCase):
         kinds = []
         for game, detail in zip(self.puzzles, self.report["puzzles"]):
             kinds.append({clue["type"] for clue in detail["constraints"]})
+            # A shared rule motif, not just three unrelated uses of a rule.
+            cages = [c for c in detail["constraints"] if c["type"] == "killer"]
+            thermos = [c for c in detail["constraints"] if c["type"] == "thermo"]
+            dots = [c for c in detail["constraints"] if c["type"] == "kropki"]
+            self.assertTrue(any(c["sum"] == 5 and len(c["cells"]) == 2
+                                for c in cages))
+            self.assertTrue(any(len(c["cells"]) == 3 for c in thermos))
+            self.assertTrue(any(c["kind"] == "white" for c in dots))
             self.assertFalse(game["metadata"]["logicProfile"]["requiresGuessing"])
             self.assertEqual(game["metadata"]["variantFamily"], "variant-workshop")
             self.assertEqual(len(game["metadata"]["relatedPuzzles"]), 2)
