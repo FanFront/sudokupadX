@@ -277,21 +277,35 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
         }
     }
     from boss_dependencies import attach_boss_dependencies, completed_boss_reward
+    from human_solver import solve as solve_human, has_aha_moment, SINGLES
     bosses = []
+    boss_proofs = []
     for i in range(4):
         boss_id = f'{WORLD_ID}-boss-{i+1}'
         target = str(solutions[i][boss_cells[i]])
         # Find a boss whose ENTIRE solved grid yields exactly the missing
         # main Sudoku digit. No extra off-grid cell or arbitrary code.
-        for boss_attempt in range(200):
+        for solution_attempt in range(240):
             solved = make_solution(rng)
             if completed_boss_reward(''.join(map(str, solved)), boss_id, seed) != target:
                 continue
-            given = dig(rng, solved, set(), min_clues=22)
-            if len(singles(given)) <= 55:
-                break
+            # A valid unique puzzle can still require speculative branching.
+            # Re-dig a matching answer until a human solver can finish it
+            # using only singles, locked candidates and small subsets.
+            for puzzle_attempt in range(24):
+                given = dig(rng, solved, set(), min_clues=24)
+                if len(given) > 30:
+                    continue
+                proof = solve_human(given, solved)
+                if has_aha_moment(proof):
+                    break
+            else:
+                continue
+            break
         else:
-            raise RuntimeError(f'Could not generate matching hard boss {boss_id}')
+            raise RuntimeError(f'Could not create a no-guess boss {boss_id}')
+        assert count_solutions(given) == 1
+        boss_proofs.append(proof)
         bosses.append({
             'id': f'{WORLD_ID}-boss-{i+1}',
             'cells': [[{'value': str(given[r * 9 + c])} if r * 9 + c in given else {}
@@ -303,7 +317,14 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
                 'author': 'SudokuPadX Procedural Generator',
                 'rules': 'Classic 9x9 Sudoku. Return to the world map when finished.',
                 'solution': ''.join(map(str, solved)),
-                'msgcorrect': f'Gatekeeper {i+1} defeated. Return to the map.'
+                'msgcorrect': f'Gatekeeper {i+1} defeated. Return to the map.',
+                'logicProfile': {
+                    'techniques': proof['techniques'],
+                    'nonSingleSteps': sum(step['method'] not in SINGLES
+                                          for step in proof['trace']),
+                    'logicalSteps': len(proof['trace']),
+                    'requiresGuessing': False
+                }
             }
         })
     boss_gates = attach_boss_dependencies(
@@ -337,6 +358,11 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
                          for r, row in enumerate(b['cells'])
                          for c, cell in enumerate(row) if cell}))
             for b in bosses],
+        'boss_logic_solved': [proof['solved'] for proof in boss_proofs],
+        'boss_logic_methods': [proof['techniques'] for proof in boss_proofs],
+        'boss_logic_steps': [len(proof['trace']) for proof in boss_proofs],
+        # Full replayable deduction traces are exported into validation.json.
+        'boss_logic_trace': [proof['trace'] for proof in boss_proofs],
         'boss_gates': [
             {'bossId': gate['bossId'], 'cell': gate['cell'],
              'revealCount': len(gate['reveals'])}
@@ -347,8 +373,9 @@ def build(seed: int, attempts: int = 40) -> tuple[dict, list[dict], dict]:
                              for r, row in enumerate(b['cells'])
                              for c, cell in enumerate(row) if cell})
             for b in bosses],
-        'label': 'Hard target: low givens, singles-resistant bosses, and '
-                 'cross-grid gates; not a calibrated human difficulty grade'
+        'label': 'Human-solvable bosses: no guessing, 1-5 meaningful '
+                 'candidate eliminations, and a verified complete path; '
+                 'not a calibrated player difficulty grade'
     }
     return world, bosses, report
 
@@ -360,7 +387,17 @@ def validate(world: dict, bosses: list[dict], report: dict) -> None:
     assert report['grid_solutions_without_boss'] == [2] * 4
     assert report['grid_solutions_with_boss'] == [1] * 4
     assert report['boss_solution_counts'] == [1] * 4
-    assert max(report['boss_singles_resolved']) <= 55
+    assert report['boss_logic_solved'] == [True] * 4
+    from human_solver import solve as solve_human, has_aha_moment
+    for i, boss in enumerate(bosses):
+        clues = {r*9+c: int(cell['value'])
+                 for r, row in enumerate(boss['cells'])
+                 for c, cell in enumerate(row) if cell}
+        proof = solve_human(clues, [int(d) for d in boss['metadata']['solution']])
+        assert has_aha_moment(proof), f'Boss {i+1} requires guessing or lacks an aha step'
+        assert proof['trace'] == report['boss_logic_trace'][i]
+        assert proof['techniques'] == report['boss_logic_methods'][i]
+        assert boss['metadata']['logicProfile']['requiresGuessing'] is False
     assert 2 <= len(world['foglight']) < 40
     assert len(world['triggereffect']) == 0
     assert len(world['metadata']['generatedFogRules']) >= 100
@@ -427,7 +464,9 @@ def main() -> None:
     world, bosses, report = build(args.seed, args.attempts)
     validate(world, bosses, report)
     export(args.output, world, bosses, report)
-    print(json.dumps(report, indent=2))
+    # The verbose proof remains in validation.json, not terminal build logs.
+    print(json.dumps({k:v for k,v in report.items()
+                      if k != 'boss_logic_trace'}, indent=2))
 
 
 if __name__ == '__main__':

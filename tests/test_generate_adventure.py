@@ -136,15 +136,43 @@ class GeneratorTests(unittest.TestCase):
                 ''.join(modified), identifier, 20261102))
         self.assertGreater(len(alternative_codes), 1)
 
-    def test_boss_uniqueness_and_singles_resistance(self):
+    def test_boss_uniqueness_and_no_guess_human_solution(self):
+        from human_solver import solve, has_aha_moment, SINGLES
         self.assertEqual(len(self.bosses), 4)
-        for boss in self.bosses:
+        self.assertEqual(self.report['boss_logic_solved'], [True]*4)
+        for i, boss in enumerate(self.bosses):
             clues = {r*9+c: int(v['value'])
                      for r,row in enumerate(boss['cells'])
                      for c,v in enumerate(row) if v}
             self.assertEqual(gen.count_solutions(clues), 1)
-            self.assertLessEqual(len(gen.singles(clues)), 55)
             self.assertEqual(len(boss['metadata']['solution']), 81)
+            answer = list(map(int, boss['metadata']['solution']))
+            proof = solve(clues, answer)
+            self.assertTrue(proof['solved'])
+            self.assertTrue(has_aha_moment(proof))
+            self.assertEqual(proof['values'], dict(enumerate(answer)))
+            self.assertEqual(proof['trace'], self.report['boss_logic_trace'][i])
+            self.assertEqual(proof['techniques'], self.report['boss_logic_methods'][i])
+            profile = boss['metadata']['logicProfile']
+            self.assertFalse(profile['requiresGuessing'])
+            self.assertEqual(profile['techniques'], proof['techniques'])
+            advanced = [step for step in proof['trace']
+                        if step['method'] not in SINGLES]
+            self.assertTrue(1 <= len(advanced) <= 5)
+            self.assertEqual(profile['nonSingleSteps'], len(advanced))
+
+    def test_unique_puzzle_can_still_require_guessing(self):
+        from human_solver import solve, has_aha_moment
+        # A notorious tough classic: unique, but beyond the deliberately
+        # bounded human-technique set used for our generated bosses.
+        grid = ('100007090030020008009600500005300900010080002'
+                '600004000300000010040000007007000300')
+        clues = {i:int(d) for i,d in enumerate(grid) if d != '0'}
+        self.assertEqual(len(grid), 81)
+        self.assertEqual(gen.count_solutions(clues), 1)
+        deduction = solve(clues)
+        self.assertFalse(deduction['solved'])
+        self.assertFalse(has_aha_moment(deduction))
 
     def test_reproducible_and_export(self):
         other, bosses, report = gen.build(20261102)
