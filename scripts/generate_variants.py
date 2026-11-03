@@ -518,7 +518,11 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
         "白点两侧数字相差 1；黑点两侧数字为 1:2；不是所有满足关系的位置都有点。"
         "蓝色连续线包含一组连续数字（顺序任意）；绿色耳语线相邻数字至少相差 5。"
         "橙色箭头路径之和等于圆圈数字；V/X 标记两格之和为 5/10。"
-        "在 9×9 中，同行的三组白点三连格会把 1–9 分成 123、456、789 三组。"
+        f"每个完整行、列、宫的数字和都是 {n*(n+1)//2}："
+        "可利用几乎填满一个宫的杀手笼推算剩余格或跨宫格（Innies/Outies）。"
+        "当杀手笼与连续线覆盖相同格子时，笼和能确定连续数字的范围。"
+        "白点三连格与连续线共同覆盖 6×6 的一整行时，会分成 123 与 456 两组；"
+        "9×9 的三组白点三连格则会分成 123、456、789。"
         "\nRules: standard row/column/box Sudoku; killer cages have the "
         "marked sum with no repeated digits; thermometers increase from "
         "bulb to tip; white Kropki dots mean consecutive digits, black "
@@ -527,7 +531,12 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
         "German whisper lines differ by at least five between neighbors; "
         "orange arrows sum along the shaft to the circle; V/X pairs sum "
         "to 5/10. Three white-dot triples covering one house partition "
-        "digits into 123, 456 and 789."
+        "digits into 123, 456 and 789. "
+        "All rows, columns and boxes total n(n+1)/2; nearly tiled "
+        "houses enable Killer innie/outie deductions. A Renban also "
+        "covered by one Killer cage has a sum-constrained consecutive "
+        "set. Mixed Renban/Kropki triples partition a 6x6 house into "
+        "123 and 456."
         "\nRelated chapters: " + ", ".join("sudokupadx:puzzle/" + x for x in other)
     )
     return {
@@ -570,8 +579,6 @@ def build(seed, attempts=120):
                 # completed grid before expensive clue digging begins.
                 deduce(n, dict(enumerate(solution)), constraints, trace=False)
                 clues = dig(n, solution, constraints, rng)
-                if n == 9:
-                    failures[f"remaining givens {len(clues)}"] += 1
                 accepted = quality(n, clues, constraints, solution, failures)
             except ValueError as exc:
                 failures[str(exc)] += 1
