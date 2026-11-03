@@ -24,7 +24,7 @@ In the app, open **Library** to select a bundled game, search for puzzles, or ma
 
 ## Procedural adventures
 
-Run `python3 scripts/generate_adventure.py` to create a seeded offline adventure: four overlapping 9×9 grids and four bosses whose completed solutions provide indispensable digits **inside** the main Sudoku. Mathematical uniqueness checks prove these highlighted boss cells remain ambiguous even if all other grid overlaps are known. Development and release builds generate the default adventure automatically. See [generation guide](docs/procedural-adventure.md) for how the puzzle design works and its difficulty limitations.
+Run `python3 scripts/generate_adventure.py` to create a seeded offline adventure: four overlapping 9×9 grids and four bosses whose completed solutions provide indispensable digits **inside** the main Sudoku. Mathematical uniqueness checks prove these highlighted boss cells remain ambiguous even if all other grid overlaps are known. A separate human-logic solver rejects boss puzzles that need guessing or backtracking, and records a replayable deduction trace with a recognizable non-single step. Development and release builds generate the default adventure automatically. See the [generation guide](docs/procedural-adventure.md) for its rules and limitations.
 
 ## Development
 
