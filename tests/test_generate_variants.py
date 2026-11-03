@@ -85,6 +85,10 @@ class VariantGeneratorTests(unittest.TestCase):
                          "sum": 5, "cells": [0, 1]}])["domains"][1], {4})
         with self.assertRaises(ValueError):
             deduce(9, {0: 5}, [{"type": "whisper", "cells": [0, 1]}])
+        whisper = deduce(9, {0: 1},
+                        [{"type": "whisper", "cells": [0, 1, 2, 3]}])
+        self.assertEqual(whisper["domains"][1], {6, 7, 8, 9})
+        self.assertTrue(whisper["domains"][2].issubset({2, 3, 4}))
         self.assertEqual(count_solutions(4, {0: 1, 1: 1}, []), 0)
         with self.assertRaises(ValueError):
             deduce(4, {}, [{"type": "thermo", "cells": [0, 15]}])
