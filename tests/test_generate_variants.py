@@ -37,7 +37,10 @@ class VariantGeneratorTests(unittest.TestCase):
             for linked in game["metadata"]["relatedPuzzles"]:
                 self.assertIn("sudokupadx:puzzle/" + linked,
                               game["metadata"]["rules"])
-        self.assertEqual(kinds, [set(("killer", "thermo", "kropki"))]*3)
+        base = {"killer", "thermo", "kropki", "renban", "arrow", "xv"}
+        self.assertEqual(kinds, [base, base, base | {"whisper"}])
+        self.assertGreater(self.report["puzzles"][2]["techniques"].get(
+            "kropki_partition", 0), 0)
 
     def test_each_unique_and_fully_deducible_without_guessing(self):
         for game, detail in zip(self.puzzles, self.report["puzzles"]):
@@ -74,6 +77,14 @@ class VariantGeneratorTests(unittest.TestCase):
         self.assertEqual(deduce(4, {}, [{"type": "kropki",
                          "kind": "black", "cells": [0, 1]}])["domains"][0],
                          {1, 2, 4})
+        self.assertEqual(deduce(4, {0: 1}, [{"type": "renban",
+                         "cells": [0, 1, 2]}])["domains"][1], {2, 3})
+        self.assertEqual(deduce(4, {0: 3}, [{"type": "arrow",
+                         "cells": [0, 1, 2]}])["domains"][1], {1, 2})
+        self.assertEqual(deduce(4, {0: 1}, [{"type": "xv",
+                         "sum": 5, "cells": [0, 1]}])["domains"][1], {4})
+        with self.assertRaises(ValueError):
+            deduce(9, {0: 5}, [{"type": "whisper", "cells": [0, 1]}])
         self.assertEqual(count_solutions(4, {0: 1, 1: 1}, []), 0)
         with self.assertRaises(ValueError):
             deduce(4, {}, [{"type": "thermo", "cells": [0, 15]}])
@@ -81,6 +92,16 @@ class VariantGeneratorTests(unittest.TestCase):
             self.assertEqual(len(houses(n)), 3*n)
             self.assertEqual(len(houses(n)[0]), n)
             self.assertEqual(len(BOXES), 3)
+
+    def test_three_white_chains_partition_a_house(self):
+        dots = [{"type": "kropki", "kind": "white", "cells": [a, a+1]}
+                for a in (0, 1, 3, 4, 6, 7)]
+        result = deduce(9, {0: 4}, dots)
+        self.assertEqual([result["domains"][i] for i in range(3)],
+                         [{4}, {5}, {6}])
+        self.assertGreater(result["techniques"].get("kropki_partition", 0), 0)
+        self.assertTrue(any(step["method"] == "kropki_partition"
+                            for step in result["trace"]))
 
     def test_export_catalog_and_determinism(self):
         other, report = variants.build(20261103)
