@@ -158,7 +158,8 @@ def add_renban_cage_motif(n, solution, rng, constraints, occupied):
                if sum(solution[i] for i in path) == (15 if n == 9 else 9)]
     path = list(rng.choice(choices or options))
     constraints.append({"type": "renban", "cells": path,
-                        "motif": "renban_cage"})
+                        "motif": "renban_cage",
+                        "protectCells": list(path)})
     constraints.append(cage(n, solution, path, motif="renban_cage"))
     occupied.update(path)
 
@@ -361,6 +362,8 @@ def dig(n, solution, constraints, rng):
     protected = {c["outie"] for c in constraints if "outie" in c}
     protected.update(c["protectCell"] for c in constraints
                      if "protectCell" in c)
+    for clue in constraints:
+        protected.update(clue.get("protectCells", []))
     order = [cell for cell in clues if cell not in protected]
     rng.shuffle(order)
     for cell in protected:
@@ -432,6 +435,8 @@ def quality(n, clues, constraints, solution, diagnostic=None):
         return reject("structural motifs did not contribute")
     if n in (6, 9) and not structural.get("killer_outie"):
         return reject("Killer outie deduction unused")
+    if n in (6, 9) and not structural.get("renban_sum_lock"):
+        return reject("Renban-Killer interval deduction unused")
 
     essential = []
     for kind in VARIANTS:
