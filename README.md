@@ -26,6 +26,10 @@ In the app, open **Library** to select a bundled game, search for puzzles, or ma
 
 Run `python3 scripts/generate_adventure.py` to create a seeded offline adventure: four overlapping 9×9 grids and four bosses whose completed solutions provide indispensable digits **inside** the main Sudoku. Mathematical uniqueness checks prove these highlighted boss cells remain ambiguous even if all other grid overlaps are known. A separate human-logic solver rejects boss puzzles that need guessing or backtracking, and records a replayable deduction trace with a recognizable non-single step. Development and release builds generate the default adventure automatically. See the [generation guide](docs/procedural-adventure.md) for its rules and limitations.
 
+## Mixed-variant puzzle workshop
+
+The procedural generator now also creates a connected set of **4×4, 6×6 and 9×9** offline puzzles. Each combines killer sums, thermometers and Kropki dots, and each is accepted only with a verified no-guess logical solution and a unique answer. The rule vocabulary is shared across the chapters, and their rule panels link to one another. See [variant generation](docs/variant-generation.md) for constraints, generation criteria and limitations.
+
 ## Development
 
 Requires Node.js, Rust, and the relevant [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/).
