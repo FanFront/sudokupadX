@@ -50,6 +50,10 @@ class VariantGeneratorTests(unittest.TestCase):
                 "region_sum_killer_bridge", 0), 0)
             self.assertGreater(detail["techniques"].get(
                 "entropic_modular_cross", 0), 0)
+            self.assertIn("modular", detail["used"])
+            self.assertIn("entropic", detail["used"])
+            self.assertTrue(any(moment["method"] == "entropic_modular_cross"
+                                for moment in detail["aha"]))
             self.assertGreater(detail["techniques"].get(
                 "between_renban", 0), 0)
         self.assertGreater(self.report["puzzles"][2]["techniques"].get(
@@ -75,6 +79,10 @@ class VariantGeneratorTests(unittest.TestCase):
             self.assertGreaterEqual(len(detail["necessary"]), 1)
             self.assertEqual(game["metadata"]["logicProfile"][
                 "structuralMotifs"], detail["structural"])
+            self.assertEqual(game["metadata"]["logicProfile"][
+                "ahaMoments"], detail["aha"])
+            self.assertTrue(all("remaining" in step
+                                for step in detail["trace"]))
 
     def test_relation_semantics(self):
         # Valid completed classic 4x4 Sudoku.
