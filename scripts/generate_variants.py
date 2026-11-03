@@ -358,9 +358,14 @@ def add_extra_geometry(n, solution, rng, constraints):
 
 
 def dig(n, solution, constraints, rng):
-    """Greedy removal; retain only deductions with a complete logical proof."""
+    """Remove motif targets first, keeping every deletion logically solvable.
+
+    Removing a whole collection of important cells simultaneously is
+    unnecessarily brittle: a puzzle may tolerate each deletion in
+    isolation but not all at once. Test each target separately, then
+    greedily remove ordinary givens without guessing or backtracking.
+    """
     clues = dict(enumerate(solution))
-    # Keep key motif cells playable rather than giving away the breakthrough.
     protected = {c["outie"] for c in constraints if "outie" in c}
     protected.update(c["protectCell"] for c in constraints
                      if "protectCell" in c)
@@ -369,25 +374,17 @@ def dig(n, solution, constraints, rng):
     forced = {cell for clue in constraints
               for cell in clue.get("forcedGivens", [])}
     protected.difference_update(forced)
-    order = [cell for cell in clues
-             if cell not in protected and cell not in forced]
-    rng.shuffle(order)
-    for cell in protected:
-        clues.pop(cell, None)
-    # The protected cells are absent only when the remaining puzzle can
-    # still be solved logically; keep them if the proof would otherwise fail.
-    try:
-        candidate = deduce(n, clues, constraints, trace=False)
-        if not candidate["solved"] or candidate["values"] != solution:
-            for cell in protected:
-                clues[cell] = solution[cell]
-    except ValueError:
-        for cell in protected:
-            clues[cell] = solution[cell]
-    for cell in order:
+    targets = sorted(protected)
+    rng.shuffle(targets)
+    others = [cell for cell in clues
+              if cell not in protected and cell not in forced]
+    rng.shuffle(others)
+    for cell in targets + others:
         if len(clues) <= MIN_GIVENS[n]:
             break
-        digit = clues.pop(cell)
+        digit = clues.pop(cell, None)
+        if digit is None:
+            continue
         try:
             acceptable = deduce(n, clues, constraints, trace=False)
             if not acceptable["solved"] or acceptable["values"] != solution:
