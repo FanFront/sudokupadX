@@ -45,8 +45,18 @@ generator searches for a boss whose reward matches the required digit in
 the main grid. **No single boss cell, including R5C5, is privileged.**
 
 A solution-counting backtracking solver verifies classic 9×9 uniqueness
-and ambiguity; the initial human-logic filter only handles naked and
-hidden singles, so the advertised hard difficulty is not calibrated.
+and ambiguity, **but it is not used to decide whether a puzzle is playable**.
+Every boss must also be solved completely by a separate no-guessing
+human-logic solver. It accepts naked and hidden singles, locked candidates
+(pointing/claiming), naked pairs, hidden pairs, and naked triples. It cannot
+assume a number, explore a case, or backtrack.
+
+The generator rejects boss puzzles that this bounded technique set cannot
+finish, even if they have exactly one mathematical solution. It also requires
+an early, meaningful non-single deduction (within the first 25 logic steps)
+and 1–5 non-single elimination steps overall, favoring a recognizable
+**aha moment** over long speculative chains. This is a concrete upper bound
+on required techniques, not a claim that all humans find the puzzle easy.
 
 ## Playable fog progression
 
@@ -70,9 +80,10 @@ To make this feasible, the generator can add a small number of further
 classic Sudoku givens, but only if they preserve the essential ambiguity of
 each boss cell—even with all neighboring overlaps fully solved. This makes
 the **main map an exploration puzzle**, while the four independent bosses
-remain intended to be difficult. The guarantee is a complete singles-based
-path, not a comprehensive human difficulty rating or proof that every
-possible player-entered ordering avoids temporary dead ends.
+remain intended to be difficult. The map's guarantee is a complete singles-based path; the bosses have
+their own complete deduction proof using the bounded techniques above.
+Neither guarantee proves that every possible player-entered ordering
+will avoid temporary dead ends.
 
 Following the original Sudokuvania model, correctness-based rules typically
 illuminate neighboring cells, with occasional nonlocal clue reveals needed
@@ -109,8 +120,14 @@ their original fog mechanics are unaffected.
 - The bosses are independent classic Sudoku challenges, not automatically
   constructed killer/arrow/thermo puzzles. Their completed solutions
   supply the mathematically necessary missing values.
-- The generator verifies uniqueness, not a complete human logical
-  solving path or narrative elegance.
+- Bosses now require both uniqueness and a complete human-style logical
+  solving path. The proof for each generated boss is saved to
+  `public/puzzles/generated/validation.json` as `boss_logic_trace`,
+  alongside per-technique counts. These checks do not guarantee subjective
+  elegance, visual presentation, or a particular player's experience.
+- Puzzles needing more advanced techniques, such as X-Wing, chains,
+  forcing nets, or contradiction-based trial, are deliberately rejected
+  rather than labeled merely "hard".
 - Updating the generated puzzle while retaining its IDs can invalidate
   existing local progress. Start this adventure fresh after upgrading.
 - Cross-puzzle boss-completion flags are stored locally and are not yet
