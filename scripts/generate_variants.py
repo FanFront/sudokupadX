@@ -270,17 +270,24 @@ def dig(n, solution, constraints, rng):
     return clues
 
 
-def quality(n, clues, constraints, solution):
+def quality(n, clues, constraints, solution, diagnostic=None):
     """Check a genuine variant dependency, not merely decorative constraints."""
-    if len(clues) > MAX_GIVENS[n]:
+    def reject(reason):
+        if diagnostic is not None:
+            diagnostic[reason] += 1
         return None
+
+    if len(clues) > MAX_GIVENS[n]:
+        return reject("too many givens")
     try:
         proof = deduce(n, clues, constraints)
         ordinary = deduce(n, clues, [])
     except ValueError:
-        return None
-    if not proof["solved"] or proof["values"] != solution or ordinary["solved"]:
-        return None
+        return reject("deduction contradiction")
+    if not proof["solved"] or proof["values"] != solution:
+        return reject("full deduction incomplete")
+    if ordinary["solved"]:
+        return reject("classic solves without variants")
     kind_for_method = {"killer_sum": "killer", "thermo": "thermo",
                        "kropki": "kropki", "kropki_partition": "kropki",
                        "renban": "renban", "whisper": "whisper",
@@ -288,11 +295,11 @@ def quality(n, clues, constraints, solution):
     used = {kind_for_method[name] for name, count in
             proof["techniques"].items() if count and name in kind_for_method}
     if len(used) < (3 if n == 9 else 2):
-        return None
+        return reject("too few variant families")
     if n == 9 and not proof["techniques"].get("kropki_partition"):
-        return None
+        return reject("partition technique unused")
     if not used.intersection({"renban", "whisper", "arrow", "xv"}):
-        return None
+        return reject("new techniques unused")
     essential = []
     for kind in VARIANTS:
         subset = [c for c in constraints if c["type"] != kind]
@@ -301,9 +308,11 @@ def quality(n, clues, constraints, solution):
                 essential.append(kind)
         except ValueError:
             # A contradiction cannot be used as an ablation success.
-            return None
-    if not essential or count_solutions(n, clues, constraints) != 1:
-        return None
+            return reject("ablation contradiction")
+    if not essential:
+        return reject("no variant family is essential")
+    if count_solutions(n, clues, constraints) != 1:
+        return reject("nonunique")
     return {"proof": proof, "used": sorted(used), "essential": essential}
 
 
@@ -427,7 +436,7 @@ def build(seed, attempts=120):
             try:
                 constraints = make_constraints(n, solution, rng)
                 clues = dig(n, solution, constraints, rng)
-                accepted = quality(n, clues, constraints, solution)
+                accepted = quality(n, clues, constraints, solution, failures)
             except ValueError as exc:
                 failures[str(exc)] += 1
                 continue
