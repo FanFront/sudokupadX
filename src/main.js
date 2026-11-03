@@ -11,6 +11,7 @@ import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPe
 import {linksAtCell,returnDestination} from './linked-navigation.js';
 import {markBossCleared,lockedBossGate,bossGateAt,applyBossReveals} from './boss-gates.js';
 import {editableCellIndices} from './fog-editing.js';
+import {variantKeypadSymbols} from './variant-keypad.js';
 import {setupOnlineLibrary} from './online-ui.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
@@ -510,7 +511,7 @@ function updateControls() {
     el.classList.toggle('active',el.dataset.mode===mode);
     el.setAttribute('aria-pressed',String(el.dataset.mode===mode));
   });
-  const keys=alphabet?'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.slice(letterPage*9,(letterPage+1)*9).split(''):['1','2','3','4','5','6','7','8','9','0'];
+  const keys=variantKeypadSymbols(puzzle,currentEntry,alphabet,letterPage);
   const pad=$('keypad');
   pad.replaceChildren();
   for (const symbol of keys) {
