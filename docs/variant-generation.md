@@ -28,7 +28,10 @@ linked-puzzle button, and the library also lists all three independently.
 An unmarked pair is **not** subject to a negative Kropki rule. Each size
 has all three constraint types, with different placements and combinations.
 Shared rule semantics deliberately let players transfer deductions across
-the three chapters. The 6×6 grid uses 2×3 boxes; 4×4 uses 2×2; 9×9 uses 3×3.
+the three chapters.
+The repeated visual motifs are a two-cell **sum-5 killer cage**, a three-cell
+**thermometer**, and a **white consecutive Kropki dot** in every chapter.
+Larger puzzles add further instances of these constraint families. The 6×6 grid uses 2×3 boxes; 4×4 uses 2×2; 9×9 uses 3×3.
 
 ## Playability and uniqueness
 
