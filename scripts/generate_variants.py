@@ -428,6 +428,16 @@ def quality(n, clues, constraints, solution, diagnostic=None):
                        "arrow": "arrow", "xv": "xv"}
     used = {kind_for_method[name] for name, count in
             proof["techniques"].items() if count and name in kind_for_method}
+    # A cross-rule deduction necessarily uses *both* authored families;
+    # counting it for only one would misrepresent the proof profile.
+    for method, families in {
+        "region_sum_killer_bridge": ("region_sum", "killer"),
+        "entropic_modular_cross": ("entropic", "modular"),
+        "between_renban": ("between", "renban"),
+        "mixed_consecutive_partition": ("renban", "kropki"),
+    }.items():
+        if proof["techniques"].get(method):
+            used.update(families)
     if len(used) < (3 if n == 9 else 2):
         return reject("too few variant families")
     if n == 9 and not proof["techniques"].get("kropki_partition"):
@@ -454,6 +464,10 @@ def quality(n, clues, constraints, solution, diagnostic=None):
     if n in (6, 9):
         if not structural.get("entropic_modular_cross"):
             return reject("Entropic-modular intersection unused")
+        if not any(step["method"] == "entropic_modular_cross"
+                   and len(step["remaining"]) == 1
+                   for step in proof["trace"]):
+            return reject("Entropic-modular crossing did not resolve a cell")
         if not structural.get("between_renban"):
             return reject("Between-Renban intersection unused")
 
@@ -470,8 +484,17 @@ def quality(n, clues, constraints, solution, diagnostic=None):
         return reject("no variant family is essential")
     if count_solutions(n, clues, constraints) != 1:
         return reject("nonunique")
+    aha = [{"method": step["method"], "cell": step["cell"],
+            "digit": step["remaining"][0], "source": step["source"]}
+           for step in proof["trace"]
+           if step["method"] in ("entropic_modular_cross",
+                                 "region_sum_killer_bridge",
+                                 "between_renban",
+                                 "kropki_partition")
+           and len(step["remaining"]) == 1]
     return {"proof": proof, "used": sorted(used),
-            "essential": essential, "structural": structural}
+            "essential": essential, "structural": structural,
+            "aha": aha[:8]}
 
 
 def point(n, index):
@@ -616,7 +639,8 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
                 "usedVariantRules": quality_info["used"],
                 "necessaryVariantTypes": quality_info["essential"],
                 "techniques": quality_info["proof"]["techniques"],
-                "structuralMotifs": quality_info["structural"]
+                "structuralMotifs": quality_info["structural"],
+                "ahaMoments": quality_info["aha"]
             }
         }
     }
@@ -653,6 +677,7 @@ def build(seed, attempts=120):
             "used": accepted["used"], "necessary": accepted["essential"],
             "techniques": accepted["proof"]["techniques"],
             "structural": accepted["structural"],
+            "aha": accepted["aha"],
             "trace": accepted["proof"]["trace"]
         })
     return puzzles, {"seed": seed, "family": FAMILY, "puzzles": details}
