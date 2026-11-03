@@ -7,11 +7,13 @@ The deduction engine NEVER branches; solution counting branches separately.
 from __future__ import annotations
 
 from collections import Counter
-from itertools import product
+from itertools import combinations, product
+
+from variant_techniques import EXTRA_VARIANTS, propagate_extra, kropki_triple_partitions
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
-VARIANTS = ("killer", "thermo", "kropki")
+VARIANTS = ("killer", "thermo", "kropki") + EXTRA_VARIANTS
 
 
 def houses(n):
@@ -36,18 +38,26 @@ def validate_constraints(n, constraints):
         if kind == "killer":
             if not 2 <= len(cells) <= 3 or not isinstance(constraint.get("sum"), int):
                 raise ValueError("Invalid killer sum")
-        elif kind == "thermo":
+        elif kind in ("thermo", "renban", "whisper", "arrow"):
             if not 2 <= len(cells) <= min(5, n):
-                raise ValueError("Invalid thermometer")
+                raise ValueError("Invalid variant line")
+            if kind == "arrow" and len(cells) < 3:
+                raise ValueError("An arrow needs a circle and at least two shaft cells")
+            if kind == "whisper" and n < 6:
+                raise ValueError("German whispers are not useful on this grid")
             if any(abs(a//n-b//n)+abs(a%n-b%n) != 1
                    for a, b in zip(cells, cells[1:])):
-                raise ValueError("Thermometer must be orthogonally connected")
-        else:
-            if len(cells) != 2 or constraint.get("kind") not in ("white", "black"):
-                raise ValueError("Invalid Kropki dot")
+                raise ValueError("Variant paths must be orthogonally connected")
+        elif kind in ("kropki", "xv"):
+            if len(cells) != 2:
+                raise ValueError("Invalid pair")
             a, b = cells
             if abs(a//n-b//n)+abs(a%n-b%n) != 1:
-                raise ValueError("Kropki dots must connect adjacent cells")
+                raise ValueError("Pair marks must connect adjacent cells")
+            if kind == "kropki" and constraint.get("kind") not in ("white", "black"):
+                raise ValueError("Invalid Kropki dot")
+            if kind == "xv" and constraint.get("sum") not in (5, 10):
+                raise ValueError("XV pairs must sum to 5 or 10")
 
 
 def deduce(n, givens, constraints, domains=None, trace=True):
@@ -104,6 +114,18 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                 if len(cells) == 1:
                     changed |= reduce(cells[0], {digit},
                                       "hidden_single", house_id)
+            # Naked pairs and triples are direct all-different deductions,
+            # never hypothetical branch guesses.
+            unsolved = [i for i in unit if len(masks[i]) > 1]
+            for size in (2, 3):
+                for chosen in combinations(unsolved, size):
+                    digits = set().union(*(masks[i] for i in chosen))
+                    if len(digits) != size:
+                        continue
+                    for i in unit:
+                        if i not in chosen:
+                            changed |= reduce(i, masks[i] - digits,
+                                              "naked_subset", house_id)
 
         for index, clue in enumerate(constraints):
             kind, cells = clue["type"], clue["cells"]
@@ -116,7 +138,7 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                         support.add(d)
                 for i, allowed in zip(cells, supports):
                     changed |= reduce(i, allowed, "killer_sum", index)
-            else:
+            elif kind in ("thermo", "kropki"):
                 edges = list(zip(cells, cells[1:])) if kind == "thermo" else [
                     (cells[0], cells[1])
                 ]
@@ -133,7 +155,10 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                     method = "thermo" if kind == "thermo" else "kropki"
                     changed |= reduce(a, {x for x, _ in allowed_pairs}, method, index)
                     changed |= reduce(b, {y for _, y in allowed_pairs}, method, index)
+            else:
+                changed |= propagate_extra(n, masks, clue, index, reduce)
 
+        changed |= kropki_triple_partitions(n, units, masks, constraints, reduce)
         if not changed:
             break
     return {"solved": all(len(s) == 1 for s in masks),
