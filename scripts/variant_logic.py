@@ -108,7 +108,10 @@ def deduce(n, givens, constraints, domains=None, trace=True):
         return True
 
     while True:
-        changed = False
+        # Global mixed-house structure is a deliberately recognizable
+        # starting deduction; apply it before ordinary local elimination.
+        changed = mixed_consecutive_partitions(
+            n, units, masks, constraints, reduce)
         for house_id, unit in enumerate(units):
             fixed = [next(iter(masks[i])) for i in unit if len(masks[i]) == 1]
             if len(set(fixed)) != len(fixed):
@@ -194,8 +197,6 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                 changed |= propagate_extra(n, masks, clue, index, reduce)
 
         changed |= kropki_triple_partitions(n, units, masks, constraints, reduce)
-        changed |= mixed_consecutive_partitions(
-            n, units, masks, constraints, reduce)
         if not changed:
             break
     return {"solved": all(len(s) == 1 for s in masks),
