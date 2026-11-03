@@ -435,7 +435,12 @@ def build(seed, attempts=120):
             solution = make_solution(n, rng)
             try:
                 constraints = make_constraints(n, solution, rng)
+                # Verify that every authored constraint agrees with the
+                # completed grid before expensive clue digging begins.
+                deduce(n, dict(enumerate(solution)), constraints, trace=False)
                 clues = dig(n, solution, constraints, rng)
+                if n == 9:
+                    failures[f"remaining givens {len(clues)}"] += 1
                 accepted = quality(n, clues, constraints, solution, failures)
             except ValueError as exc:
                 failures[str(exc)] += 1
