@@ -74,6 +74,52 @@ The generation trace records the actual candidate removals made by
 these motifs, including the involved house, cages, or line groups.
 Pattern-recognition labels without eliminations do **not** count.
 
+## Additional research: region-sum and class-based lines
+
+The generator now authors three **cross-rule motifs**, not merely new
+colored lines:
+
+| Motif | Construction | No-guess deduction |
+| --- | --- | --- |
+| **Region sum + Killer** | A region-sum line crosses a box edge, and a two- or three-cell Killer cage coincides with one entire segment | The cage gives the common sum of *all* segments; propagate sums into the other box (`region_sum_killer_bridge`) |
+| **Entropic × modular crossing** | A 4-cell gold entropic line and a 4-cell teal modular line cross once. One non-crossing anchor is a given on each line | Each anchor fixes the repeating sequence of classes; their crossing cell belongs to the intersection (`entropic_modular_cross`) |
+| **Between + Renban** | The interior cells of a violet Between line also form a Renban; one endpoint is given | The interior must form a consecutive interval *strictly* inside the endpoint range; both endpoints and interior narrow (`between_renban`) |
+
+The ordinary line deductions are also implemented: consecutive box
+segments on a region-sum line have **equal totals**; every three
+consecutive entropic digits represent the three low/middle/high classes;
+every three modular digits contain different residues mod 3; Between
+interiors lie strictly between two circle values.
+
+For **6×6**, the entropic groups are `{1,2}/{3,4}/{5,6}`;
+for **9×9** they are `{1,2,3}/{4,5,6}/{7,8,9}`. Modular
+groups always use the digit's remainder modulo three.
+These two rules are *not* interchangeable. A line of length 4
+cycles its three digit classes back to the starting class.
+
+Sudopedia's traditional techniques are also available **after** variant
+reductions: hidden pairs/triples (`hidden_subset`) and the
+two-row/two-column X-Wing (`x_wing`). These are direct candidate
+eliminations rather than hypothetical chains.
+
+### Sources and next research candidates
+
+- Sudopedia [45 rule](https://sudopedia.sudocue.net/index.php/45_rule):
+  innies, outies, and hidden cages.
+- Sudopedia [Locked Candidates](https://sudopedia.sudocue.net/index.php?title=Pointing_Pair):
+  intersections and Killer cage combinations.
+- Sudopedia [Hidden Subset](https://sudopedia.sudocue.net/index.php/Hidden_Subset)
+  and [Fish](https://sudopedia.sudocue.net/index.php?title=Fish):
+  standard deductions after variant pruning.
+- [Sudoku Skunkworks rule compendium](https://georgethetoad.co.uk/ctcHunts/Duality.pdf)
+  and [Logic Masters example](https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000IL0):
+  modern line definitions, including modular and entropic classes.
+
+The next suitable Sudopedia-derived motifs are **Killer locked
+combinations** (a digit must occur in a cage restricted to one house)
+and **innie/outie differences**; these should be added only after a
+human-readable proof step and a source-labelled motif can be generated.
+
 ## Acceptance and verification
 
 A candidate puzzle is retained only when:
@@ -86,8 +132,10 @@ A candidate puzzle is retained only when:
    (three on 9×9) actively remove candidates.
 4. **6×6 and 9×9 each have at least two different structural methods**
    that actually remove candidates. Both also demonstrate a house-wide
-   Killer outie. The 9×9 must additionally demonstrate the three-chain
-   Kropki technique.
+   Killer outie, a Renban-Killer interval lock, a region-sum/Killer
+   bridge, an entropic-modular crossing and a Between-Renban
+   interaction. The 9×9 must additionally demonstrate the three-chain
+   Kropki technique; 6×6 must demonstrate the mixed consecutive partition.
 5. Removing all constraints from at least one whole variant family
    must make the human solve stall.
 6. An *independent* bounded search finds exactly one solution to the
@@ -110,6 +158,12 @@ especially when cage, line and dot marks converge.
   candidates and independent solution counter.
 - `scripts/variant_techniques.py`: local Renban, whisper, arrow and
   XV propagation, plus 9×9 white-dot triple partition.
+- `scripts/variant_lines.py`: region-sum, entropic, modular and Between
+  domain propagation plus genuine cross-rule deductions.
+- `scripts/line_generation.py`: builds meaningful line intersections with
+  explicit opening anchors and protected deduction targets.
+- `scripts/classic_techniques.py`: hidden subsets and X-Wings from
+  traditional Sudoku solving.
 - `scripts/variant_structures.py`: reconstructed Killer house arithmetic,
   Renban–Killer sum locks and mixed Kropki–Renban house partitions.
 - `scripts/generate_variants.py`: chooses the solution, constructs
