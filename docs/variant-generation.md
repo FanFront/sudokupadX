@@ -142,9 +142,16 @@ A candidate puzzle is retained only when:
    complete visible puzzle, including all variant constraints.
 
 The proof is stored in `validation.json`, with counts, sources,
-removed candidates and rule-family ablation information.
-`metadata.logicProfile.structuralMotifs` summarizes the useful
-structural methods in each published chapter.
+removed candidates, the remaining candidate domains and rule-family
+ablation information. `metadata.logicProfile.structuralMotifs`
+summarizes genuinely used structural methods. The exported
+`logicProfile.ahaMoments` contains trace-backed single-digit resolutions
+with source constraint references, suitable for a future hint engine.
+
+In particular, an entropic/modular crossing is only accepted when its
+two class-anchored lines **actually resolve a cell to one digit**.
+One given per line leaves two possible class orders; the constructor
+therefore uses two distinct-class anchors per line.
 
 These gates establish reproducible, no-guess solutions and **actual
 participation** by the structures. They do not establish a calibrated
