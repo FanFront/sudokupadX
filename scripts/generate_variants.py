@@ -15,6 +15,7 @@ import random
 from pathlib import Path
 
 from variant_logic import BOXES, VARIANTS, count_solutions, deduce, houses
+from line_generation import add_line_motifs
 
 FAMILY = "variant-workshop"
 SIZES = (4, 6, 9)
@@ -282,6 +283,7 @@ def make_constraints(n, solution, rng):
         dot_edges.add(frozenset((a, b)))
         constraints.append({"type": "kropki", "kind": kind, "cells": [a, b]})
     add_extra_geometry(n, solution, rng, constraints)
+    add_line_motifs(n, solution, rng, constraints, paths_matching, cage)
     return constraints
 
 
@@ -364,7 +366,11 @@ def dig(n, solution, constraints, rng):
                      if "protectCell" in c)
     for clue in constraints:
         protected.update(clue.get("protectCells", []))
-    order = [cell for cell in clues if cell not in protected]
+    forced = {cell for clue in constraints
+              for cell in clue.get("forcedGivens", [])}
+    protected.difference_update(forced)
+    order = [cell for cell in clues
+             if cell not in protected and cell not in forced]
     rng.shuffle(order)
     for cell in protected:
         clues.pop(cell, None)
@@ -410,6 +416,13 @@ def quality(n, clues, constraints, solution, diagnostic=None):
     if ordinary["solved"]:
         return reject("classic solves without variants")
     kind_for_method = {"killer_sum": "killer", "killer_innie": "killer",
+                       "region_sum": "region_sum",
+                       "region_sum_killer_bridge": "region_sum",
+                       "entropic": "entropic",
+                       "modular": "modular",
+                       "entropic_modular_cross": "entropic",
+                       "between": "between",
+                       "between_renban": "between",
                        "killer_outie": "killer", "renban_sum_lock": "renban",
                        "mixed_consecutive_partition": "renban",
                        "thermo": "thermo",
@@ -427,7 +440,9 @@ def quality(n, clues, constraints, solution, diagnostic=None):
     if not used.intersection({"renban", "whisper", "arrow", "xv"}):
         return reject("new techniques unused")
     structural_names = ("killer_innie", "killer_outie",
-                        "renban_sum_lock", "mixed_consecutive_partition")
+                        "renban_sum_lock", "mixed_consecutive_partition",
+                        "region_sum_killer_bridge", "entropic_modular_cross",
+                        "between_renban")
     structural = {name: proof["techniques"].get(name, 0)
                   for name in structural_names
                   if proof["techniques"].get(name, 0)}
@@ -437,6 +452,13 @@ def quality(n, clues, constraints, solution, diagnostic=None):
         return reject("Killer outie deduction unused")
     if n in (6, 9) and not structural.get("renban_sum_lock"):
         return reject("Renban-Killer interval deduction unused")
+    if not structural.get("region_sum_killer_bridge"):
+        return reject("Region-sum Killer bridge unused")
+    if n in (6, 9):
+        if not structural.get("entropic_modular_cross"):
+            return reject("Entropic-modular intersection unused")
+        if not structural.get("between_renban"):
+            return reject("Between-Renban intersection unused")
 
     essential = []
     for kind in VARIANTS:
@@ -486,13 +508,27 @@ def render(n, constraints):
                 "backgroundColor": "#ffffff" if is_white else "#28262d",
                 "borderColor": "#28262d", "borderSize": 1.3
             })
-        elif clue["type"] in ("renban", "whisper"):
+        elif clue["type"] in ("renban", "whisper", "region_sum",
+                               "entropic", "modular", "between"):
             coords = [[r+.5, c+.5] for r, c in
                       (point(n, i) for i in cells)]
+            style = {
+                "renban": ("#85a8d8", 16),
+                "whisper": ("#7abe9a", 12),
+                "region_sum": ("#3b619c", 10),
+                "entropic": ("#d8a752", 10),
+                "modular": ("#45a8ab", 10),
+                "between": ("#a783d6", 8),
+            }
+            color, width = style[clue["type"]]
             lines.append({"wayPoints": coords, "target": "underlay",
-                          "thickness": 16 if clue["type"] == "renban" else 12,
-                          "color": "#85a8d8" if clue["type"] == "renban"
-                          else "#7abe9a"})
+                          "thickness": width, "color": color})
+            if clue["type"] == "between":
+                for end in (coords[0], coords[-1]):
+                    underlays.append({
+                        "center": end, "width": .72, "height": .72,
+                        "rounded": True, "backgroundColor": "#f8f3ff",
+                        "borderColor": color, "borderSize": 2})
         elif clue["type"] == "arrow":
             coords = [[r+.5, c+.5] for r, c in
                       (point(n, i) for i in cells)]
@@ -532,6 +568,12 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
         "当杀手笼与连续线覆盖相同格子时，笼和能确定连续数字的范围。"
         "白点三连格与连续线共同覆盖 6×6 的一整行时，会分成 123 与 456 两组；"
         "9×9 的三组白点三连格则会分成 123、456、789。"
+        "深蓝色区域和线以宫界分段，各段数字和相等；金色熵线任意连续三格"
+        "分别来自低中高三组（六宫用12/34/56，九宫用123/456/789）；"
+        "青绿色模三线任意连续三格的除以3余数互不相同；"
+        "淡紫色两端圈线的内部数字严格介于两端圈中的数字之间。"
+        "交叉熵线与模三线可确定交点的数字类别；"
+        "区域和线的一段若覆盖一整个杀手笼，可把笼和传递给其它分段。"
         "\nRules: standard row/column/box Sudoku; killer cages have the "
         "marked sum with no repeated digits; thermometers increase from "
         "bulb to tip; white Kropki dots mean consecutive digits, black "
@@ -545,7 +587,15 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
         "houses enable Killer innie/outie deductions. A Renban also "
         "covered by one Killer cage has a sum-constrained consecutive "
         "set. Mixed Renban/Kropki triples partition a 6x6 house into "
-        "123 and 456."
+        "123 and 456. "
+        "Dark-blue region-sum lines have equal sums within each "
+        "successive box segment. Gold entropic lines have one digit "
+        "from each low/mid/high group in any consecutive triple "
+        "(12/34/56 in 6x6, 123/456/789 in 9x9). Teal modular lines "
+        "have one each of the residue classes modulo 3 in every three "
+        "cells. Violet between lines have interior values strictly "
+        "between their circled endpoints. Crossed lines and Killer "
+        "segments are designed to create explicit deductions."
         "\nRelated chapters: " + ", ".join("sudokupadx:puzzle/" + x for x in other)
     )
     return {
