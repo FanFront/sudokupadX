@@ -82,7 +82,7 @@ colored lines:
 | Motif | Construction | No-guess deduction |
 | --- | --- | --- |
 | **Region sum + Killer** | A region-sum line crosses a box edge, and a two- or three-cell Killer cage coincides with one entire segment | The cage gives the common sum of *all* segments; propagate sums into the other box (`region_sum_killer_bridge`) |
-| **Entropic × modular crossing** | A 4-cell gold entropic line and a 4-cell teal modular line cross once. One non-crossing anchor is a given on each line | Each anchor fixes the repeating sequence of classes; their crossing cell belongs to the intersection (`entropic_modular_cross`) |
+| **Entropic × modular crossing** | A 4-cell gold entropic line and a 4-cell teal modular line cross once. Two distinct-class non-crossing anchors are givens on each line | Two anchors on each line fix the order of all three class groups; the crossing cell belongs to their intersection (`entropic_modular_cross`) |
 | **Between + Renban** | The interior cells of a violet Between line also form a Renban; one endpoint is given | The interior must form a consecutive interval *strictly* inside the endpoint range; both endpoints and interior narrow (`between_renban`) |
 
 The ordinary line deductions are also implemented: consecutive box
