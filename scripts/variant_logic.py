@@ -109,7 +109,9 @@ def deduce(n, givens, constraints, domains=None, trace=True):
             raise ValueError("Contradiction: no possible digit")
         if trace:
             proof.append({"method": method, "cell": cell,
-                          "removed": sorted(removed), "source": source})
+                          "removed": sorted(removed),
+                          "remaining": sorted(masks[cell]),
+                          "source": source})
         counts[method] += 1
         return True
 
