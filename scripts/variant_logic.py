@@ -15,6 +15,7 @@ from variant_structures import (sum_structures, propagate_sum_structures,
 from variant_lines import (LINE_VARIANTS, validate_line, propagate_line,
                            propagate_cross, propagate_region_killer,
                            propagate_between_renban)
+from classic_techniques import hidden_subsets, x_wings
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
@@ -149,6 +150,11 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                         if i not in chosen:
                             changed |= reduce(i, masks[i] - digits,
                                               "naked_subset", house_id)
+
+        # Hidden pairs/triples and X-Wings are optional direct followups
+        # when variant constraints have restricted candidate positions.
+        changed |= hidden_subsets(n, units, masks, reduce)
+        changed |= x_wings(n, masks, reduce)
 
         # A candidate confined to a row/box intersection cannot occur
         # elsewhere in the other house (pointing / claiming).
