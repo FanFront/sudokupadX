@@ -28,7 +28,7 @@ Run `python3 scripts/generate_adventure.py` to create a seeded offline adventure
 
 ## Mixed-variant puzzle workshop
 
-The procedural generator now also creates a connected set of **4×4, 6×6 and 9×9** offline puzzles. Each combines killer sums, thermometers and Kropki dots, and each is accepted only with a verified no-guess logical solution and a unique answer. The rule vocabulary is shared across the chapters, and their rule panels link to one another. See [variant generation](docs/variant-generation.md) for constraints, generation criteria and limitations.
+The procedural generator now also creates a connected set of **4×4, 6×6 and 9×9** offline puzzles. Across the chapters, the generator supports killer sums, thermometers, white/black Kropki, Renban, arrows, XV pairs, and 9×9 German whispers. These are active deduction rules: puzzles require a verified no-guess logical solution and a unique answer. The 9×9 chapter deliberately builds a three-chain white-Kropki deduction that partitions 1–9 into three consecutive triples. The rule vocabulary is shared across the chapters, and their rule panels link to one another. See [variant generation](docs/variant-generation.md) for constraints, generation criteria and limitations.
 
 ## Development
 
