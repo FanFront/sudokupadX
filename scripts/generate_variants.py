@@ -9,6 +9,7 @@ chains, trial-and-error, or hidden solution peeking are used by the proof.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import random
 from pathlib import Path
@@ -418,19 +419,22 @@ def build(seed, attempts=120):
     rng = random.Random(seed)
     puzzles, details = [], []
     for n in SIZES:
+        failures = Counter()
         for attempt in range(1, attempts+1):
             solution = make_solution(n, rng)
             try:
                 constraints = make_constraints(n, solution, rng)
                 clues = dig(n, solution, constraints, rng)
                 accepted = quality(n, clues, constraints, solution)
-            except ValueError:
+            except ValueError as exc:
+                failures[str(exc)] += 1
                 continue
             if accepted is not None:
                 break
+            failures["quality gates"] += 1
         else:
             raise RuntimeError(f"No meaningful no-guess {n}x{n} variant "
-                               f"after {attempts} attempts")
+                               f"after {attempts} attempts: {dict(failures)}")
         game = puzzle(n, clues, solution, constraints, accepted, seed)
         puzzles.append(game)
         details.append({
