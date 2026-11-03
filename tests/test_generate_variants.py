@@ -171,8 +171,13 @@ class VariantGeneratorTests(unittest.TestCase):
     def test_modular_entropic_and_crossing(self):
         entropy = {"type": "entropic", "cells": [9, 10, 11, 12]}
         modulo = {"type": "modular", "cells": [1, 10, 19, 28]}
-        proof = deduce(9, {9: 2, 1: 3}, [entropy, modulo])
+        proof = deduce(9, {9: 2, 11: 8, 1: 3, 19: 5},
+                       [entropy, modulo])
         self.assertEqual(proof["domains"][10], {4})
+        incomplete = deduce(9, {9: 2, 1: 3},
+                            [entropy, modulo])
+        self.assertGreater(len(incomplete["domains"][10]), 1,
+                           "One anchor per line must not falsely fix the digit")
         self.assertGreater(proof["techniques"].get(
             "entropic_modular_cross", 0), 0)
         self.assertTrue(proof["domains"][11].issubset({7, 8, 9}))
