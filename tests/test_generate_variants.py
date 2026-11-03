@@ -146,6 +146,18 @@ class VariantGeneratorTests(unittest.TestCase):
         self.assertGreater(partition["techniques"].get(
             "mixed_consecutive_partition", 0), 0)
 
+    def test_other_seeds_preserve_actual_motifs(self):
+        for seed in (20261104, 20261105):
+            with self.subTest(seed=seed):
+                puzzles, report = variants.build(seed, attempts=80)
+                variants.validate(puzzles, report)
+                self.assertGreater(report["puzzles"][1]["techniques"].get(
+                    "mixed_consecutive_partition", 0), 0)
+                self.assertGreater(report["puzzles"][2]["techniques"].get(
+                    "killer_outie", 0), 0)
+                self.assertGreater(report["puzzles"][2]["techniques"].get(
+                    "renban_sum_lock", 0), 0)
+
     def test_export_catalog_and_determinism(self):
         other, report = variants.build(20261103)
         self.assertEqual(self.puzzles, other)
