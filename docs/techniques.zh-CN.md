@@ -5,6 +5,7 @@
 > 以下都是根据规则**必然成立的推理**，不使用猜数、穷举试错，也不要求玩家提前知道答案。
 
 [返回数独规则工坊说明](variant-generation.md) ·
+[继续学习：Sudopedia 完整分类、中文进阶例题与实现状态](sudopedia-catalog.zh-CN.md) ·
 [Sudopedia 技巧总目录（英文）](https://sudopedia.sudocue.net/index.php?title=Solving_technique)
 
 ## 如何读例题
@@ -347,9 +348,12 @@ R8：C1、C9
 
 ## 哪些 Sudopedia 技巧暂不用于自动证明？
 
-Sudopedia 收录了更高级的 ALS、Finned Fish、AIC、各类链、着色、
-唯一矩形（Unique Rectangle）、试错（Trial & Error）、模板法和回溯等技术。
-**不能把目录里列出的全部技巧都当成已经实现**。
+Sudopedia 还收录了 ALS、鳍形鱼、各种链、染色、AIC、唯一矩形、
+试错、模板法和回溯等技术。**其中部分有了有界、可解释的实现**：
+ALS-XZ、Finned X-Wing、W-Wing、2-String Kite、远程数对、
+XY-Chain、X-Chain、简单双染色和五行鱼。其余高级技巧不应被冒充为已实现。
+逐项说明、中文例题和限制见
+[进阶技巧覆盖目录](sudopedia-catalog.zh-CN.md)。
 
 我们优先支持：
 - 无需预先假设解唯一的直接逻辑；
