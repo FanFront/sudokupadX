@@ -115,6 +115,18 @@ test('six-cell killer sum eliminates arithmetic impossibilities without brute fo
     sum:21,unique:true}],known,{[target]:[6,7]},target,7);
   assert.ok(hint.step.remaining.includes(6));
 });
+test('undeduced jigsaw regions are not leaked from authored solution layouts',()=>{
+  const {puzzle,progress}=game([],{[at(0,0)]:1},
+    {[at(1,1)]:[1,2]},false);
+  puzzle.rules='不规则数独：每行、每列和每个区域填入 1–9。'+
+    '区域形状需要自行推导，不能从答案偷看。';
+  puzzle.regions=Array.from({length:9},(_,diagonal)=>
+    Array.from({length:9},(_,r)=>[r,(r-diagonal+9)%9]));
+  const result=nextAdventureHint(puzzle,progress,4,at(1,1));
+  assert.notEqual(result.step?.cell,at(1,1),
+    'hidden jigsaw region may not act as an all-different witness');
+  assert.equal(result.status,'stalled');
+});
 test('invalid structured clue shapes are discarded, not guessed from visuals',()=>{
   const {puzzle,progress}=game([
     {type:'indexing_rows',cells:row},
