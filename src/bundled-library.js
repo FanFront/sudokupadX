@@ -2,6 +2,7 @@
 // puzzles discoverable without crowding the adventure map choices.
 export const GENERATED_9X9_GROUP = 'generated-9x9';
 export const SINGLE_RULE_GROUP = 'single-rule-lab';
+export const ADVANCED_GROUP = 'advanced-logic';
 
 export function filterBundledEntries(entries, {
   category = 'all', query = '', showLinked = false
@@ -12,10 +13,12 @@ export function filterBundledEntries(entries, {
       return false;
     const generated = entry.group === GENERATED_9X9_GROUP;
     const single = entry.group === SINGLE_RULE_GROUP;
+    const advanced = entry.group === ADVANCED_GROUP;
     if (category === 'generated' && !generated) return false;
     if (category === 'single' && !single) return false;
+    if (category === 'advanced' && !advanced) return false;
     if (category === 'adventure' && entry.kind !== 'main') return false;
-    if (category === 'other' && (generated || single || entry.kind === 'main')) return false;
+    if (category === 'other' && (generated || single || advanced || entry.kind === 'main')) return false;
     if (needle && ![entry.title, entry.group, entry.id, entry.tier, entry.givens]
       .join(' ').toLocaleLowerCase('zh-CN').includes(needle)) return false;
     return true;
@@ -23,11 +26,14 @@ export function filterBundledEntries(entries, {
 }
 
 export function bundledEntrySubtitle(entry) {
+  if (entry.group === ADVANCED_GROUP)
+    return '9×9 · ' + (entry.givens ?? '—') + ' 个提示数 · 认证最低技巧等级 ' +
+      entry.tier + ' / 4 · 无需猜测';
   if (entry.group === SINGLE_RULE_GROUP)
-    return '9×9 · ' + (entry.givens ?? '—') + ' 个提示数 · 技巧等级 ' +
+    return '9×9 · ' + (entry.givens ?? '—') + ' 个提示数 · 最低技巧等级 ' +
       (entry.tier || '—') + ' / 4 · 无需猜测';
   if (entry.group === GENERATED_9X9_GROUP)
-    return '生成 9×9 · 技巧等级 ' + (entry.tier || '—') + ' / 4 · 无需猜测';
+    return '生成 9×9 · 最低技巧等级 ' + (entry.tier || '—') + ' / 4 · 无需猜测';
   if (entry.kind === 'main') return '冒险地图';
   if (entry.kind === 'standalone') return '独立谜题';
   return entry.group + ' · ' + (entry.kind === 'boss' ? '首领谜题' : '支线谜题');

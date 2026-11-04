@@ -1,0 +1,33 @@
+name: Certify advanced generated Sudoku difficulty
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/generate_advanced.py
+      - scripts/generate_variants.py
+      - scripts/generate_single_variants.py
+      - scripts/variant_logic.py
+      - scripts/technique_catalog.py
+      - .github/workflows/advanced-probe.yml
+permissions:
+  contents: read
+jobs:
+  certify-advanced:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate and certify new level-3 Sudoku puzzles
+        run: python3 -u scripts/generate_advanced.py --attempts 16 --workers 4 --output /tmp/sudokupadx-advanced
+      - name: Verify generated minimum tiers
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('/tmp/sudokupadx-advanced/validation.json').read_text())
+          assert len(report['puzzles'])==4
+          for item in report['puzzles']:
+              assert item['minimumTier']==3, item
+              assert item['advancedMethods'], item
+          print('Certified all four level-3 puzzles')
+          PY

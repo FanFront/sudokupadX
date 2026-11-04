@@ -16,3 +16,4 @@ artifacts/web/
 # Rebuilt from the seeded mixed-variant generator for dev and release.
 public/puzzles/batch9/
 public/puzzles/single-rule/
+public/puzzles/advanced/
