@@ -16,7 +16,7 @@ import {setupOnlineLibrary} from './online-ui.js';
 import {filterBundledEntries, bundledEntrySubtitle} from './bundled-library.js';
 import {setupLessonPage} from './lesson-page.js';
 import {setupCreatorUI} from './creator/ui.js';
-import {computeBrowserHint} from './hints/runner.js';
+import {computeBrowserHint,computeAdventureHint} from './hints/runner.js';
 import {describeHint} from './hints/format.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
@@ -88,6 +88,17 @@ function clearHint(){
   $('hintPanel').hidden=true;
   requestDraw();
 }
+function focusHintTarget(index){
+  if(index<0||!puzzle||!frame.clientWidth||!frame.clientHeight)return;
+  const x=(index%puzzle.cols+.5)*CELL*camera.scale+camera.x;
+  const y=(Math.floor(index/puzzle.cols)+.5)*CELL*camera.scale+camera.y;
+  const margin=Math.min(75,frame.clientWidth*.2,frame.clientHeight*.2);
+  if(x>=margin&&x<=frame.clientWidth-margin&&
+     y>=margin&&y<=frame.clientHeight-margin)return;
+  camera.x=frame.clientWidth/2-(index%puzzle.cols+.5)*CELL*camera.scale;
+  camera.y=frame.clientHeight/2-(Math.floor(index/puzzle.cols)+.5)*CELL*camera.scale;
+  scheduleViewSave();
+}
 async function requestHint(){
   if(!puzzle||!progress||pending||lessonPractice)return;
   const serial=++hintSerial;
@@ -100,16 +111,21 @@ async function requestHint(){
   requestDraw();
   const tier=Number($('hintTier').value);
   const cells=progress.cells.map(cloneCell);
+  const adventure=puzzle.rows>16||puzzle.cols>16;
   try{
-    const task=native
-      ?{promise:call('hint_step',{tier})}
-      :computeBrowserHint(activeRawInput,cells,tier);
+    // Huge overlapping maps cannot be modelled as one ordinary 9×9 grid.
+    // Both Android and the browser use a worker for visible, local proofs.
+    const task=adventure
+      ?computeAdventureHint(puzzle,{cells,visible:[...progress.visible]},tier,selected)
+      :native?{promise:call('hint_step',{tier})}
+        :computeBrowserHint(activeRawInput,cells,tier);
     hintTask=task;
     const result=await task.promise;
     if(serial!==hintSerial)return;
     hintTask=null;
-    const data=describeHint(result,puzzle.rows,cells);
+    const data=describeHint(result,puzzle.cols,cells);
     currentHint=result.status==='step'?data:null;
+    if(adventure&&currentHint)focusHintTarget(data.target);
     $('hintTitle').textContent=data.title;
     $('hintDescription').textContent=data.description;
     $('hintCandidates').textContent=data.candidates;
@@ -620,9 +636,9 @@ function updateControls() {
   $('redoButton').disabled=redoStack.length===0;
   $('hintButton').disabled=Boolean(lessonPractice);
   for(const option of $('hintTier').options){
-    option.disabled=puzzle.rows!==9 && Number(option.value)>2;
+    option.disabled=puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9&&Number(option.value)>2;
   }
-  if(puzzle.rows!==9 && Number($('hintTier').value)>2)$('hintTier').value='2';
+  if(puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9&&Number($('hintTier').value)>2)$('hintTier').value='2';
   $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
   updateSelection();
 }
