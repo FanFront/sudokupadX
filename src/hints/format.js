@@ -14,6 +14,9 @@ export const TECHNIQUES=Object.freeze({
   prime_sum:'相邻质数和线',anti_king:'反王',anti_knight:'反马',
   anti_xv:'反 XV',lava:'岩浆格',reverse_whisper:'反低语线',
   shadow_lower:'暗格较小',greater_neighbors:'大于邻格',
+  anti_knight_anchors:'敌人格反马',
+  anti_kropki_black:'反黑点（负约束）',
+  anti_whisper_anchors:'灰格相邻差值限制',
   magic_square:'三阶魔方阵',crystal_cage:'晶体笼等和',
   search_contradiction:'穷举反证'
 });

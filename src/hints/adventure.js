@@ -40,7 +40,25 @@ function squareSector(s,rows,cols){
   if(range&&Number(range[1])!==s.width)return false;
   return true;
 }
-function gridsAndHouses(puzzle){
+function explicitlyClassicalNine(puzzle){
+  if(puzzle.rows!==9||puzzle.cols!==9)return false;
+  const description=String(puzzle.rules||'');
+  if(/not a sudoku|no sudoku rules|不是.*数独|无数独规则|非数独|not standard sudoku/i.test(description))
+    return false;
+  // The authored phrase "ordinary/standard Sudoku" explicitly includes
+  // classic row/column/box rules, even when it does not spell them out.
+  if(/标准数独|普通数独|standard sudoku|classic sudoku|regular sudoku/i
+      .test(description))return true;
+  // SudokuMaker commonly writes "each row, column and box", with
+  // "each" appearing only once. The second word is still an explicit
+  // column constraint, not an inference from any drawing/color.
+  const rows=/(每行|各行|each row|every row|all rows)/i.test(description);
+  const columns=/(每列|各列|each column|every column|all columns)/i
+    .test(description)||
+    /\brows?\s*[,，、]\s*(?:and\s+)?(?:columns?|cols?)\b/i.test(description);
+  return rows&&columns;
+}
+function gridsAndHouses(puzzle,typedRules=[]){
   const {rows,cols}=puzzle,total=rows*cols;
   const domains=Array(total).fill(0),houses=[],seen=new Set();
   const add=(indices,kind,n,description)=>{
@@ -51,7 +69,35 @@ function gridsAndHouses(puzzle){
     seen.add(key);houses.push({cells:members,kind,n,description});
   };
   const sectors=(puzzle.sectors||[]).filter(s=>squareSector(s,rows,cols));
-  for(const s of sectors){
+  // Standalone linked puzzles are regular 9×9 boards, not giant sectors.
+  // The explicit author rule / typed declaration establishes the domain.
+  // Variant-only artwork NEVER establishes full-board Sudoku restrictions.
+  const classic=typedRules.some(rule=>rule.type==='classic_sudoku')||
+    explicitlyClassicalNine(puzzle);
+  if(classic){
+    for(let i=0;i<81;i++)domains[i]=9;
+    for(let r=0;r<9;r++){
+      add(whole(9).map(c=>r*9+c-1),'row',9,'标准数独第 '+(r+1)+' 行');
+      add(whole(9).map(c=>(c-1)*9+r),'column',9,
+        '标准数独第 '+(r+1)+' 列');
+    }
+    const regions=(puzzle.regions||[]).filter(group=>
+      Array.isArray(group)&&group.length===9);
+    const listed=regions.map(group=>group.map(pair=>point(pair,rows,cols)));
+    const valid=listed.length===9&&listed.flat().length===81&&
+      new Set(listed.flat()).size===81&&listed.flat().every(i=>i>=0);
+    if(valid)listed.forEach((cells,index)=>add(cells,'box',9,
+      '标准数独第 '+(index+1)+' 宫'));
+    else if(/(每宫|每个宫|每个九宫格|box|3[×x]3)/i.test(puzzle.rules||'')||
+      typedRules.some(rule=>rule.type==='classic_sudoku')){
+      for(let r=0;r<9;r+=3)for(let c=0;c<9;c+=3)
+        add(Array.from({length:9},(_,i)=>(r+Math.floor(i/3))*9+c+i%3),
+          'box',9,'标准数独 3×3 宫');
+    }
+    sectors.push({top:0,left:0,width:9,height:9,
+      title:'9×9 完整数独',rules:'标准数独'});
+  }
+  for(const s of (puzzle.sectors||[]).filter(s=>squareSector(s,rows,cols))){
     const n=s.width;
     for(let r=0;r<n;r++)for(let c=0;c<n;c++){
       const i=(s.top+r)*cols+s.left+c;
@@ -326,6 +372,45 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       }
       continue;
     }
+    if(type==='classic_sudoku')continue;
+    if(type==='anti_kropki_black'||type==='anti_whisper_anchors'){
+      const anchors=type==='anti_kropki_black'?cells:cells;
+      const group=new Set(cells);
+      for(const a of anchors){
+        const r=Math.floor(a/cols),c=a%cols;
+        const adjacent=type==='anti_kropki_black'?
+          [[1,0],[0,1]]:[[1,0],[-1,0],[0,1],[0,-1]];
+        for(const [dr,dc] of adjacent){
+          const rr=r+dr,cc=c+dc;
+          if(rr<0||rr>=rows||cc<0||cc>=cols)continue;
+          const b=rr*cols+cc;
+          if(type==='anti_kropki_black'&&!group.has(b))continue;
+          relation(a,b,type,type==='anti_kropki_black'
+            ?(x,y)=>Math.max(x,y)!==2*Math.min(x,y)
+            :(x,y)=>Math.abs(x-y)<5,
+            type==='anti_kropki_black'
+              ?'反黑点规则：任意正交相邻两格的数字不能成 2:1 倍数关系。'
+              :'灰色格与任一正交邻格的数字差不能达到 5。');
+        }
+      }
+      continue;
+    }
+    if(type==='anti_knight_anchors'){
+      // Only marked alien/enemy cells are anchors. Every surrounding
+      // chess-knight neighbor, whether or not also marked, is constrained.
+      const jumps=[[1,2],[1,-2],[-1,2],[-1,-2],
+        [2,1],[2,-1],[-2,1],[-2,-1]];
+      for(const a of cells){
+        const r=Math.floor(a/cols),c=a%cols;
+        for(const [dr,dc] of jumps){
+          const nr=r+dr,nc=c+dc;
+          if(nr<0||nr>=rows||nc<0||nc>=cols)continue;
+          relation(a,nr*cols+nc,'anti_knight_anchors',(x,y)=>x!==y,
+            '蓝色敌人格不能与马步距离的任意邻格填入相同数字。');
+        }
+      }
+      continue;
+    }
     if(['anti_king','anti_knight','anti_xv','lava'].includes(type)){
       const group=new Set(cells),required=type;
       for(const a of cells){
@@ -541,8 +626,8 @@ export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
      !Number.isInteger(tier)||tier<1||tier>5){
     return {status:'unsupported',level:0,step:null};
   }
-  const {domains,houses,sectors}=gridsAndHouses(puzzle);
   const activeRules=typedConstraints(puzzle,progress);
+  const {domains,houses,sectors}=gridsAndHouses(puzzle,activeRules);
   // The 3×3 magic square in Super Sudokoid is a *separate* digit system,
   // not a Sudoku sector: its author explicitly requires digits 1..9 once.
   // Build that domain from the typed rule rather than visual 3×3 artwork.

@@ -228,6 +228,14 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-1.json"),
         "fnv1a-20d4c9b9de5cbb80" =>
             include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-2.json"),
+        "fnv1a-bc4c15c770da3e75" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-hfyjv8jqr5.json"),
+        "fnv1a-5dfb43927e90e7d6" =>
+            include_str!("../../../public/puzzles/hint-constraints/boss-6cn54q09sv.json"),
+        "fnv1a-28e181ec2a25805c" =>
+            include_str!("../../../public/puzzles/hint-constraints/boss-frudzw3n73.json"),
+        "fnv1a-38bc290f58fba96b" =>
+            include_str!("../../../public/puzzles/hint-constraints/boss-ny34cxleh8.json"),
         _ => return Vec::new(),
     };
     let Ok(manifest) = serde_json::from_str::<Value>(json) else {
@@ -347,6 +355,25 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         .map(|rules|rules.iter().take(4000).cloned().collect())
         .unwrap_or_default();
     hint_constraints.extend(bundled_legacy_hint_constraints(input, &root, rows, cols));
+    // These are *semantic booleans* authored by SudokuMaker, not
+    // interpretations of the artwork. Imported standalone nine-by-nine
+    // puzzles can safely inherit global chess constraints when declared.
+    if rows==9 && cols==9 {
+        for (field,kind) in [
+            ("antiknight","anti_knight"),
+            ("antiking","anti_king"),
+        ] {
+            if meta.get(field).and_then(Value::as_bool)==Some(true)
+                && !hint_constraints.iter().any(|r|
+                    r.get("type").and_then(Value::as_str)==Some(kind)) {
+                hint_constraints.push(serde_json::json!({
+                    "type":kind,
+                    "cells":(0..81).collect::<Vec<usize>>(),
+                    "sourceKind":format!("metadata.{field}")
+                }));
+            }
+        }
+    }
     Ok(Puzzle {
         key, title, author, rules, rows, cols, cells, hint_rules, hint_constraints,
         regions: marks(&root, "regions", "re", &mut warnings),
@@ -990,6 +1017,59 @@ mod tests {
         session.apply_many(&[1,2], "corner", "5").unwrap();
         assert!(session.snapshot().cells[1].corner.is_empty());
         assert!(session.snapshot().cells[2].corner.is_empty());
+    }
+
+    #[test]
+    fn dismantling_factory_boss_combines_verified_lines_with_authored_antiknight() {
+        let src=include_str!("../../../public/puzzles/boss-ny34cxleh8.scl");
+        let puzzle=load(src).unwrap();
+        let count=|kind:&str|puzzle.hint_constraints.iter()
+            .filter(|rule|rule.get("type").and_then(Value::as_str)==Some(kind)).count();
+        assert_eq!(count("classic_sudoku"),1);
+        assert_eq!(count("thermo"),6);
+        assert_eq!(count("whisper"),4);
+        assert_eq!(count("anti_knight"),1);
+        assert_eq!(puzzle.hint_constraints.len(),12);
+    }
+
+    #[test]
+    fn thermometer_monster_boss_loads_nine_bulb_directed_paths() {
+        let src=include_str!("../../../public/puzzles/boss-frudzw3n73.scl");
+        let puzzle=load(src).unwrap();
+        let thermos=puzzle.hint_constraints.iter().filter(|rule|
+            rule.get("type").and_then(Value::as_str)==Some("thermo")).count();
+        assert_eq!(thermos,9);
+        assert_eq!(puzzle.hint_constraints.len(),10);
+    }
+
+    #[test]
+    fn negative_constraint_boss_loads_both_authenticated_global_rules() {
+        let src=include_str!("../../../public/puzzles/boss-6cn54q09sv.scl");
+        let puzzle=load(src).unwrap();
+        let count=|kind:&str|puzzle.hint_constraints.iter()
+            .filter(|rule|rule.get("type").and_then(Value::as_str)==Some(kind)).count();
+        assert_eq!(count("classic_sudoku"),1);
+        assert_eq!(count("anti_kropki_black"),1);
+        assert_eq!(count("anti_whisper_anchors"),1);
+        assert_eq!(puzzle.hint_constraints.len(),3);
+    }
+
+    #[test]
+    fn caldera_chaos_boss_receives_all_its_original_typed_rules() {
+        let original=include_str!("../../../public/puzzles/super-linked-hfyjv8jqr5.scl");
+        assert_eq!(stable_key(original.trim()),"fnv1a-bc4c15c770da3e75",
+            "Boss package fingerprint must match the curated sidecar");
+        let puzzle=load(original).unwrap();
+        assert_eq!((puzzle.rows,puzzle.cols),(9,9));
+        let count=|name:&str|puzzle.hint_constraints.iter()
+            .filter(|rule|rule.get("type").and_then(Value::as_str)==Some(name)).count();
+        assert_eq!(puzzle.hint_constraints.len(),10);
+        assert_eq!(count("classic_sudoku"),1);
+        assert_eq!(count("thermo"),2);
+        assert_eq!(count("arrow"),6);
+        assert_eq!(count("anti_knight_anchors"),1);
+        assert!(puzzle.hint_rules.is_none(),
+            "Legacy boss must use validated typed constraints, not fake generator rules");
     }
 
     #[test]

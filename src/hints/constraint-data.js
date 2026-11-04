@@ -6,7 +6,9 @@ const TYPES=new Set([
   'entropic','modular','region_sum','arrow','reverse_thermo',
   'palindrome','parity_line','zipline','prime_sum','anti_xv',
   'anti_king','anti_knight','lava','reverse_whisper',
-  'shadow_lower','greater_neighbors','magic_square','crystal_cage'
+  'shadow_lower','greater_neighbors','magic_square','crystal_cage',
+  'classic_sudoku','anti_knight_anchors','anti_kropki_black',
+  'anti_whisper_anchors'
 ]);
 const pos=(value,rows,cols)=>{
   if(Number.isInteger(value))return value>=0&&value<rows*cols?value:-1;
@@ -47,7 +49,9 @@ export function typedConstraints(puzzle,progress){
     const items=type==='arrow'&&Array.isArray(raw.circle)&&Array.isArray(raw.shaft)
       ?[...raw.circle,...raw.shaft]:raw.cells;
     const cells=positions(items,rows,cols,
-      ['anti_king','anti_knight','anti_xv','lava'].includes(type)?121:20);
+      ['anti_king','anti_knight','anti_xv','lava',
+        'classic_sudoku','anti_knight_anchors','anti_kropki_black',
+        'anti_whisper_anchors'].includes(type)?121:20);
     // An unlocked constraint may span fog. Its already visible local parts
     // can be used independently; the solver must still reject hidden
     // witnesses and targets when applying each specific deduction.
@@ -56,6 +60,15 @@ export function typedConstraints(puzzle,progress){
     if(raw.unlockCells!==undefined&&!unlock)continue;
     if(unlock&&!unlock.some(i=>progress.visible[i]===true))continue;
     const rule={type,cells};
+    if(type==='classic_sudoku'){
+      // Only a completely specified 9×9 board can introduce its 27 houses.
+      if(rows!==9||cols!==9||cells.length!==81||
+         cells.some((cell,i)=>cell!==i))continue;
+    }
+    if(['anti_knight_anchors','anti_kropki_black','anti_whisper_anchors']
+      .includes(type)&&(rows!==9||cols!==9))continue;
+    if(type==='anti_kropki_black'&&
+       (cells.length!==81||cells.some((v,i)=>v!==i)))continue;
     if(type==='killer'){
       const sum=raw.sum;
       if(!Number.isInteger(sum)||sum<1||sum>180||cells.length>9)continue;
