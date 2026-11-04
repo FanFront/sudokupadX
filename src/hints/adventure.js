@@ -45,8 +45,14 @@ function explicitlyClassicalNine(puzzle){
   const description=String(puzzle.rules||'');
   if(/not a sudoku|no sudoku rules|不是数独|无数独规则|非数独/i.test(description))
     return false;
-  return /(每行|各行|each row|every row)/i.test(description)&&
-    /(每列|各列|each column|every column)/i.test(description);
+  // SudokuMaker commonly writes "each row, column and box", with
+  // "each" appearing only once. The second word is still an explicit
+  // column constraint, not an inference from any drawing/color.
+  const rows=/(每行|各行|each row|every row|all rows)/i.test(description);
+  const columns=/(每列|各列|each column|every column|all columns)/i
+    .test(description)||
+    /\brows?\s*[,，、]\s*(?:and\s+)?(?:columns?|cols?)\b/i.test(description);
+  return rows&&columns;
 }
 function gridsAndHouses(puzzle,typedRules=[]){
   const {rows,cols}=puzzle,total=rows*cols;
