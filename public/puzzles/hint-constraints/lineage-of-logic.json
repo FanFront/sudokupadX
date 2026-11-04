@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 1,
+  "sourcePuzzleId": "sxsm_SkepticalMario_c2d329dea6268182805b1ac32f7d2b36",
+  "sourceFingerprint": "fnv1a-67182433ced04d65",
+  "sourceDimensions": [
+    50,
+    50
+  ],
+  "audit": {
+    "basis": "Author rule legend + original drawing identity; each accepted constraint checked against the solution OFFLINE",
+    "accepted": 10,
+    "rejectedCandidates": 3,
+    "byType": {
+      "killer": 10
+    }
+  },
+  "constraints": [
+    {
+      "type": "killer",
+      "cells": [
+        1673,
+        1674
+      ],
+      "sum": 12,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 734
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1723,
+        1724
+      ],
+      "sum": 7,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 735
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1677,
+        1725,
+        1726,
+        1727
+      ],
+      "sum": 12,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 736
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1577,
+        1578,
+        1626,
+        1627
+      ],
+      "sum": 30,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 737
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1628,
+        1629
+      ],
+      "sum": 10,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 738
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1524,
+        1525,
+        1526,
+        1527,
+        1528
+      ],
+      "sum": 18,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 739
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1878,
+        1879
+      ],
+      "sum": 7,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 740
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1829,
+        1830
+      ],
+      "sum": 7,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 741
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1870,
+        1871,
+        1920
+      ],
+      "sum": 19,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 745
+    },
+    {
+      "type": "killer",
+      "cells": [
+        1574,
+        1575,
+        1623,
+        1624
+      ],
+      "sum": 19,
+      "unique": true,
+      "unlockCells": [
+        [
+          10,
+          0
+        ],
+        [
+          19,
+          0
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 746
+    }
+  ]
+}

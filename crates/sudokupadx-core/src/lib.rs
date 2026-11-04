@@ -29,6 +29,10 @@ pub struct Puzzle {
     /// Exact constraint definitions bundled by the local Rust creator.
     #[serde(default, skip_serializing_if="Option::is_none")]
     pub hint_rules: Option<Vec<creator::Rule>>,
+    /// Explicitly typed adventure constraints (metadata.hintConstraints).
+    /// Untyped strokes, colors and author prose are never inferred as rules.
+    #[serde(default, skip_serializing_if="Vec::is_empty")]
+    pub hint_constraints: Vec<Value>,
     pub regions: Vec<Value>,
     pub lines: Vec<Value>,
     pub underlays: Vec<Value>,
@@ -209,6 +213,41 @@ fn marks(v: &Value, field: &str, alias: &str, warnings: &mut Vec<String>) -> Vec
     }).collect()
 }
 
+/// Curated constraint sidecars are pinned to the *exact* original SCL
+/// package bytes. An arbitrary imported puzzle, even with the same id, must
+/// never silently inherit mathematical rules from an unrelated game.
+fn bundled_legacy_hint_constraints(input: &str, root: &Value,
+    rows: usize, cols: usize) -> Vec<Value> {
+    if !input.starts_with("scl") { return Vec::new(); }
+    let json = match stable_key(input).as_str() {
+        "fnv1a-5c6daa6106a9c478" =>
+            include_str!("../../../public/puzzles/hint-constraints/digits-of-despair.json"),
+        "fnv1a-67182433ced04d65" =>
+            include_str!("../../../public/puzzles/hint-constraints/lineage-of-logic.json"),
+        "fnv1a-b9af8139af00db7a" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-1.json"),
+        "fnv1a-20d4c9b9de5cbb80" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-2.json"),
+        _ => return Vec::new(),
+    };
+    let Ok(manifest) = serde_json::from_str::<Value>(json) else {
+        return Vec::new();
+    };
+    let fingerprint = stable_key(input);
+    if manifest.get("sourceFingerprint").and_then(Value::as_str)
+            != Some(fingerprint.as_str()) ||
+       manifest.get("sourcePuzzleId").and_then(Value::as_str)
+            != root.get("id").and_then(Value::as_str) ||
+       manifest.get("sourceDimensions") !=
+            Some(&serde_json::json!([rows,cols])) ||
+       manifest.get("schemaVersion").and_then(Value::as_u64) != Some(1) {
+        return Vec::new();
+    }
+    manifest.get("constraints").and_then(Value::as_array)
+        .map(|rules|rules.iter().take(4000).cloned().collect())
+        .unwrap_or_default()
+}
+
 /// Accept raw JSON, JSON5-compatible SudokuMaker compact literals, or
 /// SudokuPad's `scl` + LZ-String Base64. Never eval third-party strings.
 pub fn load(input: &str) -> Result<Puzzle, String> {
@@ -302,8 +341,14 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
                 && meta.get("variantTypes").and_then(Value::as_array)
                     .is_some_and(Vec::is_empty) {Some(Vec::new())} else {None}
         });
+    let mut hint_constraints: Vec<Value> = meta.get("hintConstraints")
+        .or_else(||root.get("hintConstraints"))
+        .and_then(Value::as_array)
+        .map(|rules|rules.iter().take(4000).cloned().collect())
+        .unwrap_or_default();
+    hint_constraints.extend(bundled_legacy_hint_constraints(input, &root, rows, cols));
     Ok(Puzzle {
-        key, title, author, rules, rows, cols, cells, hint_rules,
+        key, title, author, rules, rows, cols, cells, hint_rules, hint_constraints,
         regions: marks(&root, "regions", "re", &mut warnings),
         lines: marks(&root, "lines", "l", &mut warnings),
         underlays: marks(&root, "underlays", "u", &mut warnings),
@@ -945,6 +990,57 @@ mod tests {
         session.apply_many(&[1,2], "corner", "5").unwrap();
         assert!(session.snapshot().cells[1].corner.is_empty());
         assert!(session.snapshot().cells[2].corner.is_empty());
+    }
+
+    #[test]
+    fn four_bundled_original_scls_receive_only_fingerprint_pinned_constraints() {
+        let originals = [
+            (include_str!("../../../public/puzzles/digits-of-despair.scl"),57usize),
+            (include_str!("../../../public/puzzles/lineage-of-logic.scl"),10usize),
+            (include_str!("../../../public/puzzles/super-sudokoid-1.scl"),125usize),
+            (include_str!("../../../public/puzzles/super-sudokoid-2.scl"),172usize),
+        ];
+        for (scl,expected) in originals {
+            let puzzle=load(scl).unwrap();
+            assert_eq!(puzzle.hint_constraints.len(),expected,
+                "legacy SCL should inherit precisely its reviewed typed manifest");
+            assert!(puzzle.hint_constraints.iter().all(|rule|
+                rule.get("type").and_then(Value::as_str).is_some() &&
+                rule.get("cells").and_then(Value::as_array).is_some() &&
+                rule.get("unlockCells").and_then(Value::as_array).is_some()));
+        }
+    }
+
+    #[test]
+    fn forged_or_modified_imports_never_inherit_bundled_legacy_rules() {
+        let fake = r#"{
+            "id":"sxsm_TheM_8832e975540124087658ec99d5b6ca17",
+            "metadata":{"title":"Modified copy"},
+            "cells":[[{},{}],[{},{}]]
+        }"#;
+        assert!(load(fake).unwrap().hint_constraints.is_empty());
+    }
+
+    #[test]
+    fn explicit_adventure_hint_constraints_survive_parse_and_serialization() {
+        let raw = r##"{
+          "metadata":{"title":"Typed",
+            "hintConstraints":[
+              {"type":"whisper","cells":[[0,0],[0,1]]},
+              {"type":"kropki","cells":[[1,0],[1,1]],"dot":"white",
+               "unlockCells":[[0,1]]}
+            ]},
+          "cells":[[{},{}],[{},{}]],
+          "lines":[{"wayPoints":[[0.5,0.5],[0.5,1.5]],"color":"#00aa00"}]
+        }"##;
+        let puzzle=load(raw).unwrap();
+        assert_eq!(puzzle.hint_constraints.len(),2);
+        assert_eq!(puzzle.hint_constraints[0]["type"],"whisper");
+        assert_eq!(puzzle.hint_constraints[1]["dot"],"white");
+        let exported=serde_json::to_value(&puzzle).unwrap();
+        assert_eq!(exported["hintConstraints"][0]["type"],"whisper");
+        // The line remains a visual primitive and carries no inferred type.
+        assert!(exported["lines"][0].get("type").is_none());
     }
 
     #[test]
