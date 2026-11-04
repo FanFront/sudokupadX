@@ -57,6 +57,7 @@ const keyword={
   modular:/modular|模三线/i,
   between:/between line|夹心线|介于.*两端/i,
   arrow:/arrow|箭头/i,
+  killer:/killer|杀手笼|杀手隔间|killer cage|sum cage|求和笼/i,
   region_sum:/region.sum|区域和线|等和线/i
 };
 function ruleAvailable(puzzle,progress,kind,cells){
@@ -400,7 +401,9 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
     const text=String(cage.value??'');
     if(!/^\d{1,3}$/.test(text))continue;
     const cells=cage.cells.map(pair=>point(pair,rows,cols));
-    if(cells.length<2||cells.length>5||cells.some(i=>i<0||!isVisible(progress,i)||!candidates[i]&&!values[i]))continue;
+    if(cells.length<2||cells.length>5||
+       cells.some(i=>i<0||!isVisible(progress,i)||(!candidates[i]&&!values[i]))||
+       !ruleAvailable(puzzle,progress,'killer',cells))continue;
     constraints.push({method:'killer_sum',cells,goal:Number(text),
       unique:cage.unique===true,
       check:arr=>arr.reduce((a,b)=>a+b,0)===Number(text),
@@ -550,6 +553,13 @@ export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
   const {domains,houses,sectors}=gridsAndHouses(puzzle);
   if(!houses.length)return {status:'unsupported',level:0,step:null};
   const state=runCandidates(puzzle,progress,houses,domains);
+  // Visible duplicate digits contradict an all-different rule: no logical
+  // deduction from an inconsistent premise should be suggested.
+  for(const house of houses){
+    const placed=house.cells.map(i=>state.values[i]).filter(Boolean);
+    if(distinct(placed).length!==placed.length)
+      return {status:'conflict',level:0,step:null};
+  }
   const step=chooseStep(puzzle,progress,domains,houses,sectors,state,
     Math.min(tier,4),focus);
   if(step)return {status:'step',level:step.level,step};
