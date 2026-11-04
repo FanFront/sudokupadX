@@ -91,11 +91,11 @@ export function findPencilSubsetHint(puzzle,progress,tier=4,focus=-1){
           if(!removed.length||!remaining.length)continue;
           if(annotated&&!removed.some(d=>marks[target].includes(d)))
             continue; // Do not suggest an exclusion the player already made.
-          // If the player selected a source of the triple, show one of the
-          // other cells even before they have annotated it. Otherwise prefer
-          // edits to an actually recorded target candidate.
-          if(!verified&&!annotated&&target!==focus&&
-             !sources.includes(focus))continue;
+          // An unverified pencil pattern is useful only for an actual
+          // recorded target candidate (or the explicitly focused target).
+          // Selecting a source alone must not trigger speculative removals
+          // from unrelated, unannotated cells.
+          if(!verified&&!annotated&&target!==focus)continue;
           const groupName=count===2?'数对':count===3?'三数组':count+' 数组';
           const reason=verified
             ?house.description+'中 '+sources.length+' 格的全部可行数字都属于 '+
