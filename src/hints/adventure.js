@@ -941,9 +941,17 @@ export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
   // fixing which of its arrow-shaft cells contains it.
   const combined=findCombinedConstraintHint(puzzle,progress,
     {domains,houses},state,activeRules,Math.min(tier,4),focus);
-  if(combined&&(!step||['peer_elimination','locked_candidate',
-      'hidden_single','naked_subset'].includes(step.method)||
-      combined.sources.includes(focus)||combined.cell===focus)){
+  // Keep a direct, immediately explained variant proof if one exists.
+  // Generalized N-subsets should not drown out arrow/thermo/clone/odd hints
+  // just because both methods can eliminate the focused candidate.
+  const basic=['peer_elimination','locked_candidate',
+    'hidden_single','naked_subset'].includes(step?.method);
+  const relevant=combined?.sources.includes(focus)||combined?.cell===focus;
+  const preferCombined=combined&&(!step||
+    combined.method==='constraint_locked_digit'
+      ? (relevant||basic)
+      : (basic&&relevant));
+  if(preferCombined){
     return {status:'step',level:combined.level,step:combined};
   }
   if(step)return {status:'step',level:step.level,step};
