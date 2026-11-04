@@ -25,7 +25,11 @@ const cases=[
   ['single-rule-lab-thermo','9 × 9'],
   ['single-rule-lab-renban','9 × 9'],
   ['single-rule-lab-arrow','9 × 9'],
-  ['single-rule-lab-whisper','9 × 9']
+  ['single-rule-lab-whisper','9 × 9'],
+  ['advanced-logic-kropki-t3','9 × 9'],
+  ['advanced-logic-thermo-t3','9 × 9'],
+  ['advanced-logic-killer-t3','9 × 9'],
+  ['advanced-logic-renban-t3','9 × 9']
 ];
 await mkdir('artifacts/web',{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -226,6 +230,21 @@ try{
     null,{timeout:60000});
   await page.screenshot({path:'artifacts/web/sparse-single-rule-kropki.png'});
   console.log('Six sparse single-rule puzzles open from their own library category.');
+  await page.locator('#homeButton').click();
+  await page.locator('#libraryButton').click();
+  await page.locator('#bundledSearch').fill('');
+  await page.locator('#bundledCategory').selectOption('advanced');
+  assert.equal(await page.locator('#libraryList .library-entry').count(),4);
+  assert.match(await page.locator('#libraryList .library-entry').first().textContent(),/认证最低技巧等级 3/);
+  await page.locator('#bundledSearch').fill('killer');
+  assert.equal(await page.locator('#libraryList .library-entry').count(),1);
+  await page.locator('#libraryList .library-entry').first().click();
+  await page.waitForFunction(()=>
+    document.querySelector('#puzzleTitle')?.textContent?.includes('极简杀手笼') &&
+    document.querySelector('#boardMeta')?.textContent?.includes('9 × 9'),
+    null,{timeout:60000});
+  await page.screenshot({path:'artifacts/web/advanced-verified-tier3.png'});
+  console.log('Four independently certified tier-3 puzzles and library filtering passed.');
 
 
   // The bundled index is usable without reaching the online JSON provider.
