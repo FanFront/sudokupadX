@@ -580,3 +580,502 @@ fn exact_count(n:usize,givens:&[u8],rules:&[Rule],node_limit:usize)
     let solutions=branch(n,start,rules,&mut nodes,node_limit,&mut answer)?;
     Ok((solutions,answer))
 }
+
+#[derive(Clone,Debug,Deserialize)]
+#[serde(rename_all="camelCase")]
+pub struct CreateRequest {
+    pub id: String,
+    pub size: usize,
+    pub tier: u8,
+    #[serde(default)]
+    pub variants: Vec<String>,
+    #[serde(default)]
+    pub focus: Option<String>,
+    #[serde(default)]
+    pub density: Option<String>,
+    #[serde(default)]
+    pub seed: Option<u64>,
+    #[serde(default)]
+    pub attempts: Option<usize>,
+}
+#[derive(Clone,Debug,Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct CreateResponse {
+    pub puzzle: Value,
+    pub details: Value,
+}
+
+const SUPPORTED: &[&str] = &[
+    "killer","kropki","thermo","renban","whisper","arrow","xv",
+    "entropic","modular","between","region_sum"
+];
+fn supports(n:usize,kind:&str)->bool{
+    if !SUPPORTED.contains(&kind){return false;}
+    if n==4 {matches!(kind,"killer"|"kropki"|"thermo"|"renban"|"arrow"|"xv")}
+    else if n==6 {kind!="whisper"}
+    else {true}
+}
+fn zh_name(kind:&str)->&'static str {
+    match kind{
+        "killer"=>"杀手笼","kropki"=>"黑白点","thermo"=>"温度计",
+        "renban"=>"连续线","whisper"=>"耳语线","arrow"=>"箭头",
+        "xv"=>"V/X 标记","entropic"=>"熵线","modular"=>"模三线",
+        "between"=>"夹心线","region_sum"=>"区域和线",_=>"普通数独"
+    }
+}
+fn zh_rule(kind:&str)->&'static str{
+    match kind{
+        "killer"=>"每个虚线笼的数字之和等于角标，笼内不能有重复数字。",
+        "kropki"=>"白点两侧数字相差 1，黑点两侧数字之比为 1:2；没标点的地方不受额外限制。",
+        "thermo"=>"温度计上的数字从圆头到末端严格递增。",
+        "renban"=>"蓝色连续线上数字不重复且形成连续整数集合，顺序可以任意。",
+        "whisper"=>"耳语线相邻数字之差至少为 5。",
+        "arrow"=>"橙色箭头的直线上数字之和等于圆头的数字。",
+        "xv"=>"V 标记两格和为 5，X 标记两格和为 10。",
+        "entropic"=>"任意连续三格分别属于三个等宽数字区间。",
+        "modular"=>"任意连续三格除以 3 后的余数各不相同。",
+        "between"=>"夹心线上内部数字必须严格介于两端圆圈数字之间。",
+        "region_sum"=>"一条区域和线按宫界分段，各段数字之和相同。",
+        _=>""
+    }
+}
+struct Rng(u64);
+impl Rng {
+    fn new(seed:u64)->Self{Self(if seed==0{0x6a09e667f3bcc909}else{seed})}
+    fn next(&mut self)->u64{
+        // Deterministic xorshift64*: stable on native and wasm32 targets.
+        let mut x=self.0;
+        x^=x>>12;x^=x<<25;x^=x>>27;self.0=x;
+        x.wrapping_mul(0x2545f4914f6cdd1d)
+    }
+    fn range(&mut self,upper:usize)->usize {
+        if upper<=1 {0}else{(self.next() as usize)%upper}
+    }
+    fn shuffle<T>(&mut self,data:&mut [T]){
+        for i in (1..data.len()).rev(){let j=self.range(i+1);data.swap(i,j);}
+    }
+}
+fn make_solution(n:usize,rng:&mut Rng)->Vec<u8>{
+    let (h,w)=boxes(n);
+    let mut band:Vec<usize>=(0..n/h).collect();rng.shuffle(&mut band);
+    let mut stack:Vec<usize>=(0..n/w).collect();rng.shuffle(&mut stack);
+    let mut rows=Vec::new();
+    for group in band {
+        let mut inner:Vec<usize>=(group*h..group*h+h).collect();
+        rng.shuffle(&mut inner);rows.extend(inner);
+    }
+    let mut cols=Vec::new();
+    for group in stack{
+        let mut inner:Vec<usize>=(group*w..group*w+w).collect();
+        rng.shuffle(&mut inner);cols.extend(inner);
+    }
+    let mut digits:Vec<u8>=(1..=n as u8).collect();rng.shuffle(&mut digits);
+    rows.iter().flat_map(|&r|cols.iter()
+        .map(|&c|digits[(r*w + r/h + c)%n])).collect()
+}
+fn neighbors(n:usize,i:usize)->Vec<usize>{
+    let mut out=Vec::new();let r=i/n;let c=i%n;
+    if r>0 {out.push(i-n);}
+    if r+1<n {out.push(i+n);}
+    if c>0 {out.push(i-1);}
+    if c+1<n {out.push(i+1);}
+    out
+}
+fn path_valid(n:usize,solution:&[u8],rule:&Rule)->bool{
+    let ds:Vec<u8>=rule.cells.iter().map(|&i|solution[i]).collect();
+    let len=ds.len();
+    match rule.kind.as_str(){
+        "thermo"=>ds.windows(2).all(|p|p[0]<p[1]),
+        "whisper"=>ds.windows(2).all(|p|p[0].abs_diff(p[1])>=5),
+        "renban"=>ds.iter().copied().collect::<HashSet<_>>().len()==len &&
+            *ds.iter().max().unwrap()-*ds.iter().min().unwrap()==len as u8-1,
+        "arrow"=>ds[0] as u16==ds[1..].iter().map(|&d|d as u16).sum::<u16>(),
+        "between"=>{
+            let lo=ds[0].min(ds[len-1]);let hi=ds[0].max(ds[len-1]);
+            ds[1..len-1].iter().all(|&d|lo<d&&d<hi)
+        },
+        "entropic"|"modular"=>{
+            ds.windows(3).all(|window|{
+                let classes:BTreeSet<usize>=window.iter().map(|&d|
+                    if rule.kind=="entropic"{(d as usize-1)/(n/3)}
+                    else{(d as usize-1)%3}).collect();
+                classes.len()==3
+            })
+        },
+        "region_sum"=>{
+            let mut sums=Vec::new();let mut b=box_id(n,rule.cells[0]);let mut sum=0u16;
+            for (&cell,&digit) in rule.cells.iter().zip(ds.iter()){
+                let next=box_id(n,cell);
+                if next!=b {sums.push(sum);sum=0;b=next;}
+                sum+=digit as u16;
+            }
+            sums.push(sum);sums.len()>1&&sums.iter().all(|&s|s==sums[0])
+        },
+        _=>false
+    }
+}
+fn candidates(n:usize,solution:&[u8],kind:&str,rng:&mut Rng)->Vec<Rule>{
+    let mut found=Vec::new();let mut seen=HashSet::new();
+    if kind=="killer"||kind=="kropki"||kind=="xv"{
+        for a in 0..n*n{
+            for b in neighbors(n,a) {
+                if b<=a {continue;}
+                let x=solution[a];let y=solution[b];
+                if kind=="kropki" {
+                    if x.abs_diff(y)==1{
+                        let mut r=Rule::new(kind,vec![a,b]);
+                        r.dot=Some("white".into());found.push(r);
+                    }
+                    if x.max(y)==2*x.min(y){
+                        let mut r=Rule::new(kind,vec![a,b]);
+                        r.dot=Some("black".into());found.push(r);
+                    }
+                }else if kind=="xv" {
+                    if x as u16+y as u16==5||x as u16+y as u16==10 {
+                        let mut r=Rule::new(kind,vec![a,b]);r.sum=Some(x as u16+y as u16);
+                        found.push(r);
+                    }
+                }else if x!=y {
+                    let mut r=Rule::new(kind,vec![a,b]);r.sum=Some(x as u16+y as u16);
+                    found.push(r);
+                    for c in neighbors(n,b){
+                        if c==a||solution[c]==x||solution[c]==y{continue;}
+                        let mut r=Rule::new(kind,vec![a,b,c]);
+                        r.sum=Some(x as u16+y as u16+solution[c] as u16);
+                        found.push(r);
+                    }
+                }
+            }
+        }
+    }else{
+        let length=if kind=="arrow"{3}else if kind=="between"||kind=="region_sum"{4}
+            else{3+rng.range(2)};
+        // Random guided walks; a valid visible relationship is required.
+        for _ in 0..4500 {
+            let mut path=vec![rng.range(n*n)];
+            while path.len()<length{
+                let mut next=neighbors(n,*path.last().unwrap());
+                next.retain(|cell|!path.contains(cell));
+                if next.is_empty(){break;}
+                path.push(next[rng.range(next.len())]);
+            }
+            if path.len()!=length{continue;}
+            let clue=Rule::new(kind,path);
+            if !path_valid(n,solution,&clue){continue;}
+            let forward=clue.cells.iter().map(|x|x.to_string())
+                .collect::<Vec<_>>().join(",");
+            if !seen.insert(forward){continue;}
+            found.push(clue);
+        }
+    }
+    rng.shuffle(&mut found);
+    found
+}
+fn create_rules(n:usize,solution:&[u8],selected:&[String],
+                density:&str,rng:&mut Rng)->Vec<Rule>{
+    if selected.is_empty(){return vec![];}
+    let target=match density{
+        "light"=>(n*n+12)/12,
+        "heavy"=>(n*n+3)/4,
+        _=>(n*n+5)/7
+    };
+    let per=(target/selected.len()).max(1);
+    let mut out=Vec::new();
+    let mut occupied=HashSet::new();
+    let mut used_edges=HashSet::new();
+    for kind in selected{
+        let options=candidates(n,solution,kind,rng);
+        let mut added=0;
+        for rule in options{
+            if added>=per{break;}
+            if kind=="killer"&&rule.cells.iter().any(|c|occupied.contains(c)){continue;}
+            let edges:Vec<_>=rule.cells.windows(2).map(|p|
+                (p[0].min(p[1]),p[0].max(p[1]))).collect();
+            if edges.iter().any(|edge|used_edges.contains(&(kind.clone(),*edge))){
+                continue;
+            }
+            if kind=="killer"{occupied.extend(rule.cells.iter().copied());}
+            for edge in edges{used_edges.insert((kind.clone(),edge));}
+            added+=1;out.push(rule);
+        }
+    }
+    out
+}
+fn givens_grid(n:usize,solution:&[u8],rules:&[Rule],tier:u8,
+               rng:&mut Rng)->Vec<u8>{
+    let mut givens=solution.to_vec();
+    let mut cells:Vec<usize>=(0..n*n).collect();rng.shuffle(&mut cells);
+    for i in cells{
+        let digit=givens[i];givens[i]=0;
+        let acceptable=if tier==5{
+            exact_count(n,&givens,rules,8000)
+                .map(|(count,_)|count==1).unwrap_or(false)
+        }else{
+            solve(n,&givens,rules,tier,false,None)
+                .map(|p|p.solved&&p.values==solution).unwrap_or(false)
+        };
+        if !acceptable {givens[i]=digit;}
+    }
+    givens
+}
+fn certify(n:usize,givens:&[u8],solution:&[u8],rules:&[Rule],
+           tier:u8,focus:Option<&str>) -> Option<Proof>{
+    let full=solve(n,givens,rules,tier.min(4),true,None).ok()?;
+    if tier<5{
+        if !full.solved||full.values!=solution{return None;}
+        if tier>1 && solve(n,givens,rules,tier-1,false,None).ok()?.solved{return None;}
+        if tier>1 && !full.trace.iter().any(|step|level_of(&step.method)==tier){
+            return None;
+        }
+        if let Some(method)=focus{
+            if !full.methods.contains_key(method){return None;}
+            let without=solve(n,givens,rules,tier,false,Some(method)).ok()?;
+            if without.solved{return None;}
+        }
+    }else if full.solved {
+        // Level 5 is search-required relative to this level-4 curriculum.
+        return None;
+    }
+    let (counted,answer)=exact_count(n,givens,rules,20000).ok()?;
+    if counted!=1||answer!=solution {return None;}
+    if !rules.is_empty() {
+        let (without,_)=exact_count(n,givens,&[],20000).ok()?;
+        if without!=2{return None;} // Rules must actually disambiguate.
+    }
+    Some(full)
+}
+fn point(n:usize,cell:usize)->Value{json!([cell/n,cell%n])}
+fn coordinates(n:usize,cells:&[usize])->Value{
+    Value::Array(cells.iter().map(|&i|json!([i/n as usize, i%n]))
+        .collect())
+}
+fn centers(n:usize,cells:&[usize])->Vec<Value>{
+    cells.iter().map(|&i|json!([i/n as f64+0.5,(i%n) as f64+0.5]))
+        .collect()
+}
+fn render(n:usize,rules:&[Rule])->(Vec<Value>,Vec<Value>,Vec<Value>,Vec<Value>,Vec<Value>){
+    let mut cages=Vec::new();
+    let mut lines=Vec::new();
+    let mut overlays=Vec::new();
+    let mut underlays=Vec::new();
+    let mut arrows=Vec::new();
+    for rule in rules{
+        let cells=&rule.cells;
+        let path=centers(n,cells);
+        match rule.kind.as_str(){
+            "killer"=>cages.push(json!({"cells":cells.iter().map(|&i|point(n,i))
+                .collect::<Vec<_>>(),"value":rule.sum.unwrap_or(0).to_string(),
+                "unique":true,"outlineC":"#3e668b","fontC":"#234e73"})),
+            "kropki"|"xv"=>{
+                let (a,b)=(cells[0],cells[1]);
+                let mid=[((a/n+b/n) as f64)/2.0+0.5,
+                    ((a%n+b%n) as f64)/2.0+0.5];
+                if rule.kind=="kropki"{
+                    overlays.push(json!({"center":mid,"width":0.22,"height":0.22,
+                        "rounded":true,"backgroundColor":
+                            if rule.dot.as_deref()==Some("white"){"#ffffff"}
+                            else{"#28262d"},
+                        "borderColor":"#28262d","borderSize":1.3}));
+                }else{
+                    overlays.push(json!({"center":mid,"width":0.35,"height":0.35,
+                        "rounded":true,"backgroundColor":"#fff9db",
+                        "borderColor":"#ae8c35","borderSize":1.2,
+                        "text":if rule.sum==Some(5){"V"}else{"X"},
+                        "textColor":"#614e18","fontSize":18}));
+                }
+            },
+            "arrow"=>{
+                arrows.push(json!({"wayPoints":path,"color":"#d29754",
+                    "thickness":4,"headLength":0.18}));
+                underlays.push(json!({"center":path[0],"width":0.75,"height":0.75,
+                    "rounded":true,"backgroundColor":"#fff6e4",
+                    "borderColor":"#d29754","borderSize":2}));
+            },
+            _=>{
+                let (color,thickness)=match rule.kind.as_str(){
+                    "thermo"=>("#b89acb",20),"renban"=>("#85a8d8",16),
+                    "whisper"=>("#7abe9a",12),"region_sum"=>("#3b619c",10),
+                    "entropic"=>("#d8a752",10),"modular"=>("#45a8ab",10),
+                    "between"=>("#a783d6",8),_=>continue
+                };
+                lines.push(json!({"wayPoints":path,"target":"underlay",
+                    "thickness":thickness,"color":color}));
+                if rule.kind=="thermo"{
+                    underlays.push(json!({"center":path[0],"width":0.65,
+                        "height":0.65,"rounded":true,
+                        "backgroundColor":color,"borderColor":"#7c5b9a","borderSize":1}));
+                }
+                if rule.kind=="between"{
+                    for end in [path.first().unwrap(),path.last().unwrap()] {
+                        underlays.push(json!({"center":end,"width":0.72,
+                            "height":0.72,"rounded":true,"backgroundColor":"#f8f3ff",
+                            "borderColor":color,"borderSize":2}));
+                    }
+                }
+            }
+        }
+    }
+    (cages,lines,underlays,overlays,arrows)
+}
+
+fn render_puzzle(request:&CreateRequest,seed:u64,givens:&[u8],
+                 solution:&[u8],rules:&[Rule],proof:&Proof,attempt:usize)
+                 -> CreateResponse{
+    let n=request.size;
+    let (h,w)=boxes(n);
+    let regions:Vec<Value>=(0..n).step_by(h).flat_map(|r|
+        (0..n).step_by(w).map(move |c|
+            json!((0..h).flat_map(|dr|(0..w).map(move |dc|
+                [r+dr,c+dc])).collect::<Vec<_>>())
+        )).collect();
+    let cells:Vec<Value>=(0..n).map(|r|json!(
+        (0..n).map(|c|if givens[r*n+c]==0 {json!({})}
+            else{json!({"value":givens[r*n+c].to_string()})}
+        ).collect::<Vec<_>>())).collect();
+    let (cages,lines,underlays,overlays,arrows)=render(n,rules);
+    let mut description=format!("标准数独：每行、每列和每个 {}×{} 宫都恰好包含 1–{}。\n",h,w,n);
+    for kind in &request.variants{
+        description.push_str(&format!("{}：{}\n",zh_name(kind),zh_rule(kind)));
+    }
+    if request.tier==5{
+        description.push_str("技巧等级 5：客户端前四级逻辑技巧无法完成此题，唯一解由精确搜索确认。可能需要尝试、穷举或更高阶逻辑。");
+    }else{
+        description.push_str(&format!("技巧等级 {}：已证明前一级技巧无法完成，当前技巧可以无猜测完成。",request.tier));
+    }
+    let title=format!("本机创作 · {}×{} · 级别 {} · {}",n,n,request.tier,
+        if request.variants.is_empty(){"经典数独".into()}
+        else{request.variants.iter().map(|k|zh_name(k)).collect::<Vec<_>>().join(" + ")});
+    let solution_text=solution.iter().map(|digit|digit.to_string())
+        .collect::<String>();
+    let given_count=givens.iter().filter(|&&d|d!=0).count();
+    let methods=proof.methods.clone();
+    let logic=json!({"minimumTier":request.tier,
+        "requiresGuessing":request.tier==5,
+        "clientCurriculum":true,"searchCertified":true,
+        "techniques":methods,"focusTechnique":request.focus});
+    let puzzle=json!({
+        "id":request.id,"cells":cells,"regions":regions,"cages":cages,
+        "lines":lines,"overlays":overlays,"underlays":underlays,"arrows":arrows,
+        "metadata":{
+            "title":title,"author":"SudokuPadX 本机生成器","rules":description,
+            "solution":solution_text,"msgcorrect":"完成！这是你在本机生成的唯一解谜题。",
+            "variantFamily":"personal-created",
+            "variantTypes":request.variants,
+            "generatorSeed":seed,"generatorAttempt":attempt,
+            "logicProfile":logic
+        }
+    });
+    CreateResponse{
+        puzzle,
+        details:json!({"id":request.id,"title":title,"size":n,"tier":request.tier,
+            "givens":given_count,"marks":rules.len(),
+            "variants":request.variants,"focus":request.focus,
+            "seed":seed,"attempt":attempt,"searchRequired":request.tier==5,
+            "techniques":proof.methods,"steps":proof.trace.len()})
+    }
+}
+
+/// Generate on the current device. The UI must call it on a background Rust
+/// thread (Android) or a dedicated Worker (browser WASM).
+pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
+    if !matches!(request.size,4|6|9)||!(1..=5).contains(&request.tier){
+        return Err("仅支持 4×4 / 6×6 / 9×9 与技巧等级 1–5".into());
+    }
+    if request.id.is_empty()||request.id.len()>120||
+        !request.id.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'-'){
+        return Err("生成谜题编号无效".into());
+    }
+    if request.variants.len()>11 ||
+       request.variants.iter().collect::<HashSet<_>>().len()!=request.variants.len() ||
+       request.variants.iter().any(|k|!supports(request.size,k)){
+        return Err("含有重复或当前尺寸不支持的变体规则".into());
+    }
+    if request.tier>=3&&request.size!=9{
+        return Err("当前等级 3–5 仅开放 9×9；4×4 与 6×6 使用等级 1–2".into());
+    }
+    let density=request.density.as_deref().unwrap_or("medium");
+    if !matches!(density,"light"|"medium"|"heavy"){
+        return Err("标记密度需为 light / medium / heavy".into());
+    }
+    if let Some(method)=request.focus.as_deref(){
+        if !allowed_focus(method)||level_of(method)>request.tier||
+            request.tier==5{
+            return Err("选择的重点技巧不属于当前等级".into());
+        }
+    }
+    let attempts=request.attempts.unwrap_or(24);
+    if attempts==0||attempts>80{return Err("尝试次数需在 1–80 之间".into());}
+    let seed=request.seed.unwrap_or(20261104);
+    let mut rng=Rng::new(seed);
+    for attempt in 1..=attempts {
+        let solution=make_solution(request.size,&mut rng);
+        let rules=create_rules(request.size,&solution,&request.variants,density,&mut rng);
+        if rules.iter().map(|r|r.kind.as_str()).collect::<HashSet<_>>().len()
+            !=request.variants.len() {continue;}
+        let givens=givens_grid(request.size,&solution,&rules,request.tier,&mut rng);
+        if let Some(proof)=certify(request.size,&givens,&solution,&rules,
+                                  request.tier,request.focus.as_deref()){
+            return Ok(render_puzzle(&request,seed,&givens,&solution,&rules,&proof,attempt));
+        }
+    }
+    Err(format!("{} 次尝试均未生成严格满足等级 {} 的唯一解题目。可增加尝试次数、调整规则数量/密度或换一个随机种子；不会伪造技巧等级。",attempts,request.tier))
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    #[test]
+    fn solved_grids_are_real_sudokus(){
+        for n in [4,6,9]{
+            let mut rng=Rng::new(4321);
+            for _ in 0..8{
+                let sol=make_solution(n,&mut rng);
+                assert_eq!(sol.len(),n*n);
+                for unit in units(n){
+                    assert_eq!(unit.iter().map(|&i|sol[i])
+                        .collect::<BTreeSet<_>>().len(),n);
+                }
+            }
+        }
+    }
+    #[test]
+    fn authored_rules_are_consistent_with_the_solution(){
+        let mut rng=Rng::new(82371);
+        let sol=make_solution(9,&mut rng);
+        for kind in SUPPORTED {
+            let rules=create_rules(9,&sol,&[kind.to_string()],"medium",&mut rng);
+            assert!(!rules.is_empty(),"Missing authored family: {kind}");
+            assert!(solve(9,&sol,&rules,1,false,None).unwrap().solved,
+                "Invalid printed {kind} rules");
+        }
+    }
+    #[test]
+    fn exact_counter_detects_unconstrained_ambiguity(){
+        let givens=vec![0;16];
+        assert_eq!(exact_count(4,&givens,&[],500).unwrap().0,2);
+    }
+    #[test]
+    fn generate_classic_four_by_four_and_load_with_existing_core(){
+        let request=CreateRequest{
+            id:"personal-demo-1".into(),size:4,tier:1,variants:vec![],
+            focus:None,density:Some("light".into()),seed:Some(9932),
+            attempts:Some(3),
+        };
+        let output=generate_puzzle(request).unwrap();
+        assert_eq!(output.details["tier"],1);
+        let raw=serde_json::to_string(&output.puzzle).unwrap();
+        let loaded=crate::load(&raw).unwrap();
+        assert_eq!(loaded.rows,4);
+        assert_eq!(loaded.cols,4);
+        assert_eq!(loaded.key,"personal-demo-1");
+    }
+    #[test]
+    fn reject_unsupported_and_false_technique_labels(){
+        let request=CreateRequest{
+            id:"personal-invalid".into(),size:4,tier:5,variants:vec![],
+            focus:None,density:None,seed:Some(2),attempts:Some(2)
+        };
+        assert!(generate_puzzle(request).is_err());
+        assert!(!allowed_focus("invented_method"));
+    }
+}
