@@ -61,6 +61,7 @@ export function setupCreatorUI({openPuzzle,onCatalogChanged,handleDelete,notify}
     $('creatorCancel').hidden=!value;
     for(const control of $('creatorOptions').querySelectorAll('input,select,button'))
       if(control.id!=='creatorCancel')control.disabled=value;
+    if(!value)renderTechniques();
   }
   function listMeta(record){
     const info=record.details||{};
