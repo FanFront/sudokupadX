@@ -1,5 +1,5 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
-import {STAGES, parseLessonGuide, filterLessons, EXERCISES, exerciseIsCorrect} from './lesson-data.js';
+import {STAGES, parseLessonGuide, filterLessons, EXERCISES} from './lesson-data.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
 const LAST_KEY='sudokupadx:lesson-last:v1';
@@ -120,13 +120,14 @@ function getCompleted(storage) {
   } catch {return new Set();}
 }
 
-export function setupLessonPage({showHome,showGame,storage=localStorage}={}) {
+export function setupLessonPage({showHome,showGame,launchPractice,
+                                 storage=localStorage}={}) {
   const $=id=>document.getElementById(id);
   const all=parseLessonGuide(guideMarkdown);
   if(all.length!==25)throw new Error('中文课程必须包含完整的 25 节');
   const completed=getCompleted(storage);
   let selected=all[0];
-  let filter='all',query='', origin='home',choice=null,explained=false;
+  let filter='all',query='', origin='home',practiceLoading=false;
 
   try {
     const last=Number(storage.getItem(LAST_KEY));
@@ -182,41 +183,25 @@ export function setupLessonPage({showHome,showGame,storage=localStorage}={}) {
     const exercise=EXERCISES[selected.id];
     if(!exercise)return;
     const heading=element('div','lesson-exercise-heading');
-    heading.append(element('strong','','动手试一试'));
-    heading.append(element('span','','局部候选题 · 不改变游戏存档'));
+    heading.append(element('strong','','进入真实棋盘练习'));
+    heading.append(element('span','','SudokuPadX 原生数字／候选数输入'));
     const body=element('div','lesson-exercise-body');
+    body.append(element('p','lesson-exercise-context',
+      '本课将打开一个已准备好候选数的训练棋盘。相关格子会用蓝色标记，黄色格子是你的操作目标。'));
     body.append(element('p','lesson-exercise-context',exercise.context));
-    const grid=element('div','lesson-exercise-target');
-    grid.append(element('span','',exercise.target));
-    grid.append(element('strong','',exercise.prompt));
-    body.append(grid);
-    const choices=element('div','lesson-exercise-choices');
-    choices.setAttribute('role','group');choices.setAttribute('aria-label',exercise.prompt);
-    for(const option of exercise.choices){
-      const button=element('button','lesson-choice',option);
-      button.type='button';button.dataset.choice=option;
-      button.setAttribute('aria-pressed',String(choice===option));
-      if(choice===option)button.classList.add('selected');
-      choices.append(button);
-    }
-    body.append(choices);
-    if(choice!==null){
-      const correct=exerciseIsCorrect(exercise,choice);
-      const result=element('div','lesson-answer '+(correct?'correct':'incorrect'));
-      result.setAttribute('role','status');
-      result.append(element('strong','',correct?'✓ 推理正确':'再想一想'));
-      result.append(element('p','',correct?exercise.explanation:'检查规则如何限制候选数字。你还可以重新选择，或查看讲解。'));
-      body.append(result);
-    }
-    const reveal=element('button','lesson-reveal',explained?'收起讲解':'查看思路与答案');
-    reveal.type='button';reveal.id='lessonReveal';
-    body.append(reveal);
-    if(explained){
-      const solution=element('p','lesson-explanation');
-      solution.append(element('strong','','答案：'+exercise.answer+'。'));
-      solution.append(document.createTextNode(' '+exercise.explanation));
-      body.append(solution);
-    }
+    const prompt=element('p','lesson-exercise-context',
+      '观察候选数与规则的关系，在棋盘中完成一次真实的填数或候选删除。遇到困难时可在棋盘上查看讲解。');
+    body.append(prompt);
+    const start=element('button','lesson-start-practice',
+      practiceLoading?'正在准备训练棋盘…':'进入练习棋盘');
+    start.id='lessonStartPractice';
+    start.type='button';
+    start.disabled=practiceLoading;
+    body.append(start);
+    const status=element('p','lesson-practice-message','不会覆盖正在游玩的谜题；返回课程时恢复原来的棋盘。');
+    status.id='lessonPracticeFeedback';
+    status.setAttribute('role','status');
+    body.append(status);
     root.append(heading,body);
   }
 
@@ -235,7 +220,7 @@ export function setupLessonPage({showHome,showGame,storage=localStorage}={}) {
   function select(id,{scroll=true}={}){
     const next=all.find(item=>item.id===Number(id));
     if(!next)return;
-    selected=next;choice=null;explained=false;
+    selected=next;
     saveProgress();
     renderList();renderDetail();
     if(scroll)$('lessonDetail').scrollTop=0;
@@ -277,22 +262,44 @@ export function setupLessonPage({showHome,showGame,storage=localStorage}={}) {
     else completed.add(selected.id);
     saveProgress();renderList();renderDetail();
   });
-  $('lessonExercise').addEventListener('click',event=>{
-    const button=event.target.closest('button');
-    if(!button)return;
-    if(button.dataset.choice){
-      choice=button.dataset.choice;
-      renderExercise();
-    }else if(button.id==='lessonReveal'){
-      explained=!explained;
-      renderExercise();
+  $('lessonExercise').addEventListener('click',async event=>{
+    const button=event.target.closest('#lessonStartPractice');
+    if(!button||practiceLoading)return;
+    if(typeof launchPractice!=='function'){
+      $('lessonPracticeFeedback').textContent='训练引擎尚未连接。';
+      return;
+    }
+    practiceLoading=true;
+    button.disabled=true;
+    try{
+      await launchPractice(selected);
+    }catch(error){
+      $('lessonPracticeFeedback').textContent='训练棋盘加载失败：'+
+        String(error?.message||error);
+    }finally{
+      practiceLoading=false;
+      if(!$('lessonScreen').hidden)renderExercise();
     }
   });
+  function markPracticed(id){
+    if(!all.some(lesson=>lesson.id===Number(id)))return;
+    completed.add(Number(id));
+    saveProgress();
+    renderCounts();renderList();
+    if(selected.id===Number(id))renderDetail();
+  }
+  function returnFromPractice(){
+    $('gameScreen').hidden=true;
+    $('homeScreen').hidden=true;
+    $('lessonScreen').hidden=false;
+    renderFilters();renderList();renderDetail();
+  }
+
   document.addEventListener('keydown',event=>{
     if($('lessonScreen').hidden)return;
     if(event.key==='Escape'){
       event.preventDefault();close();
     }
   });
-  return {open,close,lessons:all};
+  return {open,close,lessons:all,markPracticed,returnFromPractice};
 }

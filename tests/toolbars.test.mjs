@@ -60,5 +60,8 @@ test('linked-puzzle count, grid state and navigation remain accessible',()=>{
   assert.ok(!main.includes("$('gridButton').textContent"));
   assert.ok(main.includes("button.setAttribute('aria-pressed',String(showGridLines))"));
   assert.ok(main.includes("button.setAttribute('aria-label',label)"));
-  assert.ok(main.includes("$('homeButton').addEventListener('click',showHome)"));
+  assert.match(main,/\$\('homeButton'\)\.addEventListener\('click',/);
+  assert.match(main,/if\(lessonPractice\)endLessonPractice\(\)\.catch\(notify\)/);
+  assert.match(main,/else showHome\(\)/,
+    'Home must still return to Home outside of a lesson practice');
 });

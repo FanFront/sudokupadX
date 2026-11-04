@@ -44,13 +44,39 @@ try{
   await page.locator('#lessonList [data-id="7"]').click();
   assert.match(await page.locator('#lessonTitle').textContent(),/X-Wing/);
   assert.match(await page.locator('#lessonReading').textContent(),/第 2 行和第 7 行/);
-  await page.locator('#lessonExercise button[data-choice="4"]').click();
-  assert.match(await page.locator('#lessonExercise .lesson-answer.correct').textContent(),/推理正确/);
-  await page.locator('#lessonComplete').click();
+  // Launch the real game engine, remove one seeded candidate with the
+  // regular keypad and verify the lesson, not a multiple-choice button.
+  assert.equal(await page.locator('#lessonExercise .lesson-choice').count(),0);
+  await page.locator('#lessonStartPractice').click();
+  await page.locator('#lessonPracticeBar').waitFor({state:'visible',timeout:15000});
+  assert.equal(await page.locator('#gameScreen').isVisible(),true);
+  assert.match(await page.locator('#puzzleTitle').textContent(),/技巧练习/);
+  assert.equal(await page.locator('#modeBar [data-mode="center"]').getAttribute('aria-pressed'),'true');
+  assert.match(await page.locator('#selectionLabel').textContent(),/R5C3/);
+  await page.locator('#keypad button[data-symbol="4"]').click();
+  await page.waitForFunction(()=>document.querySelector('#lessonPracticeStatus')?.textContent?.includes('推理正确'));
+  await page.screenshot({path:'artifacts/web/chinese-lesson-real-board.png'});
+  await page.locator('#lessonPracticeReturn').click();
+  assert.equal(await page.locator('#lessonScreen').isVisible(),true);
   assert.match(await page.locator('#lessonProgressText').textContent(),/1 \/ 25/);
   await page.locator('#lessonNext').click();
   assert.match(await page.locator('#lessonTitle').textContent(),/Swordfish/);
   await page.screenshot({path:'artifacts/web/chinese-lessons.png'});
+  // Every authored lesson must actually open inside Rust/WASM. Validate
+  // all 25 engine definitions, not only their JSON shape in Node tests.
+  await page.locator('#lessonFilters button[data-stage="all"]').click();
+  for(let lessonId=1;lessonId<=25;lessonId++){
+    await page.locator('#lessonList [data-id="'+lessonId+'"]').click();
+    await page.locator('#lessonStartPractice').click();
+    await page.locator('#lessonPracticeBar').waitFor({state:'visible',timeout:10000});
+    assert.match(await page.locator('#puzzleTitle').textContent(),/技巧练习/);
+    assert.match(await page.locator('#lessonPracticeName').textContent(),
+      new RegExp('第 '+lessonId+' 课'));
+    await page.locator('#lessonPracticeReturn').click();
+    assert.equal(await page.locator('#lessonScreen').isVisible(),true);
+  }
+  await page.locator('#lessonList [data-id="8"]').click();
+  console.log('All 25 themed lesson boards opened successfully in Rust / WASM.');
   await page.locator('#lessonBack').click();
   assert.equal(await page.locator('#homeScreen').isVisible(),true);
   await page.locator('#lessonButton').click();
@@ -59,7 +85,7 @@ try{
   assert.match(await page.locator('#lessonProgressText').textContent(),/1 \/ 25/,
     'Mastered progress must survive leaving and returning');
   await page.locator('#lessonBack').click();
-  console.log('Chinese in-app lessons, interactive practice and saved progress passed.');
+  console.log('Chinese lesson board uses Rust/WASM pencilmarks, completion and preserved puzzle state.');
   for(const [id,dimensions] of cases){
     const url=new URL(root);
     url.searchParams.set('puzzle',id);
@@ -92,6 +118,10 @@ try{
       await page.locator('#lessonFromRulesButton').click();
       assert.equal(await page.locator('#lessonScreen').isVisible(),true);
       assert.equal(await page.locator('#gameScreen').isHidden(),true);
+      await page.locator('#lessonStartPractice').click();
+      await page.locator('#lessonPracticeBar').waitFor({state:'visible',timeout:15000});
+      await page.locator('#lessonPracticeReturn').click();
+      assert.equal(await page.locator('#lessonScreen').isVisible(),true);
       await page.locator('#lessonBack').click();
       assert.equal(await page.locator('#gameScreen').isVisible(),true);
       assert.equal(await page.locator('#puzzleTitle').textContent(),before,
