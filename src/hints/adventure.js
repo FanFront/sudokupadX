@@ -700,9 +700,42 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       }
       continue;
     }
-    if(type==='arrow'&&cells.length===2){
-      relation(cells[0],cells[1],'arrow',(circle,shaft)=>circle===shaft,
-        '只有一格箭杆的箭头，其数字必须等于圆圈内的数字。');
+    if(type==='arrow'){
+      // An arrow has one circle digit and any number of shaft digits. Every
+      // full-shaft sum is supported by exact DP, not by a 5-cell cutoff.
+      const circle=cells[0],shaft=cells.slice(1);
+      if(cells.some(i=>!isVisible(progress,i)))continue;
+      const possibleCircle=values[circle]?[values[circle]]:
+        candidates[circle]||whole(domains[circle]||9);
+      const circleKeep=new Set(),shaftKeep=shaft.map(()=>new Set());
+      for(const n of possibleCircle){
+        const support=sumSupports(shaft,n);
+        if(!support)continue;
+        circleKeep.add(n);
+        support.forEach((set,j)=>set.forEach(d=>shaftKeep[j].add(d)));
+      }
+      if(!circleKeep.size||shaftKeep.some(set=>set.size===0))continue;
+      const explanation='圆圈中的数字必须等于整条箭杆上数字之和；'+
+        '排除不能被另一侧剩余数字组合支持的候选。';
+      const before=candidates[circle];
+      if(before){
+        const keep=before.filter(d=>circleKeep.has(d));
+        add(type,circle,before.filter(d=>!keep.includes(d)),keep,
+          shaft,explanation,1,true);
+      }
+      for(let j=0;j<shaft.length;j++){
+        const cell=shaft[j],prior=candidates[cell];
+        if(!prior)continue;
+        const keep=prior.filter(d=>shaftKeep[j].has(d));
+        add(type,cell,prior.filter(d=>!keep.includes(d)),keep,
+          cells.filter(i=>i!==cell),explanation,1,true);
+      }
+      continue;
+    }
+    if(type==='killer'&&cells.length>5){
+      proveSum(cells,rule.sum,'killer_sum',
+        '该杀手笼内数字之和等于 '+rule.sum+
+        '；在所有可能的和中都不存在的候选可排除。');
       continue;
     }
     if(type==='kropki'){
