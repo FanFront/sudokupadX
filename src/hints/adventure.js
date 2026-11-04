@@ -136,7 +136,7 @@ function runCandidates(puzzle,progress,houses,domains){
   }
   for(const house of houses){
     for(const i of house.cells){
-      if(!domains[i]||values[i])continue;
+      if(values[i])continue;
       for(const j of house.cells){
         if(i!==j&&values[j]&&isVisible(progress,j)){
           peers[i].push({digit:values[j],source:j,house});
@@ -205,7 +205,7 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
     if(!allowed.length)return;
     const step={method,cell,removed:distinct(removed),remaining:allowed,
       before:original,sources:distinct(sources.filter(i=>i>=0&&isVisible(progress,i))),
-      reason,level,adventure:true};
+      reason,level,adventure:true,forceElimination:!domains[cell]};
     const rank=score(step,notes,focus,tier,variant);
     if(Number.isFinite(rank))options.push({step,rank});
   };
@@ -246,13 +246,14 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
   }
   function relation(a,b,method,test,description){
     if(!isVisible(progress,a)||!isVisible(progress,b))return;
-    const ca=candidates[a],cb=candidates[b];
-    if(!ca||!cb)return;
+    const ca=values[a]?[values[a]]:(candidates[a]||whole(domains[a]||9));
+    const cb=values[b]?[values[b]]:(candidates[b]||whole(domains[b]||9));
+    if(!ca.length||!cb.length)return;
     const keepA=ca.filter(x=>cb.some(y=>test(x,y)));
     const keepB=cb.filter(y=>ca.some(x=>test(x,y)));
     if(!keepA.length||!keepB.length)return;
-    add(method,a,ca.filter(v=>!keepA.includes(v)),keepA,[b],description,1,true);
-    add(method,b,cb.filter(v=>!keepB.includes(v)),keepB,[a],description,1,true);
+    if(!values[a])add(method,a,ca.filter(v=>!keepA.includes(v)),keepA,[b],description,1,true);
+    if(!values[b])add(method,b,cb.filter(v=>!keepB.includes(v)),keepB,[a],description,1,true);
   }
   for(const {a,b,kind} of markedDots(puzzle,progress,sectors)){
     if(kind==='white')relation(a,b,'kropki',(x,y)=>Math.abs(x-y)===1,'白点两端的数字相差 1；其他数字无法与另一端的候选组成合法配对。');
