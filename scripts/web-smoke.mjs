@@ -32,6 +32,34 @@ try{
   assert.equal(await page.locator('#homeContinueSection').isHidden(),true);
   assert.equal(await page.locator('.topbar').count(),0);
   await page.screenshot({path:'artifacts/web/android-home.png'});
+  // The offline Chinese guide must be a real, touch-friendly application
+  // page with all 25 lessons and working practice, not an external URL.
+  await page.locator('#lessonButton').click();
+  await page.locator('#lessonList .lesson-entry').first().waitFor();
+  assert.equal(await page.locator('#lessonScreen').isVisible(),true);
+  assert.equal(await page.locator('#homeScreen').isHidden(),true);
+  assert.equal(await page.locator('#lessonList .lesson-entry').count(),25);
+  await page.locator('#lessonFilters button[data-stage="patterns"]').click();
+  assert.equal(await page.locator('#lessonList .lesson-entry').count(),6);
+  await page.locator('#lessonList [data-id="7"]').click();
+  assert.match(await page.locator('#lessonTitle').textContent(),/X-Wing/);
+  assert.match(await page.locator('#lessonReading').textContent(),/X-Wing/);
+  await page.locator('#lessonExercise button[data-choice="4"]').click();
+  assert.match(await page.locator('#lessonExercise .lesson-answer.correct').textContent(),/推理正确/);
+  await page.locator('#lessonComplete').click();
+  assert.match(await page.locator('#lessonProgressText').textContent(),/1 \/ 25/);
+  await page.locator('#lessonNext').click();
+  assert.match(await page.locator('#lessonTitle').textContent(),/Swordfish/);
+  await page.screenshot({path:'artifacts/web/chinese-lessons.png'});
+  await page.locator('#lessonBack').click();
+  assert.equal(await page.locator('#homeScreen').isVisible(),true);
+  await page.locator('#lessonButton').click();
+  assert.match(await page.locator('#lessonTitle').textContent(),/Swordfish/,
+    'Last lesson must survive leaving and returning');
+  assert.match(await page.locator('#lessonProgressText').textContent(),/1 \/ 25/,
+    'Mastered progress must survive leaving and returning');
+  await page.locator('#lessonBack').click();
+  console.log('Chinese in-app lessons, interactive practice and saved progress passed.');
   for(const [id,dimensions] of cases){
     const url=new URL(root);
     url.searchParams.set('puzzle',id);
@@ -58,6 +86,17 @@ try{
     await page.screenshot({path:`artifacts/web/${id}.png`});
     assert.equal(await page.locator('#gameScreen').isVisible(),true);
     assert.equal(await page.locator('#homeScreen').isHidden(),true);
+    if(id==='digits-of-despair'){
+      const before=await page.locator('#puzzleTitle').textContent();
+      await page.locator('#rulesButton').click();
+      await page.locator('#lessonFromRulesButton').click();
+      assert.equal(await page.locator('#lessonScreen').isVisible(),true);
+      assert.equal(await page.locator('#gameScreen').isHidden(),true);
+      await page.locator('#lessonBack').click();
+      assert.equal(await page.locator('#gameScreen').isVisible(),true);
+      assert.equal(await page.locator('#puzzleTitle').textContent(),before,
+        'Returning from a lesson must preserve the puzzle');
+    }
     console.log('Rendered '+id+' ('+dimensions+')');
   }
 
