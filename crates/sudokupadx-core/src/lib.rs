@@ -378,7 +378,7 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
     // These are *semantic booleans* authored by SudokuMaker, not
     // interpretations of the artwork. Imported standalone nine-by-nine
     // puzzles can safely inherit global chess constraints when declared.
-    if rows==9 && cols==9 {
+    if rows==cols && [4,6,9].contains(&rows) {
         for (field,kind) in [
             ("antiknight","anti_knight"),
             ("antiking","anti_king"),
@@ -388,7 +388,7 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
                     r.get("type").and_then(Value::as_str)==Some(kind)) {
                 hint_constraints.push(serde_json::json!({
                     "type":kind,
-                    "cells":(0..81).collect::<Vec<usize>>(),
+                    "cells":(0..rows*cols).collect::<Vec<usize>>(),
                     "sourceKind":format!("metadata.{field}")
                 }));
             }
