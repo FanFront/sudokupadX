@@ -1,6 +1,6 @@
 // GitHub Pages offline shell. Bundled index is prefetched on service worker install;
 // downloaded online puzzles themselves are stored explicitly in IndexedDB.
-const CACHE = 'sudokupadx-offline-shell-v6';
+const CACHE = 'sudokupadx-offline-shell-v7';
 const scope = self.registration.scope;
 const shell = [
   'puzzles/online-index.json',
@@ -8,6 +8,7 @@ const shell = [
   'puzzles/generated/catalog-entries.json',
   'puzzles/variants/catalog-entries.json',
   'puzzles/batch9/catalog-entries.json',
+  'puzzles/single-rule/catalog-entries.json',
   'puzzles/locale-zh.json',
   'puzzles/digits-of-despair.scl',
   'puzzles/lineage-of-logic.scl',
@@ -43,7 +44,8 @@ self.addEventListener('install', event => {
       'puzzles/catalog.json',
       'puzzles/generated/catalog-entries.json',
       'puzzles/variants/catalog-entries.json',
-      'puzzles/batch9/catalog-entries.json'
+      'puzzles/batch9/catalog-entries.json',
+  'puzzles/single-rule/catalog-entries.json'
     ]){
       try {
         const response=await fetch(local(catalogPath),{cache:'reload'});
