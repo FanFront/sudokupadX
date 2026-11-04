@@ -120,6 +120,67 @@ combinations** (a digit must occur in a cage restricted to one house)
 and **innie/outie differences**; these should be added only after a
 human-readable proof step and a source-labelled motif can be generated.
 
+## Chinese learning curriculum and Sudopedia techniques
+
+The player-facing reference is in **Chinese**:
+[数独解题技巧中文指南（含局部候选数例题）](techniques.zh-CN.md).
+It covers 25 worked mini-lessons: singles, naked/hidden subsets of size
+2–4, locked candidates, X-Wing/Swordfish/Jellyfish, XY-Wing/XYZ-Wing,
+Skyscraper, and all authored variant deductions. The examples are
+locally valid candidate implications, not complete synthetic puzzles.
+
+The solver recognizes additional Sudopedia catalogue entries without
+using guess-and-reject or unique-solution assumptions:
+
+| Implemented classic technique | Deduction source method | Learner tier |
+| --- | --- | --- |
+| Peer elimination / hidden single | `peer_elimination`, `hidden_single` | 1 |
+| Naked/hidden pair and triple | `naked_subset`, `hidden_subset` | 2 |
+| Locked candidates | `locked_candidate` | 2 |
+| Naked/hidden quad | `naked_subset`, `hidden_subset`, with `source.size=4` | 3 |
+| X-Wing / Swordfish | `x_wing`, `swordfish` | 3 |
+| XY-Wing / Skyscraper | `xy_wing`, `skyscraper` | 3 |
+| Jellyfish / XYZ-Wing | `jellyfish`, `xyz_wing` | 4 |
+
+Tier 1 also includes **direct** variant-constraint propagation; tier 2
+includes constructed Killer and line interactions. These are pedagogical
+tiers, **not** calibrated difficulty ratings.
+
+Every published chapter supplies `logicProfile.education`:
+
+- `minimumTier`: the first of four progressively enabled technique sets
+  capable of fully solving that *specific puzzle* with no guessing.
+- `techniquePath`: the first **actual candidate removal** by each used
+  technique, in logical order, with Chinese name, target RnCn coordinate,
+  removed/remaining digits and method tier.
+- `maxUsedTier`: highest tier used in the generator's default proof;
+  this may differ from the weakest sufficient tier because the default
+  solver uses all sound methods.
+- `focusTechnique`: a method ID for a purpose-built technique lesson,
+  or null for the regular workshop.
+- `guideUrl`: stable link to the Chinese tutorial.
+
+To **try generating a focused example** (rather than just relabel a
+random puzzle):
+
+```sh
+python3 scripts/generate_variants.py --seed 20261103 \
+  --focus-size 9 --focus-technique x_wing --attempts 200
+```
+
+The focused 9×9 puzzle is accepted only if the default proof actually
+uses `x_wing` **and** a separate full human solver, with `x_wing`
+disabled, can no longer finish. Other variants continue to be enforced.
+If the requested teaching pattern is too rare for the specified
+seed/attempt budget, generation **fails explicitly**, rather than
+claiming a fake example. The generator doesn't yet guarantee an example
+for *every* Sudopedia technique in one seed.
+
+A separate exact search remains in use **only** to check uniqueness;
+it never writes steps into `techniquePath`. Uniqueness-dependent
+techniques (unique rectangles), forcing-net enumeration, Nishio,
+brute force and trial-and-error remain excluded from the human solver.
+
 ## Acceptance and verification
 
 A candidate puzzle is retained only when:
@@ -161,16 +222,19 @@ especially when cage, line and dot marks converge.
 
 ## Architecture
 
-- `scripts/variant_logic.py`: full deduction loop, classic locked
-  candidates and independent solution counter.
+- `scripts/variant_logic.py`: tier-limited human deduction loop,
+  classic locked candidates and independent solution counter.
+- `scripts/technique_catalog.py`: stable Chinese technique names,
+  curriculum tiers, actual learning-path exports and tiered solve checks.
+- `scripts/classic_techniques.py`: classical subsets, X-Wing/Swordfish/
+  Jellyfish fish, XY-Wing/XYZ-Wing and Skyscraper.
 - `scripts/variant_techniques.py`: local Renban, whisper, arrow and
   XV propagation, plus 9×9 white-dot triple partition.
 - `scripts/variant_lines.py`: region-sum, entropic, modular and Between
   domain propagation plus genuine cross-rule deductions.
 - `scripts/line_generation.py`: builds meaningful line intersections with
   explicit opening anchors and protected deduction targets.
-- `scripts/classic_techniques.py`: hidden subsets and X-Wings from
-  traditional Sudoku solving.
+
 - `scripts/variant_structures.py`: reconstructed Killer house arithmetic,
   Renban–Killer sum locks and mixed Kropki–Renban house partitions.
 - `scripts/generate_variants.py`: chooses the solution, constructs
