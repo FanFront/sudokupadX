@@ -1,0 +1,436 @@
+{
+  "schemaVersion": 1,
+  "sourcePuzzleId": "sxsm_TheM_5668a3a15589ec2c4f707b128e0d2389",
+  "sourceFingerprint": "fnv1a-eb69e130736ace1b",
+  "sourceDimensions": [
+    9,
+    9
+  ],
+  "audit": {
+    "basis": "Exact author-declared rule semantics and original artwork indices verified against the published solution OFFLINE",
+    "accepted": 34,
+    "byType": {
+      "classic_sudoku": 1,
+      "kropki": 33
+    }
+  },
+  "constraints": [
+    {
+      "type": "classic_sudoku",
+      "cells": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ],
+      "sourceKind": "metadata.rules"
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1,
+        2
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 0
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        3,
+        4
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 1
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        4,
+        5
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 2
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        5,
+        14
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 3
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        13,
+        14
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 4
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        12,
+        13
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 5
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        12,
+        21
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 6
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        21,
+        22
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 7
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        22,
+        23
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 8
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        16,
+        25
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 9
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        16,
+        17
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 10
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        33,
+        34
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 11
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        32,
+        33
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 12
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        31,
+        32
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 13
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        30,
+        31
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 14
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        29,
+        30
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 15
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        28,
+        29
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 16
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        27,
+        28
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 17
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        37,
+        38
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 18
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        36,
+        37
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 19
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        36,
+        45
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 20
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        45,
+        46
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 21
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        43,
+        44
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 22
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        42,
+        43
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 23
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        51,
+        52
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 24
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        52,
+        53
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 25
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        50,
+        59
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 26
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        59,
+        60
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 27
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        56,
+        65
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 28
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        63,
+        72
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 29
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        73,
+        74
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 30
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        76,
+        77
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 31
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        78,
+        79
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 32
+    }
+  ]
+}
