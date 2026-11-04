@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 1,
+  "sourcePuzzleId": "sxsm_TheM_336c103c1283bd07f1021f1c6a7c1cfd",
+  "sourceFingerprint": "fnv1a-9648ba2e2d389e0a",
+  "sourceDimensions": [
+    9,
+    9
+  ],
+  "audit": {
+    "basis": "Author rule legend + directed artwork indices; arithmetic and parity validated against original solution OFFLINE",
+    "accepted": 14,
+    "byType": {
+      "classic_sudoku": 1,
+      "arrow": 13
+    }
+  },
+  "constraints": [
+    {
+      "type": "classic_sudoku",
+      "cells": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ],
+      "sourceKind": "metadata.rules"
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        9
+      ],
+      "shaft": [
+        10,
+        11
+      ],
+      "cells": [
+        9,
+        10,
+        11
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 0
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        12
+      ],
+      "shaft": [
+        13,
+        14
+      ],
+      "cells": [
+        12,
+        13,
+        14
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 1
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        15
+      ],
+      "shaft": [
+        16,
+        25
+      ],
+      "cells": [
+        15,
+        16,
+        25
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 2
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        34
+      ],
+      "shaft": [
+        43,
+        42
+      ],
+      "cells": [
+        34,
+        43,
+        42
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 3
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        41
+      ],
+      "shaft": [
+        40,
+        49
+      ],
+      "cells": [
+        41,
+        40,
+        49
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 4
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        58
+      ],
+      "shaft": [
+        59,
+        60
+      ],
+      "cells": [
+        58,
+        59,
+        60
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 5
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        61
+      ],
+      "shaft": [
+        70,
+        79
+      ],
+      "cells": [
+        61,
+        70,
+        79
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 6
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        80
+      ],
+      "shaft": [
+        71,
+        62
+      ],
+      "cells": [
+        80,
+        71,
+        62
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 7
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        78
+      ],
+      "shaft": [
+        68
+      ],
+      "cells": [
+        78,
+        68
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 8
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        72
+      ],
+      "shaft": [
+        63,
+        64
+      ],
+      "cells": [
+        72,
+        63,
+        64
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 9
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        65
+      ],
+      "shaft": [
+        56,
+        55
+      ],
+      "cells": [
+        65,
+        56,
+        55
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 10
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        54
+      ],
+      "shaft": [
+        45,
+        36
+      ],
+      "cells": [
+        54,
+        45,
+        36
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 11
+    },
+    {
+      "type": "arrow",
+      "circle": [
+        46
+      ],
+      "shaft": [
+        38,
+        28
+      ],
+      "cells": [
+        46,
+        38,
+        28
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 12
+    }
+  ]
+}

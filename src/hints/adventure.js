@@ -2,6 +2,7 @@
 // Every inference is derived from *visible* values and explicitly authored
 // all-different sets and explicitly typed variants, not colors or fogged givens.
 import {typedConstraints} from './constraint-data.js';
+import {findCombinedConstraintHint} from './constraint-propagation.js';
 
 const SIZES=new Set([4,6,9]);
 const whole=n=>Array.from({length:n},(_,i)=>i+1);
@@ -58,9 +59,19 @@ function explicitlyClassicalNine(puzzle){
     /\brows?\s*[,，、]\s*(?:and\s+)?(?:columns?|cols?)\b/i.test(description);
   return rows&&columns;
 }
+function hiddenRegionLayout(puzzle){
+  // A number grid whose jigsaw regions are part of the *puzzle* must not
+  // acquire those regions from a solved/author-private layout. Until the
+  // player actually establishes the partition, only shown row/column rules
+  // and separately typed clues may support a hint.
+  const text=String(puzzle.rules||'');
+  return /(?:区域|宫|星系)[^。\n]{0,28}(?:自行推导|待推断|未知|自行构建|自行划分)|(?:deduce|construct|unknown|hidden)[^.!\n]{0,45}(?:regions?|region boundaries|jigsaw)/i
+    .test(text);
+}
 function gridsAndHouses(puzzle,typedRules=[]){
   const {rows,cols}=puzzle,total=rows*cols;
   const domains=Array(total).fill(0),houses=[],seen=new Set();
+  const authoredRegions=hiddenRegionLayout(puzzle)?[]:puzzle.regions||[];
   const add=(indices,kind,n,description)=>{
     const members=distinct(indices.filter(i=>Number.isInteger(i)&&i>=0&&i<total));
     if(members.length<2)return;
@@ -81,7 +92,7 @@ function gridsAndHouses(puzzle,typedRules=[]){
       add(whole(9).map(c=>(c-1)*9+r),'column',9,
         '标准数独第 '+(r+1)+' 列');
     }
-    const regions=(puzzle.regions||[]).filter(group=>
+    const regions=authoredRegions.filter(group=>
       Array.isArray(group)&&group.length===9);
     const listed=regions.map(group=>group.map(pair=>point(pair,rows,cols)));
     const valid=listed.length===9&&listed.flat().length===81&&
@@ -124,7 +135,7 @@ function gridsAndHouses(puzzle,typedRules=[]){
       }
     }
   }
-  for(const region of puzzle.regions||[]){
+  for(const region of authoredRegions){
     if(Array.isArray(region)){
       const cells=region.map(p=>point(p,rows,cols));
       const n=SIZES.has(cells.length)?cells.length:0;
@@ -233,7 +244,7 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
     // admissible digits, not from untrusted handwritten notes.
     for(const house of completeHouses){
       const open=house.cells.filter(i=>!values[i]&&candidates[i]?.length>1);
-      for(const count of [2,3]){
+      for(let count=2;count<Math.min(9,open.length);count++){
         for(const subset of combinations(open.filter(i=>isVisible(progress,i)),count)){
           const union=distinct(subset.flatMap(i=>candidates[i]));
           if(union.length!==count)continue;
@@ -345,6 +356,47 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
     if(!values[a])add(method,a,ca.filter(v=>!keepA.includes(v)),keepA,[b],description,1,true);
     if(!values[b])add(method,b,cb.filter(v=>!keepB.includes(v)),keepB,[a],description,1,true);
   }
+  // Exact sum support via prefix/suffix dynamic programming. Unlike
+  // 9^N tuple enumeration this remains inexpensive for 9-cell diagonals,
+  // large cages and sandwich interiors. Relaxing all-different only makes
+  // the result conservative (never a false elimination).
+  function sumSupports(indices,goal,forceFirst=null){
+    if(indices.some(i=>!isVisible(progress,i)))return null;
+    const lists=indices.map((cell,k)=>{
+      const found=values[cell]?[values[cell]]:
+        candidates[cell]||whole(domains[cell]||9);
+      return k===0&&forceFirst!==null?found.filter(d=>d===forceFirst):found;
+    });
+    if(lists.some(list=>list.length===0))return null;
+    const n=lists.length,prefix=[new Set([0])],suffix=Array(n+1);
+    for(let k=0;k<n;k++){
+      const next=new Set();
+      for(const sum of prefix[k])for(const d of lists[k])
+        if(sum+d<=goal)next.add(sum+d);
+      prefix.push(next);
+    }
+    if(!prefix[n].has(goal))return null;
+    suffix[n]=new Set([0]);
+    for(let k=n-1;k>=0;k--){
+      const next=new Set();
+      for(const sum of suffix[k+1])for(const d of lists[k])
+        if(sum+d<=goal)next.add(sum+d);
+      suffix[k]=next;
+    }
+    return lists.map((list,k)=>new Set(list.filter(d=>
+      [...prefix[k]].some(left=>suffix[k+1].has(goal-left-d)))));
+  }
+  function proveSum(indices,goal,method,reason){
+    const supported=sumSupports(indices,goal);
+    if(!supported)return;
+    for(let j=0;j<indices.length;j++){
+      const cell=indices[j],before=candidates[cell];
+      if(!before)continue;
+      const keep=before.filter(d=>supported[j].has(d));
+      add(method,cell,before.filter(d=>!keep.includes(d)),keep,
+        indices.filter(i=>i!==cell),reason,2,true);
+    }
+  }
   // Type, cell sequence, numeric values and optional fog unlock conditions
   // are all taken directly from authored constraint records. In particular,
   // no line, dot or cage becomes a rule because of its display color.
@@ -369,6 +421,81 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
           :type==='prime_sum'?'相邻数字之和必须是质数。'
             :'反低语线相邻数字的差必须小于 5。';
         relation(cells[j-1],cells[j],type,relationTest,description);
+      }
+      continue;
+    }
+    if(type==='odd'||type==='even'){
+      for(const cell of cells){
+        if(values[cell]||!isVisible(progress,cell))continue;
+        const before=candidates[cell]||whole(domains[cell]||9);
+        const keep=before.filter(d=>type==='odd'?d%2===1:d%2===0);
+        add(type,cell,before.filter(d=>!keep.includes(d)),keep,[],
+          type==='odd'?'题目明确将此格标记为奇数。':
+            '题目明确将此格标记为偶数。',1,true);
+      }
+      continue;
+    }
+    if(type==='inequality'){
+      relation(cells[0],cells[1],type,(x,y)=>x<y,
+        '结构化不等号指定第一个格的数字严格小于第二个格。');
+      continue;
+    }
+    if(type==='clone'){
+      const groups=rule.groups;
+      for(let k=0;k<groups[0].length;k++)for(let j=1;j<groups.length;j++)
+        relation(groups[0][k],groups[j][k],type,(a,b)=>a===b,
+          '克隆区域中相同位置的数字必须完全相同。');
+      continue;
+    }
+    if(type==='indexing_rows'){
+      // Row-based column indexing: at RrCc digit X implies RrCX=C.
+      // The marked rule is global and should never be inferred from the
+      // displayed book illustration alone.
+      for(let row=0;row<9;row++)for(let col=0;col<9;col++){
+        const witness=row*9+col;
+        if(!isVisible(progress,witness)||!values[witness])continue;
+        const target=row*9+values[witness]-1,digitNeeded=col+1;
+        if(!isVisible(progress,target)||values[target])continue;
+        const before=candidates[target]||whole(9);
+        if(!before.includes(digitNeeded))continue;
+        add(type,target,before.filter(d=>d!==digitNeeded),
+          [digitNeeded],[witness],
+          '同行的 '+(col+1)+' 列填了 '+values[witness]+
+          '，因此该行第 '+values[witness]+' 列必须填 '+(col+1)+'。',
+          2,true);
+      }
+      continue;
+    }
+    if(type==='ambiguous_thermo'){
+      // A damaged thermometer can point either way, but must still be
+      // strictly monotonic in one entire direction, not switch mid-line.
+      const lists=cells.map(i=>values[i]?[values[i]]:
+        candidates[i]||whole(domains[i]||9));
+      if(cells.some(i=>!isVisible(progress,i))||
+         lists.some(list=>list.length===0))continue;
+      const supported=cells.map(()=>new Set()),assign=[];
+      let valid=false;
+      const walk=(k,ascending)=>{
+        if(k===cells.length){
+          valid=true;
+          assign.forEach((d,j)=>supported[j].add(d));
+          return;
+        }
+        for(const d of lists[k]){
+          if(k>0&&(ascending?d<=assign[k-1]:d>=assign[k-1]))continue;
+          assign.push(d);walk(k+1,ascending);assign.pop();
+        }
+      };
+      walk(0,true);walk(0,false);
+      if(!valid)continue;
+      for(let j=0;j<cells.length;j++){
+        const cell=cells[j],before=candidates[cell];
+        if(!before)continue;
+        const keep=before.filter(d=>supported[j].has(d));
+        add(type,cell,before.filter(d=>!keep.includes(d)),keep,
+          cells.filter(i=>i!==cell),
+          '破损温度计的圆头虽然未知，但整条线必须沿某一个方向严格递增。两种方向都不允许的候选数可以排除。',
+          2,true);
       }
       continue;
     }
@@ -503,6 +630,167 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
           check:arr=>arr.reduce((a,b)=>a+b,0)===rule.sum,
           reason:'晶体笼每条指定的行或列数字之和必须为 '+rule.sum+'。'});
       }
+      continue;
+    }
+    if(type==='renban'){
+      if(cells.length>9||cells.some(i=>!isVisible(progress,i)))continue;
+      const lists=cells.map(i=>values[i]?[values[i]]:
+        candidates[i]||whole(domains[i]||9));
+      const m=cells.length,maximum=Math.max(...cells.map(i=>domains[i]||9));
+      if(m>maximum||lists.some(list=>!list.length))continue;
+      const supported=lists.map(()=>new Set()),seenIntervals=[];
+      function matching(start,forcedAt=-1,forcedDigit=0){
+        const allowed=lists.map((list,i)=>list.filter(d=>
+          d>=start&&d<start+m&&
+          (i!==forcedAt||d===forcedDigit)));
+        if(allowed.some(a=>!a.length))return false;
+        const owner=Array(maximum+1).fill(-1);
+        const visit=(i,visited)=>{
+          for(const d of allowed[i]){
+            if(visited.has(d))continue;
+            visited.add(d);
+            if(owner[d]<0||visit(owner[d],visited)){
+              owner[d]=i;return true;
+            }
+          }
+          return false;
+        };
+        return allowed.every((_,i)=>visit(i,new Set()));
+      }
+      for(let first=1;first+m-1<=maximum;first++){
+        if(matching(first))seenIntervals.push(first);
+      }
+      if(!seenIntervals.length)continue;
+      for(let j=0;j<m;j++)for(const d of lists[j]){
+        if(seenIntervals.some(start=>matching(start,j,d)))
+          supported[j].add(d);
+      }
+      for(let j=0;j<m;j++){
+        const cell=cells[j],prior=candidates[cell];
+        if(!prior)continue;
+        const keep=prior.filter(d=>supported[j].has(d));
+        add(type,cell,prior.filter(d=>!keep.includes(d)),keep,
+          cells.filter(i=>i!==cell),
+          '连续线中所有数字必须恰好构成一段互不重复的连续整数，排除无法参与任何完整匹配的候选数。',
+          2,true);
+      }
+      continue;
+    }
+    if(type==='little_killer'){
+      proveSum(cells,rule.sum,type,
+        '小杀手斜线上全部数字之和等于 '+rule.sum+'；对角线允许重复数字。');
+      continue;
+    }
+    if(type==='x_sums'){
+      const lead=cells[0],before=values[lead]?[values[lead]]:
+        candidates[lead]||whole(domains[lead]||9);
+      const possible=before.filter(n=>sumSupports(cells.slice(0,n),rule.sum,n));
+      if(!values[lead])
+        add(type,lead,before.filter(d=>!possible.includes(d)),possible,
+          cells.slice(1).filter(i=>isVisible(progress,i)),
+          '从提示所在边向内数前 N 格的和为 '+rule.sum+
+          '，其中 N 就是首格的数字。',2,true);
+      else if(possible.length){
+        const n=values[lead];
+        proveSum(cells.slice(0,n),rule.sum,type,
+          '本行或列的首格是 '+n+'，因此靠近外侧的前 '+n+
+          ' 格数字之和等于 '+rule.sum+'。');
+      }
+      continue;
+    }
+    if(type==='sandwich'){
+      if(cells.some(i=>!isVisible(progress,i)))continue;
+      const left=cells.findIndex(i=>values[i]===1);
+      const right=cells.findIndex(i=>values[i]===9);
+      if(left<0||right<0||left===right)continue;
+      const interior=cells.slice(Math.min(left,right)+1,Math.max(left,right));
+      if(interior.length){
+        proveSum(interior,rule.sum,type,
+          '两端数字 1 和 9 已确定，其间格子的数字之和等于 '+rule.sum+'。');
+      }
+      continue;
+    }
+    if(type==='skyscraper'){
+      // True skyline visibility is counted only when all nine distinct
+      // numbers form a proven row/column house. Search permutations in a
+      // bounded worker; an unfinished search never licenses elimination.
+      if(cells.length!==9||cells.some(i=>!isVisible(progress,i))||
+         !houses.some(h=>h.n===9&&h.cells.length===9&&
+           cells.every(i=>h.cells.includes(i))))continue;
+      const lists=cells.map(i=>values[i]?[values[i]]:candidates[i]||[]);
+      if(lists.some(list=>!list.length))continue;
+      const seenDigits=Array(9).fill(0),assign=[],supports=cells.map(()=>new Set());
+      let remainingBudget=500000,aborted=false,valid=false;
+      const walk=(k,tallest,seenCount)=>{
+        if(--remainingBudget<0){aborted=true;return;}
+        // Only heights strictly above the tallest building can create
+        // another visible building, even if all remaining cells are free.
+        if(seenCount>rule.count||
+           seenCount+Math.min(9-k,9-tallest)<rule.count)return;
+        if(k===9){
+          if(seenCount===rule.count){
+            valid=true;
+            assign.forEach((d,j)=>supports[j].add(d));
+          }
+          return;
+        }
+        for(const d of lists[k]){
+          if(seenDigits[d])continue;
+          seenDigits[d]=1;assign.push(d);
+          walk(k+1,Math.max(tallest,d),seenCount+(d>tallest?1:0));
+          assign.pop();seenDigits[d]=0;
+          if(aborted)return;
+        }
+      };
+      walk(0,0,0);
+      if(aborted||!valid)continue;
+      for(let k=0;k<9;k++){
+        const cell=cells[k],before=candidates[cell];
+        if(!before)continue;
+        const keep=before.filter(d=>supports[k].has(d));
+        add(type,cell,before.filter(d=>!keep.includes(d)),keep,
+          cells.filter(i=>i!==cell),
+          '从题目箭头方向看去，只有 '+rule.count+
+          ' 栋楼可见；高数字会遮挡后方较小的数字。',3,true);
+      }
+      continue;
+    }
+    if(type==='arrow'){
+      // An arrow has one circle digit and any number of shaft digits. Every
+      // full-shaft sum is supported by exact DP, not by a 5-cell cutoff.
+      const circle=cells[0],shaft=cells.slice(1);
+      if(cells.some(i=>!isVisible(progress,i)))continue;
+      const possibleCircle=values[circle]?[values[circle]]:
+        candidates[circle]||whole(domains[circle]||9);
+      const circleKeep=new Set(),shaftKeep=shaft.map(()=>new Set());
+      for(const n of possibleCircle){
+        const support=sumSupports(shaft,n);
+        if(!support)continue;
+        circleKeep.add(n);
+        support.forEach((set,j)=>set.forEach(d=>shaftKeep[j].add(d)));
+      }
+      if(!circleKeep.size||shaftKeep.some(set=>set.size===0))continue;
+      const explanation='圆圈中的数字必须等于整条箭杆上数字之和；'+
+        '排除不能被另一侧剩余数字组合支持的候选。';
+      const before=candidates[circle];
+      if(before){
+        const keep=before.filter(d=>circleKeep.has(d));
+        add(type,circle,before.filter(d=>!keep.includes(d)),keep,
+          shaft,explanation,1,true);
+      }
+      for(let j=0;j<shaft.length;j++){
+        const cell=shaft[j],prior=candidates[cell];
+        if(!prior)continue;
+        const keep=prior.filter(d=>shaftKeep[j].has(d));
+        add(type,cell,prior.filter(d=>!keep.includes(d)),keep,
+          cells.filter(i=>i!==cell),explanation,1,true);
+      }
+      continue;
+    }
+    if(type==='killer'&&cells.length>5){
+      proveSum(cells,rule.sum,'killer_sum',
+        '该杀手笼内数字之和等于 '+rule.sum+
+        '；在所有可能的和中都不存在的候选可排除。');
       continue;
     }
     if(type==='kropki'){
@@ -648,6 +936,24 @@ export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
   }
   const step=chooseStep(puzzle,progress,domains,houses,sectors,state,
     Math.min(tier,4),focus);
+  // Join independently proven variant arithmetic with Sudoku all-different
+  // reasoning. A sum group can guarantee a digit within a house without
+  // fixing which of its arrow-shaft cells contains it.
+  const combined=findCombinedConstraintHint(puzzle,progress,
+    {domains,houses},state,activeRules,Math.min(tier,4),focus);
+  // Keep a direct, immediately explained variant proof if one exists.
+  // Generalized N-subsets should not drown out arrow/thermo/clone/odd hints
+  // just because both methods can eliminate the focused candidate.
+  const basic=['peer_elimination','locked_candidate',
+    'hidden_single','naked_subset'].includes(step?.method);
+  const relevant=combined?.sources.includes(focus)||combined?.cell===focus;
+  const preferCombined=Boolean(combined)&&
+    (!step||(combined.method==='constraint_locked_digit'
+      ? (relevant||basic)
+      : (basic&&relevant)));
+  if(preferCombined){
+    return {status:'step',level:combined.level,step:combined};
+  }
   if(step)return {status:'step',level:step.level,step};
   return {status:progress.visible?.some(flag=>flag===false)
     ?'fog_stalled':'stalled',level:Math.min(tier,4),step:null};

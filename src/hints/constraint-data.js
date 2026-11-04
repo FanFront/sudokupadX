@@ -8,7 +8,9 @@ const TYPES=new Set([
   'anti_king','anti_knight','lava','reverse_whisper',
   'shadow_lower','greater_neighbors','magic_square','crystal_cage',
   'classic_sudoku','anti_knight_anchors','anti_kropki_black',
-  'anti_whisper_anchors'
+  'anti_whisper_anchors','odd','even','inequality','clone',
+  'indexing_rows','little_killer','x_sums','sandwich',
+  'skyscraper','ambiguous_thermo'
 ]);
 const pos=(value,rows,cols)=>{
   if(Number.isInteger(value))return value>=0&&value<rows*cols?value:-1;
@@ -51,11 +53,12 @@ export function typedConstraints(puzzle,progress){
     const cells=positions(items,rows,cols,
       ['anti_king','anti_knight','anti_xv','lava',
         'classic_sudoku','anti_knight_anchors','anti_kropki_black',
-        'anti_whisper_anchors'].includes(type)?121:20);
+        'anti_whisper_anchors','indexing_rows','odd','even'].includes(type)?121:20);
     // An unlocked constraint may span fog. Its already visible local parts
     // can be used independently; the solver must still reject hidden
     // witnesses and targets when applying each specific deduction.
-    if(!cells||cells.length<2||cells.every(i=>progress.visible[i]!==true))continue;
+    if(!cells||cells.length<(['odd','even'].includes(type)?1:2)||
+       cells.every(i=>progress.visible[i]!==true))continue;
     const unlock=raw.unlockCells===undefined?null:positions(raw.unlockCells,rows,cols);
     if(raw.unlockCells!==undefined&&!unlock)continue;
     if(unlock&&!unlock.some(i=>progress.visible[i]===true))continue;
@@ -69,6 +72,42 @@ export function typedConstraints(puzzle,progress){
       .includes(type)&&(rows!==9||cols!==9))continue;
     if(type==='anti_kropki_black'&&
        (cells.length!==81||cells.some((v,i)=>v!==i)))continue;
+    if(type==='indexing_rows'&&
+       (rows!==9||cols!==9||cells.length!==81||cells.some((v,i)=>v!==i)))
+      continue;
+    if(type==='inequality'&&cells.length!==2)continue;
+    if(type==='clone'){
+      if(!Array.isArray(raw.groups)||raw.groups.length<2||raw.groups.length>8)
+        continue;
+      const groups=raw.groups.map(part=>positions(part,rows,cols));
+      if(groups.some(g=>!g)||groups.some(g=>g.length!==groups[0].length)||
+         groups[0].length>9||
+         new Set(groups.flat()).size!==groups.flat().length||
+         groups.flat().length!==cells.length||
+         groups.flat().some(i=>!cells.includes(i)))continue;
+      rule.groups=groups;
+    }
+    if(type==='ambiguous_thermo'&&cells.length>9)continue;
+    if(['little_killer','x_sums','sandwich','skyscraper'].includes(type)){
+      const ordered=cells.every((i,j)=>{
+        if(j===0)return true;
+        const a=cells[j-1],dr=Math.floor(i/cols)-Math.floor(a/cols),
+          dc=i%cols-a%cols;
+        return type==='little_killer'
+          ?Math.abs(dr)===1&&Math.abs(dc)===1
+          :Math.abs(dr)+Math.abs(dc)===1;
+      });
+      if(!ordered||cells.length>9||
+         ['x_sums','sandwich','skyscraper'].includes(type)&&cells.length!==9)
+        continue;
+      if(type==='skyscraper'){
+        if(!Number.isInteger(raw.count)||raw.count<1||raw.count>9)continue;
+        rule.count=raw.count;
+      }else{
+        if(!Number.isInteger(raw.sum)||raw.sum<0||raw.sum>90)continue;
+        rule.sum=raw.sum;
+      }
+    }
     if(type==='killer'){
       const sum=raw.sum;
       if(!Number.isInteger(sum)||sum<1||sum>180||cells.length>9)continue;

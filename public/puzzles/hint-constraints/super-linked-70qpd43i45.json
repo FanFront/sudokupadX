@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "sourcePuzzleId": "sxsm_TheM_51e89255a8baff1afc59b47b1a0e5e88",
+  "sourceFingerprint": "fnv1a-8136a622130a7bb6",
+  "sourceDimensions": [
+    9,
+    9
+  ],
+  "audit": {
+    "basis": "Exact author-declared rule semantics and original artwork indices verified against the published solution OFFLINE",
+    "accepted": 18,
+    "byType": {
+      "classic_sudoku": 1,
+      "kropki": 2,
+      "killer": 15
+    }
+  },
+  "constraints": [
+    {
+      "type": "classic_sudoku",
+      "cells": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ],
+      "sourceKind": "metadata.rules"
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        75,
+        76
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 0
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        76,
+        77
+      ],
+      "dot": "white",
+      "sourceKind": "overlays",
+      "sourceIndex": 1
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        75,
+        76,
+        77
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 0
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        67,
+        68,
+        69
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 1
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        65,
+        66
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 2
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        45,
+        54,
+        63
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 3
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        49,
+        58
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 4
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        53,
+        62,
+        71
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 5
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        26,
+        34,
+        35
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 6
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        31,
+        32
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 7
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        18,
+        27,
+        28
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 8
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        19,
+        20,
+        21
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 9
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        2,
+        3
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 10
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        4,
+        13
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 11
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        5,
+        14
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 12
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        15,
+        24
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 13
+    },
+    {
+      "type": "killer",
+      "sum": 9,
+      "unique": true,
+      "cells": [
+        7,
+        8
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 14
+    }
+  ]
+}

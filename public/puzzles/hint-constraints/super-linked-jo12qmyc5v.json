@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "sourcePuzzleId": "sxsm_TheM_44f63f2c6311274fc94aad70a7dc9a4e",
+  "sourceFingerprint": "fnv1a-dd3495d2df50012c",
+  "sourceDimensions": [
+    9,
+    9
+  ],
+  "audit": {
+    "basis": "30 authored odd marks, 6 black dots and 4 symmetric ball-chute lines audited against original solution OFFLINE",
+    "accepted": 12,
+    "byType": {
+      "classic_sudoku": 1,
+      "odd": 1,
+      "kropki": 6,
+      "zipline": 4
+    }
+  },
+  "constraints": [
+    {
+      "type": "classic_sudoku",
+      "cells": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ],
+      "sourceKind": "metadata.rules"
+    },
+    {
+      "type": "odd",
+      "cells": [
+        0,
+        10,
+        2,
+        20,
+        18,
+        12,
+        4,
+        22,
+        14,
+        13,
+        30,
+        48,
+        32,
+        50,
+        40,
+        42,
+        43,
+        44,
+        34,
+        52,
+        60,
+        70,
+        62,
+        80,
+        78,
+        55,
+        64,
+        73,
+        65,
+        63
+      ],
+      "sourceKind": "underlays",
+      "sourceIndices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ]
+    },
+    {
+      "type": "kropki",
+      "dot": "black",
+      "cells": [
+        65,
+        66
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 0
+    },
+    {
+      "type": "kropki",
+      "dot": "black",
+      "cells": [
+        66,
+        67
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 1
+    },
+    {
+      "type": "kropki",
+      "dot": "black",
+      "cells": [
+        68,
+        69
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 2
+    },
+    {
+      "type": "kropki",
+      "dot": "black",
+      "cells": [
+        61,
+        62
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 3
+    },
+    {
+      "type": "kropki",
+      "dot": "black",
+      "cells": [
+        32,
+        33
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 4
+    },
+    {
+      "type": "kropki",
+      "dot": "black",
+      "cells": [
+        18,
+        19
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 5
+    },
+    {
+      "type": "zipline",
+      "cells": [
+        67,
+        66,
+        65,
+        55,
+        45,
+        36,
+        27
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 0
+    },
+    {
+      "type": "zipline",
+      "cells": [
+        68,
+        69,
+        70,
+        62,
+        53
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 1
+    },
+    {
+      "type": "zipline",
+      "cells": [
+        30,
+        31,
+        32
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 2
+    },
+    {
+      "type": "zipline",
+      "cells": [
+        35,
+        26,
+        16,
+        15,
+        6,
+        5,
+        13
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 3
+    }
+  ]
+}

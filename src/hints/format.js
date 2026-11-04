@@ -3,6 +3,8 @@ export const TECHNIQUES=Object.freeze({
   peer_elimination:'已知数排除',hidden_single:'隐性唯一数',
   naked_single:'显性唯一数',
   naked_subset:'显性数组',hidden_subset:'隐性数组',
+  constraint_locked_digit:'变体强制数字与区块排除',
+  pencil_subset:'中心手记数组（条件提示）',
   locked_candidate:'区块排除',
   x_wing:'X-Wing',swordfish:'Swordfish',jellyfish:'Jellyfish',
   xy_wing:'XY-Wing',xyz_wing:'XYZ-Wing',skyscraper:'Skyscraper',
@@ -18,12 +20,17 @@ export const TECHNIQUES=Object.freeze({
   anti_kropki_black:'反黑点（负约束）',
   anti_whisper_anchors:'灰格相邻差值限制',
   magic_square:'三阶魔方阵',crystal_cage:'晶体笼等和',
+  odd:'奇数标记',even:'偶数标记',inequality:'不等号',
+  clone:'克隆区域',indexing_rows:'列索引',little_killer:'小杀手对角线',
+  x_sums:'X-Sums',sandwich:'三明治求和',skyscraper:'摩天楼可见数',
+  ambiguous_thermo:'缺失圆头的温度计',
   search_contradiction:'穷举反证'
 });
 const ruleText={
   peer_elimination:'同行、同列或同宫中已有的确定数字，不能再次出现在目标格。',
   hidden_single:'在这条行、列或宫中，剩余候选位置使目标数字只能落在目标格。',
   naked_subset:'这些来源格的候选数合起来恰好占满相同数量的格，其他同一区域的格不能再使用这些数。',
+  constraint_locked_digit:'变体求和的所有可行组合都包含指定数字；其可能位置被限制在同一行、列或宫内，因此可从其他格排除该数字。',
   hidden_subset:'这些数字在同一行、列或宫里只能出现在来源格中，因此这些格的其他候选数可删去。',
   locked_candidate:'某数字在一个行、列或宫中的位置都被限制在交集内，因此可从交集所在的另一单位其余位置排除。',
   x_wing:'两行或两列把某个数字限制在相同两列或两行，形成矩形，覆盖单位的其他位置可排除该数字。',
@@ -83,12 +90,17 @@ export function describeHint(response,size,cells=[]){
   const cellCount=cells?.length||size*size;
   const sourceCells=[...new Set((step.sources||[]).filter(i=>
     Number.isInteger(i)&&i>=0&&i<cellCount&&i!==step.cell))];
+  const affectedCells=[...new Set((step.affectedCells||[]).filter(i=>
+    Number.isInteger(i)&&i>=0&&i<cellCount))];
+  const also=affectedCells.filter(i=>i!==step.cell);
   const entropicGroups=(step.ruleSize||size)===6?'1–2、3–4、5–6':'1–3、4–6、7–9';
   const rationale=step.reason||(
     step.method==='entropic'
       ?'每组三连格必须分别取自三个数字区间（'+entropicGroups+'），不符合分组的候选数可排除。'
       :ruleText[step.method]||'遵循已知数独规则。');
-  const placement=!step.forceElimination&&step.remaining?.length===1&&step.before?.length>1;
+  const conditional=step.assumptionBased===true;
+  const placement=!conditional&&!step.forceElimination&&
+    step.remaining?.length===1&&step.before?.length>1;
   const action=step.method==='search_contradiction'
     ?'经反证，可排除 '+removed
     :placement?'确定填入 '+remaining:'排除候选数 '+removed;
@@ -105,13 +117,23 @@ export function describeHint(response,size,cells=[]){
       :'求解器此步候选：'+before+' ｜ 排除：'+
         (step.removed||[]).join('、')+' ｜ 余下：'+remaining;
   return {
-    title:(TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
-    description:cellName(step.cell,size)+'：'+rationale+
+    title:(conditional?'待验证 · ':'')+
+      (step.method==='pencil_subset'
+        ?'中心手记'+(step.subsetSize===2?'数对':
+          step.subsetSize===3?'三数组':step.subsetSize+' 数组')
+        :TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
+    description:(conditional?'【条件推理，不是已证明的排除】 ':'')+
+      cellName(step.cell,size)+'：'+rationale+
       ' 由此'+action+'。'+(sourceCells.length?
         ' 参考格：'+sourceCells.slice(0,12).map(i=>cellName(i,size)).join('、')+
-        (sourceCells.length>12?' 等':'')+'。':''),
+        (sourceCells.length>12?' 等':'')+'。':'')+
+      (also.length?' 同一证明还可以从 '+also.slice(0,18).map(i=>
+        cellName(i,size)).join('、')+
+        (also.length>18?' 等':'')+' 排除相同数字。':''),
     candidates:notesSummary,
-    target:step.cell,sources:sourceCells,removed:effectiveRemoved,
-    placement:placement&&step.method!=='search_contradiction',level
+    target:step.cell,sources:sourceCells,
+    affectedCells,removed:effectiveRemoved,
+    placement:placement&&step.method!=='search_contradiction',
+    assumptionBased:conditional,level
   };
 }
