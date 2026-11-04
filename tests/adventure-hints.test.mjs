@@ -1,0 +1,132 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import {dirname,join} from 'node:path';
+import LZString from 'lz-string';
+import {nextAdventureHint,gridsAndHouses} from '../src/hints/adventure.js';
+import {describeHint} from '../src/hints/format.js';
+
+const root=join(dirname(fileURLToPath(import.meta.url)),'..');
+function world(rows=40,cols=50,sectors=[],extra={}){
+  const n=rows*cols;
+  return {puzzle:{rows,cols,cells:Array.from({length:n},()=>({given:null})),
+    sectors,regions:[],cages:[],overlays:[],underlays:[],arrows:[],lines:[],...extra},
+    progress:{cells:Array.from({length:n},()=>({value:null,center:[],corner:[]})),
+      visible:Array(n).fill(false)}};
+}
+function sector(top,left,n=6,rules){
+  return {top,left,width:n,height:n,title:n+'×'+n+' 数独',
+    rules:rules||'数独——每行、每列与每个 2×3 宫填入 1 至 6。'};
+}
+const idx=(r,c,cols=50)=>r*cols+c;
+test('Sudokuvania-style visible notes get useful next steps, not guessed placements',()=>{
+  const {puzzle,progress}=world(40,50,[sector(21,0)]);
+  const target=idx(21,0),source=idx(21,1);
+  progress.visible[target]=progress.visible[source]=true;
+  puzzle.cells[source].given='2';
+  progress.cells[target].center=['2','7']; // extra mark is not a premise
+  const original=JSON.stringify(progress);
+  const response=nextAdventureHint(puzzle,progress,4,target);
+  assert.equal(response.status,'step');
+  assert.equal(response.step.cell,target);
+  assert.deepEqual(response.step.removed,[2]);
+  assert.ok(response.step.sources.includes(source));
+  assert.equal(response.step.forceElimination,false);
+  assert.equal(JSON.stringify(progress),original);
+  const description=describeHint(response,puzzle.cols,progress.cells);
+  assert.match(description.description,/R22C1/);
+  assert.match(description.candidates,/本步可删：2/);
+});
+test('hidden clues cannot be observed before reveal',()=>{
+  const {puzzle,progress}=world(40,50,[sector(21,0)]);
+  const target=idx(21,0),source=idx(21,1);
+  progress.visible[target]=true;
+  puzzle.cells[source].given='2'; // still hidden!
+  progress.cells[target].center=['2','7'];
+  const first=nextAdventureHint(puzzle,progress,4,target);
+  assert.notEqual(first.status,'step');
+  progress.visible[source]=true;
+  assert.equal(nextAdventureHint(puzzle,progress,4,target).step.removed[0],2);
+  progress.visible[target]=false;
+  assert.notEqual(nextAdventureHint(puzzle,progress,4,target).status,'step');
+});
+test('unrelated 9×9 sectors on the same global row are not peers',()=>{
+  const a=sector(3,1,9,'标准数独：每行、每列及每个 3×3 宫填入 1 至 9。');
+  const b=sector(3,20,9,'标准数独：每行、每列及每个 3×3 宫填入 1 至 9。');
+  const {puzzle,progress}=world(40,50,[a,b]);
+  const source=idx(3,1),target=idx(3,20);
+  progress.visible[source]=progress.visible[target]=true;
+  puzzle.cells[source].given='5';
+  progress.cells[target].center=['5','7'];
+  assert.notEqual(nextAdventureHint(puzzle,progress,4,target).status,'step');
+});
+test('Super Sudokoid 2 unique-only regions support safe notes without invented 1–9 singles',()=>{
+  const target=idx(25,3,45),source=idx(25,4,45);
+  const {puzzle,progress}=world(36,45,[],{cages:[
+    {unique:true,hidden:true,cells:[[25,3],[25,4],[24,4],[24,5]]}
+  ]});
+  progress.visible[target]=progress.visible[source]=true;
+  progress.cells[source].value='3';
+  progress.cells[target].center=['3','6'];
+  const hint=nextAdventureHint(puzzle,progress,5,target);
+  assert.equal(hint.status,'step');
+  assert.equal(hint.step.cell,target);
+  assert.deepEqual(hint.step.removed,[3]);
+  assert.equal(hint.step.forceElimination,true);
+  assert.equal(describeHint(hint,45,progress.cells).placement,false);
+});
+test('visible numeric killer sum can prove a digit while decorative sums are ignored',()=>{
+  const {puzzle,progress}=world(40,50,[sector(21,0)],{
+    cages:[{cells:[[21,0],[21,1]],value:3,unique:true}]
+  });
+  const known=idx(21,0),target=idx(21,1);
+  progress.visible[known]=progress.visible[target]=true;
+  puzzle.cells[known].given='1';
+  progress.cells[target].center=['2','4'];
+  const hint=nextAdventureHint(puzzle,progress,4,target);
+  assert.equal(hint.status,'step');
+  assert.equal(hint.step.cell,target);
+  assert.ok(hint.step.remaining.includes(2));
+  assert.ok(!hint.step.remaining.includes(4) || hint.step.method==='peer_elimination');
+});
+test('kropki is considered only after the matching region rule is revealed',()=>{
+  const {puzzle,progress}=world(40,50,[sector(21,0,6,
+    '数独，每行、每列每宫 1–6；白点 Kropki 相差 1。')],{
+    overlays:[{center:[21.5,1],backgroundColor:'#ffffff',rounded:true,width:.25,height:.25}]
+  });
+  const target=idx(21,0),source=idx(21,1);
+  progress.visible[target]=progress.visible[source]=true;
+  puzzle.cells[source].given='3';
+  progress.cells[target].center=['1','2','4'];
+  const hint=nextAdventureHint(puzzle,progress,4,target);
+  assert.equal(hint.status,'step');
+  assert.equal(hint.step.method,'kropki');
+  assert.ok(hint.step.removed.includes(1));
+});
+test('actual bundled adventure packages load as independent, fog-safe map puzzles',()=>{
+  for(const name of [
+    'digits-of-despair','lineage-of-logic',
+    'super-sudokoid-1','super-sudokoid-2'
+  ]){
+    const raw=readFileSync(join(root,'public','puzzles',name+'.scl'),'utf8');
+    const p=JSON.parse(LZString.decompressFromBase64(raw.trim().slice(3)));
+    const rows=p.cells.length,cols=p.cells[0].length;
+    const puzzle={rows,cols,cells:p.cells.flat().map(c=>({given:c?.value==null?null:String(c.value)})),
+      cages:p.cages||[],lines:p.lines||[],overlays:p.overlays||[],
+      underlays:p.underlays||[],arrows:p.arrows||[],regions:p.regions||[],
+      sectors:(p.metadata.grids||[]).map(s=>({...s,cells:Array.from({length:s.width*s.height},(_,i)=>
+        (s.top+Math.floor(i/s.width))*cols+s.left+i%s.width)}))};
+    const lit=new Set((p.foglight||[]).map(([r,c])=>r*cols+c));
+    const progress={visible:puzzle.cells.map((_,i)=>lit.has(i)),
+      cells:puzzle.cells.map(()=>({value:null,center:[],corner:[]}))};
+    const {houses}=gridsAndHouses(puzzle);
+    assert.ok(houses.length>0,name+' should expose local unique groups');
+    const hint=nextAdventureHint(puzzle,progress,4);
+    assert.ok(['step','fog_stalled','stalled'].includes(hint.status),name+' status '+hint.status);
+    if(hint.step){
+      assert.ok(progress.visible[hint.step.cell],name+' hint target should be visible');
+      assert.ok(hint.step.sources.every(i=>progress.visible[i]),name+' witnesses must be visible');
+    }
+  }
+});
