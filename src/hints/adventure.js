@@ -41,9 +41,12 @@ function colorTag(color){
   if(!rgb)return '';
   const [r,g,b]=rgb;
   if(g>r*1.3&&g>b*1.13)return 'green';
+  // Purple paths often have a strong blue channel too (e.g. #a783d6).
+  // Classify balanced red+blue *before* generic blue, otherwise valid
+  // Between Lines are mistaken for unrelated blue lines.
+  if(b>g*.9&&r>g*.9&&Math.abs(r-b)<95)return 'purple';
   if(b>r*1.2&&b>g*1.05)return 'blue';
   if(r>b*1.25&&g>b*1.1&&Math.abs(r-g)<100)return 'gold';
-  if(b>g*.9&&r>g*.9&&Math.abs(r-b)<95)return 'purple';
   if(g>r*1.15&&b>r*1.1&&Math.abs(g-b)<65)return 'teal';
   return '';
 }
