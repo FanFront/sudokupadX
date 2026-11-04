@@ -95,19 +95,20 @@ async function requestHint(){
   currentHint=null;
   $('hintPanel').hidden=false;
   $('hintTitle').textContent='正在计算逻辑步骤…';
-  $('hintDescription').textContent='使用当前盘面中的大数字与题面规则重新计算候选数，不信任玩家手记。';
+  $('hintDescription').textContent='正在基于当前大数字与题面规则验证下一步，并跳过中心候选数中已经完成的排除。';
   $('hintCandidates').textContent='';
   requestDraw();
   const tier=Number($('hintTier').value);
+  const cells=progress.cells.map(cloneCell);
   try{
     const task=native
       ?{promise:call('hint_step',{tier})}
-      :computeBrowserHint(activeRawInput,progress.cells.map(cloneCell),tier);
+      :computeBrowserHint(activeRawInput,cells,tier);
     hintTask=task;
     const result=await task.promise;
     if(serial!==hintSerial)return;
     hintTask=null;
-    const data=describeHint(result,puzzle.rows);
+    const data=describeHint(result,puzzle.rows,cells);
     currentHint=result.status==='step'?data:null;
     $('hintTitle').textContent=data.title;
     $('hintDescription').textContent=data.description;
