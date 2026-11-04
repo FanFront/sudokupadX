@@ -638,10 +638,14 @@ function updateControls() {
   $('undoButton').disabled=undoStack.length===0;
   $('redoButton').disabled=redoStack.length===0;
   $('hintButton').disabled=Boolean(lessonPractice);
+  const giant=puzzle.rows>16||puzzle.cols>16;
+  const small=puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9;
   for(const option of $('hintTier').options){
-    option.disabled=puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9&&Number(option.value)>2;
+    option.disabled=(giant&&Number(option.value)===5)||
+      (small&&Number(option.value)>2);
   }
-  if(puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9&&Number($('hintTier').value)>2)$('hintTier').value='2';
+  if(small&&Number($('hintTier').value)>2)$('hintTier').value='2';
+  if(giant&&Number($('hintTier').value)===5)$('hintTier').value='4';
   $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
   updateSelection();
 }
