@@ -95,6 +95,10 @@ class ClassicCurriculumTests(unittest.TestCase):
         self.assertIn(9, basic["domains"][1])
         self.assertNotIn(9, advanced["domains"][1])
         self.assertGreater(advanced["techniques"].get("x_wing", 0), 0)
+        disabled = deduce(9, {}, [], domains=masks,
+                          disabled_methods=("x_wing",))
+        self.assertIn(9, disabled["domains"][1])
+        self.assertEqual(disabled["techniques"].get("x_wing", 0), 0)
         with self.assertRaises(ValueError):
             deduce(9, {}, [], max_tier=5)
 
