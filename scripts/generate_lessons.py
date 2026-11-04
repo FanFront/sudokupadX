@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from technique_catalog import METHODS
-from variant_logic import count_solutions, houses
+from variant_logic import count_solutions, deduce, houses
 from technique_catalog import replay_trace
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -150,7 +150,10 @@ def collect_report_examples():
         replayed = replay_trace(n, givens, trace)
         if any(domain != {solution[i]} for i, domain in enumerate(replayed)):
             raise ValueError("Workshop trace does not reconstruct its solution")
-        # The source generator already asserts independent uniqueness.
+        # Check the finished puzzle independently, even when this script
+        # is run against an old report without regenerating that source.
+        if count_solutions(n, givens, detail["constraints"]) != 1:
+            raise ValueError("Workshop lesson source is not uniquely solvable")
         masks = [set(range(1, n+1)) for _ in range(n*n)]
         for cell, digit in givens.items():
             masks[cell] = {digit}
@@ -212,21 +215,26 @@ def anchor_examples():
     hidden = make_fixture(
         2, board(base), masks, {"method": "hidden_single", "cell": cell,
            "removed": [7], "remaining": [6], "source": 4})
-    # A basic peer elimination, as an *unprocessed* pencil mark. All other
-    # candidates are computed from the givens; only the target's pending
-    # elimination remains in the candidate state.
+    # A genuine unprocessed peer elimination from the same no-guess
+    # solver trace as the variant workshop; no hand-added fake candidate.
     given_1 = dict(base)
     given_1[0] = 5
-    basic_masks = clue_domains(n, given_1)
+    basic_masks = [set(range(1, n+1)) for _ in range(n*n)]
+    for cell, digit in given_1.items():
+        basic_masks[cell] = {digit}
     target = 3  # R1C4
-    if target in given_1 or int(SOLUTION[target]) == 5:
-        raise ValueError("Invalid peer-elimination example")
-    basic_masks[target].add(5)
-    basic = make_fixture(
-        1, board(given_1), basic_masks,
-        {"method": "peer_elimination", "cell": target,
-         "removed": [5], "remaining": sorted(basic_masks[target] - {5}),
-         "source": 0})
+    basic = None
+    for step in deduce(n, given_1, [], trace=True)["trace"]:
+        if (step["method"] == "peer_elimination" and
+                step["cell"] == target and 5 in step["removed"]):
+            basic = make_fixture(1, board(given_1), basic_masks, step)
+            # Choose 5 from the solver's actual list of removed candidates;
+            # deleting any one of them is a valid step of this lesson.
+            basic["goal"]["digit"] = "5"
+            break
+        basic_masks[step["cell"]].difference_update(step["removed"])
+    if basic is None:
+        raise ValueError("The peer elimination no longer appears in solver proof")
     return {1: basic, 2: hidden}
 
 
