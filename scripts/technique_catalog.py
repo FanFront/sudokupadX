@@ -47,6 +47,9 @@ METHODS = {
     "color_wrap": ("双色标记：颜色包围", 4),
     "xy_chain": ("XY-Chain 双候选链", 4),
     "x_chain": ("X-Chain 单数字链", 4),
+    "als_xz": ("ALS-XZ 准锁定数组联动", 4),
+    "finned_x_wing": ("鳍形 X-Wing", 4),
+    "squirmbag": ("Squirmbag 五行列鱼", 4),
 }
 
 
