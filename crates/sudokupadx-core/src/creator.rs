@@ -1171,6 +1171,19 @@ mod tests{
         assert_eq!(loaded.rows,4);
         assert_eq!(loaded.cols,4);
         assert_eq!(loaded.key,"personal-demo-1");
+        assert!(loaded.hint_rules.as_ref().is_some_and(Vec::is_empty));
+        let session=crate::Session::new(loaded);
+        let (n,grid,rules)=session.hint_input().unwrap();
+        let response=next_hint(n,&grid,&rules,1).unwrap();
+        assert_eq!(response.status,"step");
+        let step=response.step.unwrap();
+        assert_eq!(level_of(&step.method),1);
+        assert!(step.cell<n*n && !step.removed.is_empty());
+        let answer=output.puzzle["metadata"]["solution"].as_str().unwrap();
+        let digit=answer.as_bytes()[step.cell]-b'0';
+        assert!(!step.removed.contains(&digit),
+            "Hint must not eliminate the known correct digit");
+        assert!(step.sources.iter().all(|&cell|cell<n*n));
     }
     #[test]
     fn level_five_is_a_real_unique_hard_classic_not_a_mocked_label(){
