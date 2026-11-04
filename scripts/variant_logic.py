@@ -15,7 +15,9 @@ from variant_structures import (sum_structures, propagate_sum_structures,
 from variant_lines import (LINE_VARIANTS, validate_line, propagate_line,
                            propagate_cross, propagate_region_killer,
                            propagate_between_renban)
-from classic_techniques import hidden_subsets, x_wings
+from classic_techniques import (hidden_subsets, basic_fish, xy_wings,
+                                xyz_wings, skyscrapers)
+from technique_catalog import technique_tier
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
@@ -68,12 +70,14 @@ def validate_constraints(n, constraints):
                 raise ValueError("XV pairs must sum to 5 or 10")
 
 
-def deduce(n, givens, constraints, domains=None, trace=True):
+def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None):
     """Propagate human-readable local rules; never assume a candidate.
 
     The trace lists the actual candidate removals or hidden single placements,
     and is independent of any known answer supplied by the generator.
     """
+    if max_tier is not None and max_tier not in (1, 2, 3, 4):
+        raise ValueError("Technique tier must be 1 through 4")
     units = houses(n)
     validate_constraints(n, constraints)
     structural_rules = sum_structures(n, units, constraints)
@@ -101,6 +105,8 @@ def deduce(n, givens, constraints, domains=None, trace=True):
     proof, counts = [], Counter()
 
     def reduce(cell, allowed, method, source):
+        if max_tier is not None and technique_tier(method, source) > max_tier:
+            return False
         removed = masks[cell] - allowed
         if not removed:
             return False
@@ -143,7 +149,7 @@ def deduce(n, givens, constraints, domains=None, trace=True):
             # Naked pairs and triples are direct all-different deductions,
             # never hypothetical branch guesses.
             unsolved = [i for i in unit if len(masks[i]) > 1]
-            for size in (2, 3):
+            for size in range(2, min(4, n-1)+1):
                 for chosen in combinations(unsolved, size):
                     digits = set().union(*(masks[i] for i in chosen))
                     if len(digits) != size:
@@ -151,12 +157,19 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                     for i in unit:
                         if i not in chosen:
                             changed |= reduce(i, masks[i] - digits,
-                                              "naked_subset", house_id)
+                                              "naked_subset",
+                                              {"house": house_id, "size": size,
+                                               "cells": list(chosen),
+                                               "digits": sorted(digits)})
 
-        # Hidden pairs/triples and X-Wings are optional direct followups
-        # when variant constraints have restricted candidate positions.
+        # Classical consequences of variant restrictions: subsets,
+        # 2/3/4-line fish, and three-cell wing patterns. These are
+        # unconditional deductions, never hypothetical branch guesses.
         changed |= hidden_subsets(n, units, masks, reduce)
-        changed |= x_wings(n, masks, reduce)
+        changed |= basic_fish(n, masks, reduce)
+        changed |= xy_wings(n, masks, reduce)
+        changed |= xyz_wings(n, masks, reduce)
+        changed |= skyscrapers(n, masks, reduce)
 
         # A candidate confined to a row/box intersection cannot occur
         # elsewhere in the other house (pointing / claiming).
