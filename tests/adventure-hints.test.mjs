@@ -143,6 +143,77 @@ test('unlocked Super Sudokoid rule panel permits a proved Kropki elimination',()
   progress.visible[panel.cells[0]]=false;
   assert.notEqual(nextAdventureHint(puzzle,progress,4,target).step?.method,'kropki');
 });
+test('visible German-whisper and thermometer rules give proven eliminations',()=>{
+  for(const variant of ['whisper','thermo']){
+    const base=sector(21,0,6,
+      '标准数独。每行每列与 2×3 宫填入 1 至 6。'+variant+'（温度计或低语线）规则已解锁。');
+    const line={wayPoints:[[21.5,.5],[21.5,1.5]],
+      color:variant==='whisper'?'#62b873':'#b89acb',thickness:14};
+    const {puzzle,progress}=world(40,50,[base],{
+      lines:[line],underlays:variant==='thermo'?
+        [{center:[21.5,.5],rounded:true,width:.75,height:.75}]:[]
+    });
+    const known=idx(21,0),target=idx(21,1);
+    progress.visible[known]=progress.visible[target]=true;
+    puzzle.cells[known].given=variant==='whisper'?'1':'2';
+    progress.cells[target].center=['1','4','6'];
+    const hint=nextAdventureHint(puzzle,progress,4,target);
+    assert.equal(hint.step?.method,variant,variant);
+    assert.ok(hint.step.removed.includes(1),variant);
+  }
+});
+test('renban and between lines require their geometric evidence and rule text',()=>{
+  for(const variant of ['renban','between']){
+    const {puzzle,progress}=world(40,50,[sector(21,0,6,
+      '标准数独，每行列和 2×3 宫填 1 至 6；'+variant+' 已解锁。')],{
+      lines:[{wayPoints:[[21.5,.5],[21.5,1.5],[21.5,2.5]],
+        color:variant==='renban'?'#85a8d8':'#a783d6'}]
+    });
+    const a=idx(21,0),b=idx(21,1),c=idx(21,2);
+    for(const i of [a,b,c])progress.visible[i]=true;
+    puzzle.cells[a].given=variant==='renban'?'1':'2';
+    puzzle.cells[c].given=variant==='renban'?'3':'6';
+    progress.cells[b].center=['2','4'];
+    const hint=nextAdventureHint(puzzle,progress,4,b);
+    assert.equal(hint.step?.method,variant,variant);
+    if(variant==='renban')assert.ok(hint.step.removed.includes(4));
+  }
+});
+test('entropic and modular lines use three-way class logic rather than guesses',()=>{
+  const variants=[
+    {kind:'entropic',color:'#d8a752',values:['1','4'],marks:['2','7'],out:2},
+    {kind:'modular',color:'#45a8ab',values:['1','2'],marks:['4','6'],out:4}
+  ];
+  for(const item of variants){
+    const {puzzle,progress}=world(40,50,[sector(21,0,9,
+      '9×9 标准数独：每行每列3×3宫填 1 至 9；'+item.kind+' 规则已解锁。')],{
+      lines:[{wayPoints:[[21.5,.5],[21.5,1.5],[21.5,2.5]],color:item.color}]
+    });
+    const cells=[idx(21,0),idx(21,1),idx(21,2)];
+    cells.forEach(i=>progress.visible[i]=true);
+    puzzle.cells[cells[0]].given=item.values[0];
+    puzzle.cells[cells[1]].given=item.values[1];
+    progress.cells[cells[2]].center=item.marks;
+    const hint=nextAdventureHint(puzzle,progress,4,cells[2]);
+    assert.equal(hint.step?.method,item.kind,item.kind);
+    assert.ok(hint.step.removed.includes(item.out),item.kind);
+  }
+});
+test('arrow arithmetic never interprets the full solution as a clue',()=>{
+  const {puzzle,progress}=world(40,50,[sector(21,0,6,
+    '标准数独；1 至 6；arrow 箭头圈内数字等于箭杆总和。')],{
+    arrows:[{wayPoints:[[21.5,.5],[21.5,1.5],[21.5,2.5]]}],
+    underlays:[{center:[21.5,.5],rounded:true,width:.7,height:.7}]
+  });
+  const [circle,target,last]=[idx(21,0),idx(21,1),idx(21,2)];
+  for(const i of [circle,target,last])progress.visible[i]=true;
+  puzzle.cells[circle].given='3';
+  puzzle.cells[last].given='1';
+  progress.cells[target].center=['2','4'];
+  const hint=nextAdventureHint(puzzle,progress,4,target);
+  assert.equal(hint.step?.method,'arrow');
+  assert.ok(hint.step.removed.includes(4));
+});
 test('actual bundled adventure packages load as independent, fog-safe map puzzles',()=>{
   for(const name of [
     'digits-of-despair','lineage-of-logic',
