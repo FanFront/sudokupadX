@@ -1072,6 +1072,25 @@ mod tests{
         assert_eq!(loaded.key,"personal-demo-1");
     }
     #[test]
+    fn level_five_is_a_real_unique_hard_classic_not_a_mocked_label(){
+        // A known 23-given very hard classical Sudoku: the printed rules
+        // and givens alone feed both the deduction solver and exact counter.
+        let rows=[
+            "1....7.9.",".3..2...8","..96..5..","..53..9..",
+            ".1..8...2","6....4...","3......1.",".4......7",
+            "..7...3.."
+        ];
+        let givens:Vec<u8>=rows.join("").chars().map(|c|
+            c.to_digit(10).unwrap_or(0) as u8).collect();
+        let (solutions,answer)=exact_count(9,&givens,&[],20000).unwrap();
+        assert_eq!(solutions,1);
+        assert!(!solve(9,&givens,&[],4,false,None).unwrap().solved,
+            "Level 4 must genuinely stall before claiming level 5");
+        assert!(certify(9,&givens,&answer,&[],5,None).is_some());
+        assert!(certify(9,&answer,&answer,&[],5,None).is_none(),
+            "Full grid cannot be mislabeled level 5");
+    }
+    #[test]
     fn reject_unsupported_and_false_technique_labels(){
         let request=CreateRequest{
             id:"personal-invalid".into(),size:4,tier:5,variants:vec![],
