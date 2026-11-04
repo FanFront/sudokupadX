@@ -41,6 +41,23 @@ export function createLessonPractice(id) {
     seed[idx].center=[];
     return idx;
   };
+  // Derive real pencilmarks from the clue grid instead of inventing masks.
+  const classicCandidates=(r,c)=>{
+    if(puzzleCells[r-1][c-1].value)return [];
+    const excluded=new Set();
+    const add=cell=>{if(cell.value)excluded.add(Number(cell.value));};
+    for(let i=0;i<n;i++){
+      add(puzzleCells[r-1][i]);
+      add(puzzleCells[i][c-1]);
+    }
+    const firstR=Math.floor((r-1)/boxHeight)*boxHeight;
+    const firstC=Math.floor((c-1)/boxWidth)*boxWidth;
+    for(let rr=firstR;rr<firstR+boxHeight;rr++)
+      for(let cc=firstC;cc<firstC+boxWidth;cc++)
+        add(puzzleCells[rr][cc]);
+    return Array.from({length:n},(_,i)=>i+1)
+      .filter(d=>!excluded.has(d));
+  };
   const mark=(...locations)=>{
     for(const [r,c] of locations)focus.add(index(r,c));
   };
@@ -95,10 +112,32 @@ export function createLessonPractice(id) {
   switch(id){
     case 1:
       given(1,1,5);mark([1,1]);target(1,2,5,'remove',[2,5,7]);break;
-    case 2:
-      for(let col=1;col<=9;col++)note(5,col,col===7?[3,6,9]:[1,2,8]);
-      target(5,7,6,'fill',[3,6,9]);
-      mark([5,1],[5,4],[5,9]);break;
+    case 2: {
+      // Unique-solution classic Sudoku: a genuine hidden single in R5C7.
+      // The target has three legal candidates, but only its position in
+      // row 5 can contain 6. All given digits belong to one valid solution.
+      const clueRows=[
+        '.3..27..9',
+        '...78916.',
+        '.8..6.4..',
+        '63..2.8.1',
+        '5278.....',
+        '89.6.4...',
+        '..52....6',
+        '27..1....',
+        '.163...7.'
+      ];
+      for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+        const digit=Number(clueRows[r][c]);
+        if(digit)given(r+1,c+1,digit);
+      }
+      for(let col=1;col<=9;col++)
+        if(!puzzleCells[4][col-1].value)
+          note(5,col,classicCandidates(5,col));
+      target(5,7,6,'fill',classicCandidates(5,7));
+      mark([6,4],[2,8],[7,9],[5,5],[5,6],[5,8],[5,9]);
+      break;
+    }
     case 3:
       note(4,1,[2,7]);note(4,5,[2,7]);
       mark([4,1],[4,5]);target(4,6,5,'fill',[2,5,7]);break;
