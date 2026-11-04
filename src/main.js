@@ -18,6 +18,7 @@ import {setupLessonPage} from './lesson-page.js';
 import {setupCreatorUI} from './creator/ui.js';
 import {computeBrowserHint,computeAdventureHint} from './hints/runner.js';
 import {usesTypedHintEngine} from './hints/mode.js';
+import {adventureHintCoverage} from './hints/coverage.js';
 import {describeHint} from './hints/format.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
@@ -116,6 +117,14 @@ async function requestHint(){
   $('hintSupportNote').textContent=typed
     ?'绿色：依据格；橙色：目标格。旧版冒险与首领题采用题目明确声明的约束类型，不会根据颜色猜测规则；迷雾下的数字不参与推理。此路径不使用等级 5 穷举。'
     :'绿色：依据格；橙色：目标格。中心/角标手记只用来跳过重复排除，不作为已证明的事实。提示不改盘面。';
+  const coverage=adventureHintCoverage(currentEntry?.id);
+  if(coverage?.status==='partial'){
+    const missing=coverage.unmodelled;
+    $('hintSupportNote').textContent+=' 本题尚未完整支持：'+
+      missing.slice(0,3).join('、')+
+      (missing.length>3?' 等':'')+
+      '。本次只显示能够从已核验规则独立证明的步骤。';
+  }
   try{
     // Legacy standalone 9×9 linked/Boss SCLs lack local-generator solverRules.
     // Route them to independently verified typed constraints on both platforms.
