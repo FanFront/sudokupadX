@@ -51,11 +51,13 @@ def clue_domains(n, givens):
             for i in range(n*n)]
 
 
-def focus_cells(n, cell, source):
+def focus_cells(n, cell, source, method, constraints=()):
     found = {cell}
     units = houses(n)
-    if isinstance(source, int) and 0 <= source < len(units):
+    if isinstance(source, int) and method in ("peer_elimination", "hidden_single") and 0 <= source < len(units):
         found.update(units[source])
+    elif isinstance(source, int) and 0 <= source < len(constraints):
+        found.update(constraints[source]["cells"])
     elif isinstance(source, dict):
         def visit(value, key=""):
             if isinstance(value, dict):
@@ -67,13 +69,14 @@ def focus_cells(n, cell, source):
             elif (isinstance(value, int) and not isinstance(value, bool)
                   and 0 <= value < n*n and
                   ("cell" in key or key in
-                   ("pivot", "pincer", "wing", "a", "b", "tip", "base"))):
+                   ("pivot", "pincer", "wing", "a", "b", "tip", "base",
+                    "groups", "group"))):
                 found.add(value)
         visit(source)
     return sorted(found)
 
 
-def make_fixture(id_, puzzle, masks, step, step_index=0):
+def make_fixture(id_, puzzle, masks, step, step_index=0, constraints=()):
     n = len(puzzle["cells"])
     solution = list(map(int, puzzle["metadata"]["solution"]))
     givens = given_values(puzzle)
@@ -111,7 +114,8 @@ def make_fixture(id_, puzzle, masks, step, step_index=0):
         "id": id_, "n": n, "puzzle": puzzle,
         "masks": [sorted(domain) for domain in masks],
         "goal": {"index": cell, "digit": str(digit), "kind": kind},
-        "focus": focus_cells(n, cell, step.get("source")),
+        "focus": focus_cells(n, cell, step.get("source"),
+                             step["method"], constraints),
         "method": step["method"],
         "nameZh": METHODS[step["method"]][0],
         "proof": {"method": step["method"], "source": step.get("source"),
@@ -162,7 +166,8 @@ def collect_report_examples():
                     continue
                 try:
                     examples[id_] = make_fixture(
-                        id_, puzzle, masks, step, index)
+                        id_, puzzle, masks, step, index,
+                        detail["constraints"])
                 except ValueError:
                     pass
             cell, removed = step["cell"], set(step["removed"])
