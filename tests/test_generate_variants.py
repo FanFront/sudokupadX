@@ -37,11 +37,25 @@ class VariantGeneratorTests(unittest.TestCase):
             for linked in game["metadata"]["relatedPuzzles"]:
                 self.assertIn("sudokupadx:puzzle/" + linked,
                               game["metadata"]["rules"])
-        base = {"killer", "thermo", "kropki", "renban", "arrow", "xv"}
-        self.assertEqual(kinds, [base, base, base | {"whisper"}])
+        base = {"killer", "thermo", "kropki", "renban", "arrow", "xv",
+                "region_sum"}
+        additional = {"entropic", "modular", "between"}
+        self.assertEqual(kinds,
+                         [base, base | additional,
+                          base | additional | {"whisper"}])
         for detail in self.report["puzzles"][1:]:
             self.assertGreaterEqual(len(detail["structural"]), 2)
             self.assertGreater(detail["techniques"].get("killer_outie", 0), 0)
+            self.assertGreater(detail["techniques"].get(
+                "region_sum_killer_bridge", 0), 0)
+            self.assertGreater(detail["techniques"].get(
+                "entropic_modular_cross", 0), 0)
+            self.assertIn("modular", detail["used"])
+            self.assertIn("entropic", detail["used"])
+            self.assertTrue(any(moment["method"] == "entropic_modular_cross"
+                                for moment in detail["aha"]))
+            self.assertGreater(detail["techniques"].get(
+                "between_renban", 0), 0)
         self.assertGreater(self.report["puzzles"][2]["techniques"].get(
             "kropki_partition", 0), 0)
 
@@ -65,6 +79,10 @@ class VariantGeneratorTests(unittest.TestCase):
             self.assertGreaterEqual(len(detail["necessary"]), 1)
             self.assertEqual(game["metadata"]["logicProfile"][
                 "structuralMotifs"], detail["structural"])
+            self.assertEqual(game["metadata"]["logicProfile"][
+                "ahaMoments"], detail["aha"])
+            self.assertTrue(all("remaining" in step
+                                for step in detail["trace"]))
 
     def test_relation_semantics(self):
         # Valid completed classic 4x4 Sudoku.
@@ -146,6 +164,65 @@ class VariantGeneratorTests(unittest.TestCase):
         self.assertGreater(partition["techniques"].get(
             "mixed_consecutive_partition", 0), 0)
 
+    def test_region_sum_transfer_from_killer(self):
+        # R1C2,C3 and R1C4,C5 each contribute the same total.
+        constraints = [
+            {"type": "killer", "cells": [1, 2], "sum": 5},
+            {"type": "region_sum", "cells": [1, 2, 3, 4]},
+        ]
+        proof = deduce(6, {}, constraints)
+        self.assertTrue(proof["domains"][3].issubset({1, 2, 3, 4}))
+        self.assertGreater(proof["techniques"].get(
+            "region_sum_killer_bridge", 0), 0)
+        self.assertEqual(count_solutions(6, {}, constraints, limit=1), 1)
+
+    def test_modular_entropic_and_crossing(self):
+        entropy = {"type": "entropic", "cells": [9, 10, 11, 12]}
+        modulo = {"type": "modular", "cells": [1, 10, 19, 28]}
+        proof = deduce(9, {9: 2, 11: 8, 1: 3, 19: 5},
+                       [entropy, modulo])
+        self.assertEqual(proof["domains"][10], {4})
+        incomplete = deduce(9, {9: 2, 1: 3},
+                            [entropy, modulo])
+        self.assertGreater(len(incomplete["domains"][10]), 1,
+                           "One anchor per line must not falsely fix the digit")
+        self.assertGreater(proof["techniques"].get(
+            "entropic_modular_cross", 0), 0)
+        self.assertTrue(proof["domains"][11].issubset({7, 8, 9}))
+        with self.assertRaises(ValueError):
+            deduce(4, {}, [entropy])
+
+    def test_between_and_renban_interaction(self):
+        constraints = [
+            {"type": "between", "cells": [0, 1, 2, 3, 4]},
+            {"type": "renban", "cells": [1, 2, 3]},
+        ]
+        proof = deduce(9, {0: 1}, constraints)
+        self.assertGreater(proof["techniques"].get("between_renban", 0), 0)
+        self.assertNotIn(1, proof["domains"][2])
+        self.assertNotIn(9, proof["domains"][2])
+
+    def test_sudopedia_hidden_pair_and_x_wing(self):
+        # Only two cells in the first row can hold 1 or 2.
+        domains = [set(range(1, 10)) for _ in range(81)]
+        for cell in range(2, 9):
+            domains[cell].difference_update((1, 2))
+        hidden = deduce(9, {}, [], domains=domains)
+        self.assertEqual(hidden["domains"][0], {1, 2})
+        self.assertEqual(hidden["domains"][1], {1, 2})
+        self.assertGreater(hidden["techniques"].get("hidden_subset", 0), 0)
+        # Rows 2 and 5 can place 9 only in columns 2 and 6,
+        # therefore the other rows cannot put 9 in these columns.
+        domains = [set(range(1, 10)) for _ in range(81)]
+        for row in (1, 4):
+            for col in range(9):
+                if col not in (1, 5):
+                    domains[row*9+col].discard(9)
+        fish = deduce(9, {}, [], domains=domains)
+        self.assertNotIn(9, fish["domains"][0*9+1])
+        self.assertNotIn(9, fish["domains"][8*9+5])
+        self.assertGreater(fish["techniques"].get("x_wing", 0), 0)
+
     def test_other_seeds_preserve_actual_motifs(self):
         for seed in (20261104, 20261105):
             with self.subTest(seed=seed):
@@ -157,6 +234,12 @@ class VariantGeneratorTests(unittest.TestCase):
                     "killer_outie", 0), 0)
                 self.assertGreater(report["puzzles"][2]["techniques"].get(
                     "renban_sum_lock", 0), 0)
+                for size in (1, 2):
+                    for method in ("region_sum_killer_bridge",
+                                   "entropic_modular_cross",
+                                   "between_renban"):
+                        self.assertGreater(report["puzzles"][size][
+                            "techniques"].get(method, 0), 0)
 
     def test_export_catalog_and_determinism(self):
         other, report = variants.build(20261103)

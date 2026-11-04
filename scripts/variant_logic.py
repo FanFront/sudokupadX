@@ -12,10 +12,16 @@ from itertools import combinations, product
 from variant_techniques import EXTRA_VARIANTS, propagate_extra, kropki_triple_partitions
 from variant_structures import (sum_structures, propagate_sum_structures,
                                 mixed_consecutive_partitions)
+from variant_lines import (LINE_VARIANTS, validate_line, propagate_line,
+                           propagate_cross, propagate_region_killer,
+                           propagate_between_renban)
+from classic_techniques import (hidden_subsets, basic_fish, xy_wings,
+                                xyz_wings, skyscrapers)
+from technique_catalog import technique_tier
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
-VARIANTS = ("killer", "thermo", "kropki") + EXTRA_VARIANTS
+VARIANTS = ("killer", "thermo", "kropki") + EXTRA_VARIANTS + LINE_VARIANTS
 
 
 def houses(n):
@@ -40,8 +46,10 @@ def validate_constraints(n, constraints):
         if kind == "killer":
             if not 2 <= len(cells) <= 3 or not isinstance(constraint.get("sum"), int):
                 raise ValueError("Invalid killer sum")
-        elif kind in ("thermo", "renban", "whisper", "arrow"):
-            if not 2 <= len(cells) <= min(5, n):
+        elif kind in ("thermo", "renban", "whisper", "arrow") + LINE_VARIANTS:
+            if kind in LINE_VARIANTS:
+                validate_line(n, constraint)
+            elif not 2 <= len(cells) <= min(5, n):
                 raise ValueError("Invalid variant line")
             if kind == "arrow" and len(cells) < 3:
                 raise ValueError("An arrow needs a circle and at least two shaft cells")
@@ -62,12 +70,15 @@ def validate_constraints(n, constraints):
                 raise ValueError("XV pairs must sum to 5 or 10")
 
 
-def deduce(n, givens, constraints, domains=None, trace=True):
+def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
+           disabled_methods=()):
     """Propagate human-readable local rules; never assume a candidate.
 
     The trace lists the actual candidate removals or hidden single placements,
     and is independent of any known answer supplied by the generator.
     """
+    if max_tier is not None and max_tier not in (1, 2, 3, 4):
+        raise ValueError("Technique tier must be 1 through 4")
     units = houses(n)
     validate_constraints(n, constraints)
     structural_rules = sum_structures(n, units, constraints)
@@ -95,6 +106,9 @@ def deduce(n, givens, constraints, domains=None, trace=True):
     proof, counts = [], Counter()
 
     def reduce(cell, allowed, method, source):
+        if method in disabled_methods or (max_tier is not None
+                                           and technique_tier(method, source) > max_tier):
+            return False
         removed = masks[cell] - allowed
         if not removed:
             return False
@@ -103,15 +117,21 @@ def deduce(n, givens, constraints, domains=None, trace=True):
             raise ValueError("Contradiction: no possible digit")
         if trace:
             proof.append({"method": method, "cell": cell,
-                          "removed": sorted(removed), "source": source})
+                          "removed": sorted(removed),
+                          "remaining": sorted(masks[cell]),
+                          "source": source})
         counts[method] += 1
         return True
 
     while True:
-        # Global mixed-house structure is a deliberately recognizable
-        # starting deduction; apply it before ordinary local elimination.
+        # Global motifs are recognizable without local candidate guessing.
+        # Resolve these before separate per-line rules so each meaningful
+        # cross-rule breakthrough is recorded in the trace.
         changed = mixed_consecutive_partitions(
             n, units, masks, constraints, reduce)
+        changed |= propagate_cross(n, masks, constraints, reduce)
+        changed |= propagate_region_killer(n, masks, constraints, reduce)
+        changed |= propagate_between_renban(n, masks, constraints, reduce)
         for house_id, unit in enumerate(units):
             fixed = [next(iter(masks[i])) for i in unit if len(masks[i]) == 1]
             if len(set(fixed)) != len(fixed):
@@ -131,7 +151,7 @@ def deduce(n, givens, constraints, domains=None, trace=True):
             # Naked pairs and triples are direct all-different deductions,
             # never hypothetical branch guesses.
             unsolved = [i for i in unit if len(masks[i]) > 1]
-            for size in (2, 3):
+            for size in range(2, min(4, n-1)+1):
                 for chosen in combinations(unsolved, size):
                     digits = set().union(*(masks[i] for i in chosen))
                     if len(digits) != size:
@@ -139,7 +159,19 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                     for i in unit:
                         if i not in chosen:
                             changed |= reduce(i, masks[i] - digits,
-                                              "naked_subset", house_id)
+                                              "naked_subset",
+                                              {"house": house_id, "size": size,
+                                               "cells": list(chosen),
+                                               "digits": sorted(digits)})
+
+        # Classical consequences of variant restrictions: subsets,
+        # 2/3/4-line fish, and three-cell wing patterns. These are
+        # unconditional deductions, never hypothetical branch guesses.
+        changed |= hidden_subsets(n, units, masks, reduce)
+        changed |= basic_fish(n, masks, reduce)
+        changed |= xy_wings(n, masks, reduce)
+        changed |= xyz_wings(n, masks, reduce)
+        changed |= skyscrapers(n, masks, reduce)
 
         # A candidate confined to a row/box intersection cannot occur
         # elsewhere in the other house (pointing / claiming).
@@ -193,6 +225,8 @@ def deduce(n, givens, constraints, domains=None, trace=True):
                     method = "thermo" if kind == "thermo" else "kropki"
                     changed |= reduce(a, {x for x, _ in allowed_pairs}, method, index)
                     changed |= reduce(b, {y for _, y in allowed_pairs}, method, index)
+            elif kind in LINE_VARIANTS:
+                changed |= propagate_line(n, masks, clue, index, reduce)
             else:
                 changed |= propagate_extra(n, masks, clue, index, reduce)
 

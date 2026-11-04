@@ -22,6 +22,14 @@ Android 用户可通过上方链接下载并安装 **APK 文件**（支持 Andro
 
 进入应用后，打开 **游戏库**，即可选择内置游戏、搜索谜题或管理离线下载。探索到关联谜题所在区域后，可以进入支线或首领谜题，并在返回主地图时保留之前的视图位置。
 
+## 数独解题技巧中文教程
+
+**[数独解题技巧中文指南（含候选数实例）](docs/techniques.zh-CN.md)**
+
+内置「规则工坊」会生成 4×4、6×6、9×9 的多规则数独，并用不猜测的逻辑求解器验证所有题目。教程结合 [Sudopedia 解题技巧目录](https://sudopedia.sudocue.net/index.php?title=Solving_technique)，讲解唯一候选、数对／数组、锁定候选、X-Wing、剑鱼、水母、XY-Wing／XYZ-Wing、摩天楼、杀手笼 45 法则，以及连续线、熵线、模三线、夹心线等变体联动。
+
+生成题的 `logicProfile.education` 保存**最低可通关技巧等级**、实际使用的技巧及其对应格子和候选数变化。求解器只通过逻辑排除完成题目；回溯只用于独立验证唯一解，不会当作玩家必需步骤。
+
 ## 开发与构建
 
 需要 Node.js、Rust，以及对应平台的 [Tauri 2 开发环境](https://v2.tauri.app/start/prerequisites/)。

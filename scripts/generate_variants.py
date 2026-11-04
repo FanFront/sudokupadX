@@ -15,6 +15,9 @@ import random
 from pathlib import Path
 
 from variant_logic import BOXES, VARIANTS, count_solutions, deduce, houses
+from line_generation import add_line_motifs
+from technique_catalog import (METHODS, GUIDE_URL, lesson_profile,
+                               minimum_tier, replay_trace)
 
 FAMILY = "variant-workshop"
 SIZES = (4, 6, 9)
@@ -282,6 +285,7 @@ def make_constraints(n, solution, rng):
         dot_edges.add(frozenset((a, b)))
         constraints.append({"type": "kropki", "kind": kind, "cells": [a, b]})
     add_extra_geometry(n, solution, rng, constraints)
+    add_line_motifs(n, solution, rng, constraints, paths_matching, cage)
     return constraints
 
 
@@ -356,32 +360,33 @@ def add_extra_geometry(n, solution, rng, constraints):
 
 
 def dig(n, solution, constraints, rng):
-    """Greedy removal; retain only deductions with a complete logical proof."""
+    """Remove motif targets first, keeping every deletion logically solvable.
+
+    Removing a whole collection of important cells simultaneously is
+    unnecessarily brittle: a puzzle may tolerate each deletion in
+    isolation but not all at once. Test each target separately, then
+    greedily remove ordinary givens without guessing or backtracking.
+    """
     clues = dict(enumerate(solution))
-    # Keep key motif cells playable rather than giving away the breakthrough.
     protected = {c["outie"] for c in constraints if "outie" in c}
     protected.update(c["protectCell"] for c in constraints
                      if "protectCell" in c)
     for clue in constraints:
         protected.update(clue.get("protectCells", []))
-    order = [cell for cell in clues if cell not in protected]
-    rng.shuffle(order)
-    for cell in protected:
-        clues.pop(cell, None)
-    # The protected cells are absent only when the remaining puzzle can
-    # still be solved logically; keep them if the proof would otherwise fail.
-    try:
-        candidate = deduce(n, clues, constraints, trace=False)
-        if not candidate["solved"] or candidate["values"] != solution:
-            for cell in protected:
-                clues[cell] = solution[cell]
-    except ValueError:
-        for cell in protected:
-            clues[cell] = solution[cell]
-    for cell in order:
+    forced = {cell for clue in constraints
+              for cell in clue.get("forcedGivens", [])}
+    protected.difference_update(forced)
+    targets = sorted(protected)
+    rng.shuffle(targets)
+    others = [cell for cell in clues
+              if cell not in protected and cell not in forced]
+    rng.shuffle(others)
+    for cell in targets + others:
         if len(clues) <= MIN_GIVENS[n]:
             break
-        digit = clues.pop(cell)
+        digit = clues.pop(cell, None)
+        if digit is None:
+            continue
         try:
             acceptable = deduce(n, clues, constraints, trace=False)
             if not acceptable["solved"] or acceptable["values"] != solution:
@@ -391,7 +396,8 @@ def dig(n, solution, constraints, rng):
     return clues
 
 
-def quality(n, clues, constraints, solution, diagnostic=None):
+def quality(n, clues, constraints, solution, diagnostic=None,
+            focus_method=None, required_min_tier=1):
     """Check a genuine variant dependency, not merely decorative constraints."""
     def reject(reason):
         if diagnostic is not None:
@@ -407,9 +413,26 @@ def quality(n, clues, constraints, solution, diagnostic=None):
         return reject("deduction contradiction")
     if not proof["solved"] or proof["values"] != solution:
         return reject("full deduction incomplete")
+    if focus_method:
+        if not proof["techniques"].get(focus_method):
+            return reject("focused technique not used: " + focus_method)
+        # A teaching-focus puzzle must *need* the demonstrated method
+        # under our implemented no-guess repertoire. Merely labelling
+        # a step in one trace would not be a meaningful lesson.
+        without = deduce(n, clues, constraints, trace=False,
+                         disabled_methods=(focus_method,))
+        if without["solved"]:
+            return reject("focused technique is redundant: " + focus_method)
     if ordinary["solved"]:
         return reject("classic solves without variants")
     kind_for_method = {"killer_sum": "killer", "killer_innie": "killer",
+                       "region_sum": "region_sum",
+                       "region_sum_killer_bridge": "region_sum",
+                       "entropic": "entropic",
+                       "modular": "modular",
+                       "entropic_modular_cross": "entropic",
+                       "between": "between",
+                       "between_renban": "between",
                        "killer_outie": "killer", "renban_sum_lock": "renban",
                        "mixed_consecutive_partition": "renban",
                        "thermo": "thermo",
@@ -418,6 +441,16 @@ def quality(n, clues, constraints, solution, diagnostic=None):
                        "arrow": "arrow", "xv": "xv"}
     used = {kind_for_method[name] for name, count in
             proof["techniques"].items() if count and name in kind_for_method}
+    # A cross-rule deduction necessarily uses *both* authored families;
+    # counting it for only one would misrepresent the proof profile.
+    for method, families in {
+        "region_sum_killer_bridge": ("region_sum", "killer"),
+        "entropic_modular_cross": ("entropic", "modular"),
+        "between_renban": ("between", "renban"),
+        "mixed_consecutive_partition": ("renban", "kropki"),
+    }.items():
+        if proof["techniques"].get(method):
+            used.update(families)
     if len(used) < (3 if n == 9 else 2):
         return reject("too few variant families")
     if n == 9 and not proof["techniques"].get("kropki_partition"):
@@ -427,7 +460,9 @@ def quality(n, clues, constraints, solution, diagnostic=None):
     if not used.intersection({"renban", "whisper", "arrow", "xv"}):
         return reject("new techniques unused")
     structural_names = ("killer_innie", "killer_outie",
-                        "renban_sum_lock", "mixed_consecutive_partition")
+                        "renban_sum_lock", "mixed_consecutive_partition",
+                        "region_sum_killer_bridge", "entropic_modular_cross",
+                        "between_renban")
     structural = {name: proof["techniques"].get(name, 0)
                   for name in structural_names
                   if proof["techniques"].get(name, 0)}
@@ -437,6 +472,17 @@ def quality(n, clues, constraints, solution, diagnostic=None):
         return reject("Killer outie deduction unused")
     if n in (6, 9) and not structural.get("renban_sum_lock"):
         return reject("Renban-Killer interval deduction unused")
+    if not structural.get("region_sum_killer_bridge"):
+        return reject("Region-sum Killer bridge unused")
+    if n in (6, 9):
+        if not structural.get("entropic_modular_cross"):
+            return reject("Entropic-modular intersection unused")
+        if not any(step["method"] == "entropic_modular_cross"
+                   and len(step["remaining"]) == 1
+                   for step in proof["trace"]):
+            return reject("Entropic-modular crossing did not resolve a cell")
+        if not structural.get("between_renban"):
+            return reject("Between-Renban intersection unused")
 
     essential = []
     for kind in VARIANTS:
@@ -451,8 +497,25 @@ def quality(n, clues, constraints, solution, diagnostic=None):
         return reject("no variant family is essential")
     if count_solutions(n, clues, constraints) != 1:
         return reject("nonunique")
+    aha = [{"method": step["method"], "cell": step["cell"],
+            "digit": step["remaining"][0], "source": step["source"]}
+           for step in proof["trace"]
+           if step["method"] in ("entropic_modular_cross",
+                                 "region_sum_killer_bridge",
+                                 "between_renban",
+                                 "kropki_partition")
+           and len(step["remaining"]) == 1]
+    education = lesson_profile(n, proof)
+    education["focusTechnique"] = focus_method
+    education["requestedMinimumTier"] = required_min_tier
+    education["minimumTier"] = minimum_tier(n, clues, constraints, deduce)
+    if education["minimumTier"] is None:
+        return reject("curriculum cannot fully solve puzzle")
+    if education["minimumTier"] < required_min_tier:
+        return reject("curriculum is easier than requested level")
     return {"proof": proof, "used": sorted(used),
-            "essential": essential, "structural": structural}
+            "essential": essential, "structural": structural,
+            "aha": aha[:8], "education": education}
 
 
 def point(n, index):
@@ -486,13 +549,27 @@ def render(n, constraints):
                 "backgroundColor": "#ffffff" if is_white else "#28262d",
                 "borderColor": "#28262d", "borderSize": 1.3
             })
-        elif clue["type"] in ("renban", "whisper"):
+        elif clue["type"] in ("renban", "whisper", "region_sum",
+                               "entropic", "modular", "between"):
             coords = [[r+.5, c+.5] for r, c in
                       (point(n, i) for i in cells)]
+            style = {
+                "renban": ("#85a8d8", 16),
+                "whisper": ("#7abe9a", 12),
+                "region_sum": ("#3b619c", 10),
+                "entropic": ("#d8a752", 10),
+                "modular": ("#45a8ab", 10),
+                "between": ("#a783d6", 8),
+            }
+            color, width = style[clue["type"]]
             lines.append({"wayPoints": coords, "target": "underlay",
-                          "thickness": 16 if clue["type"] == "renban" else 12,
-                          "color": "#85a8d8" if clue["type"] == "renban"
-                          else "#7abe9a"})
+                          "thickness": width, "color": color})
+            if clue["type"] == "between":
+                for end in (coords[0], coords[-1]):
+                    underlays.append({
+                        "center": end, "width": .72, "height": .72,
+                        "rounded": True, "backgroundColor": "#f8f3ff",
+                        "borderColor": color, "borderSize": 2})
         elif clue["type"] == "arrow":
             coords = [[r+.5, c+.5] for r, c in
                       (point(n, i) for i in cells)]
@@ -532,6 +609,12 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
         "当杀手笼与连续线覆盖相同格子时，笼和能确定连续数字的范围。"
         "白点三连格与连续线共同覆盖 6×6 的一整行时，会分成 123 与 456 两组；"
         "9×9 的三组白点三连格则会分成 123、456、789。"
+        "深蓝色区域和线以宫界分段，各段数字和相等；金色熵线任意连续三格"
+        "分别来自低中高三组（六宫用12/34/56，九宫用123/456/789）；"
+        "青绿色模三线任意连续三格的除以3余数互不相同；"
+        "淡紫色两端圈线的内部数字严格介于两端圈中的数字之间。"
+        "交叉熵线与模三线可确定交点的数字类别；"
+        "区域和线的一段若覆盖一整个杀手笼，可把笼和传递给其它分段。"
         "\nRules: standard row/column/box Sudoku; killer cages have the "
         "marked sum with no repeated digits; thermometers increase from "
         "bulb to tip; white Kropki dots mean consecutive digits, black "
@@ -545,7 +628,17 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
         "houses enable Killer innie/outie deductions. A Renban also "
         "covered by one Killer cage has a sum-constrained consecutive "
         "set. Mixed Renban/Kropki triples partition a 6x6 house into "
-        "123 and 456."
+        "123 and 456. "
+        "Dark-blue region-sum lines have equal sums within each "
+        "successive box segment. Gold entropic lines have one digit "
+        "from each low/mid/high group in any consecutive triple "
+        "(12/34/56 in 6x6, 123/456/789 in 9x9). Teal modular lines "
+        "have one each of the residue classes modulo 3 in every three "
+        "cells. Violet between lines have interior values strictly "
+        "between their circled endpoints. Crossed lines and Killer "
+        "segments are designed to create explicit deductions."
+        "\n中文解题技巧教程（含例题与候选数排除过程）："
+        + GUIDE_URL +
         "\nRelated chapters: " + ", ".join("sudokupadx:puzzle/" + x for x in other)
     )
     return {
@@ -569,13 +662,28 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
                 "usedVariantRules": quality_info["used"],
                 "necessaryVariantTypes": quality_info["essential"],
                 "techniques": quality_info["proof"]["techniques"],
-                "structuralMotifs": quality_info["structural"]
+                "structuralMotifs": quality_info["structural"],
+                "ahaMoments": quality_info["aha"],
+                "education": quality_info["education"]
             }
         }
     }
 
 
-def build(seed, attempts=120):
+def build(seed, attempts=120, focus_method=None, focus_size=9,
+          min_tier=1):
+    """Generate a family; optionally demand a real use of one taught technique.
+
+    A focus is a *filter*, never a fake label. Some rare techniques may
+    require more attempts or different motif templates and can fail
+    explicitly rather than returning an unrelated puzzle.
+    """
+    if focus_method is not None and focus_method not in METHODS:
+        raise ValueError("Unknown focus technique: " + focus_method)
+    if focus_size not in SIZES:
+        raise ValueError("Focus size must be 4, 6 or 9")
+    if min_tier not in (1, 2, 3, 4):
+        raise ValueError("Minimum tier must be 1 through 4")
     rng = random.Random(seed)
     puzzles, details = [], []
     for n in SIZES:
@@ -588,7 +696,9 @@ def build(seed, attempts=120):
                 # completed grid before expensive clue digging begins.
                 deduce(n, dict(enumerate(solution)), constraints, trace=False)
                 clues = dig(n, solution, constraints, rng)
-                accepted = quality(n, clues, constraints, solution, failures)
+                accepted = quality(n, clues, constraints, solution, failures,
+                                   focus_method if n == focus_size else None,
+                                   min_tier if n == focus_size else 1)
             except ValueError as exc:
                 failures[str(exc)] += 1
                 continue
@@ -606,6 +716,8 @@ def build(seed, attempts=120):
             "used": accepted["used"], "necessary": accepted["essential"],
             "techniques": accepted["proof"]["techniques"],
             "structural": accepted["structural"],
+            "aha": accepted["aha"],
+            "education": accepted["education"],
             "trace": accepted["proof"]["trace"]
         })
     return puzzles, {"seed": seed, "family": FAMILY, "puzzles": details}
@@ -623,7 +735,13 @@ def validate(puzzles, report):
                  if cell}
         constraints = details["constraints"]
         assert len(solution) == n*n
-        expected = {"killer", "thermo", "kropki", "renban", "arrow", "xv"}
+        expected = {"killer", "thermo", "kropki", "renban", "arrow",
+                    "xv", "region_sum"}
+        if n >= 6:
+            expected.update(("entropic", "modular", "between"))
+            for method in ("region_sum_killer_bridge",
+                           "entropic_modular_cross", "between_renban"):
+                assert details["techniques"].get(method, 0) > 0
         if n == 9:
             expected.add("whisper")
             assert details["techniques"].get("kropki_partition", 0) > 0
@@ -632,8 +750,15 @@ def validate(puzzles, report):
         for house in houses(n):
             assert sorted(solution[i] for i in house) == list(range(1, n+1))
         assert deduce(n, clues, constraints)["values"] == solution
+        replayed = replay_trace(n, clues, details["trace"])
+        assert all(len(mask) == 1 for mask in replayed)
+        assert [next(iter(mask)) for mask in replayed] == solution
         assert not deduce(n, clues, [])["solved"]
         assert game["metadata"]["logicProfile"]["requiresGuessing"] is False
+        assert details["education"]["guideUrl"] == GUIDE_URL
+        assert details["education"]["minimumTier"] in (1, 2, 3, 4)
+        assert details["education"]["techniquePath"]
+        assert game["metadata"]["logicProfile"]["education"] == details["education"]
         assert len(details["used"]) >= 2 and details["necessary"]
         assert len(game["cages"]) > 0 and len(game["lines"]) > 0
         assert len(game["overlays"]) > 0 and len(game["arrows"]) > 0
@@ -663,9 +788,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=20261103)
     parser.add_argument("--attempts", type=int, default=120)
+    parser.add_argument("--focus-technique", choices=sorted(METHODS))
+    parser.add_argument("--focus-size", type=int, choices=SIZES, default=9)
+    parser.add_argument("--min-tier", type=int, choices=(1, 2, 3, 4), default=1)
     parser.add_argument("--output", type=Path, default=Path("public/puzzles/variants"))
     args = parser.parse_args()
-    puzzles, report = build(args.seed, args.attempts)
+    puzzles, report = build(args.seed, args.attempts,
+                            args.focus_technique, args.focus_size, args.min_tier)
     validate(puzzles, report)
     export(args.output, puzzles, report)
     print(json.dumps([{k: v for k, v in item.items()

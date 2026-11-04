@@ -74,6 +74,118 @@ The generation trace records the actual candidate removals made by
 these motifs, including the involved house, cages, or line groups.
 Pattern-recognition labels without eliminations do **not** count.
 
+## Additional research: region-sum and class-based lines
+
+The generator now authors three **cross-rule motifs**, not merely new
+colored lines:
+
+| Motif | Construction | No-guess deduction |
+| --- | --- | --- |
+| **Region sum + Killer** | A region-sum line crosses a box edge, and a two- or three-cell Killer cage coincides with one entire segment | The cage gives the common sum of *all* segments; propagate sums into the other box (`region_sum_killer_bridge`) |
+| **Entropic × modular crossing** | A 4-cell gold entropic line and a 4-cell teal modular line cross once. Two distinct-class non-crossing anchors are givens on each line | Two anchors on each line fix the order of all three class groups; the crossing cell belongs to their intersection (`entropic_modular_cross`) |
+| **Between + Renban** | The interior cells of a violet Between line also form a Renban; one endpoint is given | The interior must form a consecutive interval *strictly* inside the endpoint range; both endpoints and interior narrow (`between_renban`) |
+
+The ordinary line deductions are also implemented: consecutive box
+segments on a region-sum line have **equal totals**; every three
+consecutive entropic digits represent the three low/middle/high classes;
+every three modular digits contain different residues mod 3; Between
+interiors lie strictly between two circle values.
+
+For **6×6**, the entropic groups are `{1,2}/{3,4}/{5,6}`;
+for **9×9** they are `{1,2,3}/{4,5,6}/{7,8,9}`. Modular
+groups always use the digit's remainder modulo three.
+These two rules are *not* interchangeable. A line of length 4
+cycles its three digit classes back to the starting class.
+
+Sudopedia's traditional techniques are also available **after** variant
+reductions: hidden pairs/triples (`hidden_subset`) and the
+two-row/two-column X-Wing (`x_wing`). These are direct candidate
+eliminations rather than hypothetical chains.
+
+### Sources and next research candidates
+
+- Sudopedia [45 rule](https://sudopedia.sudocue.net/index.php/45_rule):
+  innies, outies, and hidden cages.
+- Sudopedia [Locked Candidates](https://sudopedia.sudocue.net/index.php?title=Pointing_Pair):
+  intersections and Killer cage combinations.
+- Sudopedia [Hidden Subset](https://sudopedia.sudocue.net/index.php/Hidden_Subset)
+  and [Fish](https://sudopedia.sudocue.net/index.php?title=Fish):
+  standard deductions after variant pruning.
+- [Sudoku Skunkworks rule compendium](https://georgethetoad.co.uk/ctcHunts/Duality.pdf)
+  and [Logic Masters example](https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=000IL0):
+  modern line definitions, including modular and entropic classes.
+
+The next suitable Sudopedia-derived motifs are **Killer locked
+combinations** (a digit must occur in a cage restricted to one house)
+and **innie/outie differences**; these should be added only after a
+human-readable proof step and a source-labelled motif can be generated.
+
+## Chinese learning curriculum and Sudopedia techniques
+
+The player-facing reference is in **Chinese**:
+[数独解题技巧中文指南（含局部候选数例题）](techniques.zh-CN.md).
+It covers 25 worked mini-lessons: singles, naked/hidden subsets of size
+2–4, locked candidates, X-Wing/Swordfish/Jellyfish, XY-Wing/XYZ-Wing,
+Skyscraper, and all authored variant deductions. The examples are
+locally valid candidate implications, not complete synthetic puzzles.
+
+The solver recognizes additional Sudopedia catalogue entries without
+using guess-and-reject or unique-solution assumptions:
+
+| Implemented classic technique | Deduction source method | Learner tier |
+| --- | --- | --- |
+| Peer elimination / hidden single | `peer_elimination`, `hidden_single` | 1 |
+| Naked/hidden pair and triple | `naked_subset`, `hidden_subset` | 2 |
+| Locked candidates | `locked_candidate` | 2 |
+| Naked/hidden quad | `naked_subset`, `hidden_subset`, with `source.size=4` | 3 |
+| X-Wing / Swordfish | `x_wing`, `swordfish` | 3 |
+| XY-Wing / Skyscraper | `xy_wing`, `skyscraper` | 3 |
+| Jellyfish / XYZ-Wing | `jellyfish`, `xyz_wing` | 4 |
+
+Tier 1 also includes **direct** variant-constraint propagation; tier 2
+includes constructed Killer and line interactions. These are pedagogical
+tiers, **not** calibrated difficulty ratings.
+
+Every published chapter supplies `logicProfile.education`:
+
+- `minimumTier`: the first of four progressively enabled technique sets
+  capable of fully solving that *specific puzzle* with no guessing.
+- `techniquePath`: the first **actual candidate removal** by each used
+  technique, in logical order, with Chinese name, target RnCn coordinate,
+  removed/remaining digits and method tier.
+- `maxUsedTier`: highest tier used in the generator's default proof;
+  this may differ from the weakest sufficient tier because the default
+  solver uses all sound methods.
+- `focusTechnique`: a method ID for a purpose-built technique lesson,
+  or null for the regular workshop.
+- `requestedMinimumTier`: curriculum target selected with `--min-tier`.
+- `guideUrl`: stable link to the Chinese tutorial.
+
+To **try generating a focused example** (rather than just relabel a
+random puzzle):
+
+```sh
+python3 scripts/generate_variants.py --seed 20261103 \
+  --focus-size 9 --focus-technique x_wing --attempts 200
+
+# Or try to require a tier-3 human solve in the 9×9 chapter:
+python3 scripts/generate_variants.py --seed 20261103 \
+  --focus-size 9 --min-tier 3 --attempts 200
+```
+
+The focused 9×9 puzzle is accepted only if the default proof actually
+uses `x_wing` **and** a separate full human solver, with `x_wing`
+disabled, can no longer finish. Other variants continue to be enforced.
+If the requested teaching pattern is too rare for the specified
+seed/attempt budget, generation **fails explicitly**, rather than
+claiming a fake example. The generator doesn't yet guarantee an example
+for *every* Sudopedia technique in one seed.
+
+A separate exact search remains in use **only** to check uniqueness;
+it never writes steps into `techniquePath`. Uniqueness-dependent
+techniques (unique rectangles), forcing-net enumeration, Nishio,
+brute force and trial-and-error remain excluded from the human solver.
+
 ## Acceptance and verification
 
 A candidate puzzle is retained only when:
@@ -86,17 +198,26 @@ A candidate puzzle is retained only when:
    (three on 9×9) actively remove candidates.
 4. **6×6 and 9×9 each have at least two different structural methods**
    that actually remove candidates. Both also demonstrate a house-wide
-   Killer outie. The 9×9 must additionally demonstrate the three-chain
-   Kropki technique.
+   Killer outie, a Renban-Killer interval lock, a region-sum/Killer
+   bridge, an entropic-modular crossing and a Between-Renban
+   interaction. The 9×9 must additionally demonstrate the three-chain
+   Kropki technique; 6×6 must demonstrate the mixed consecutive partition.
 5. Removing all constraints from at least one whole variant family
    must make the human solve stall.
 6. An *independent* bounded search finds exactly one solution to the
    complete visible puzzle, including all variant constraints.
 
 The proof is stored in `validation.json`, with counts, sources,
-removed candidates and rule-family ablation information.
-`metadata.logicProfile.structuralMotifs` summarizes the useful
-structural methods in each published chapter.
+removed candidates, the remaining candidate domains and rule-family
+ablation information. `metadata.logicProfile.structuralMotifs`
+summarizes genuinely used structural methods. The exported
+`logicProfile.ahaMoments` contains trace-backed single-digit resolutions
+with source constraint references, suitable for a future hint engine.
+
+In particular, an entropic/modular crossing is only accepted when its
+two class-anchored lines **actually resolve a cell to one digit**.
+One given per line leaves two possible class orders; the constructor
+therefore uses two distinct-class anchors per line.
 
 These gates establish reproducible, no-guess solutions and **actual
 participation** by the structures. They do not establish a calibrated
@@ -106,10 +227,19 @@ especially when cage, line and dot marks converge.
 
 ## Architecture
 
-- `scripts/variant_logic.py`: full deduction loop, classic locked
-  candidates and independent solution counter.
+- `scripts/variant_logic.py`: tier-limited human deduction loop,
+  classic locked candidates and independent solution counter.
+- `scripts/technique_catalog.py`: stable Chinese technique names,
+  curriculum tiers, actual learning-path exports and tiered solve checks.
+- `scripts/classic_techniques.py`: classical subsets, X-Wing/Swordfish/
+  Jellyfish fish, XY-Wing/XYZ-Wing and Skyscraper.
 - `scripts/variant_techniques.py`: local Renban, whisper, arrow and
   XV propagation, plus 9×9 white-dot triple partition.
+- `scripts/variant_lines.py`: region-sum, entropic, modular and Between
+  domain propagation plus genuine cross-rule deductions.
+- `scripts/line_generation.py`: builds meaningful line intersections with
+  explicit opening anchors and protected deduction targets.
+
 - `scripts/variant_structures.py`: reconstructed Killer house arithmetic,
   Renban–Killer sum locks and mixed Kropki–Renban house partitions.
 - `scripts/generate_variants.py`: chooses the solution, constructs
