@@ -203,7 +203,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters
+            open_puzzle, update_cell, update_cells, check_progress, hint_step, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");
