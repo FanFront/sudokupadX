@@ -1011,6 +1011,132 @@ board.addEventListener('wheel',event=>{
   const p=locationInFrame(event);setZoom(camera.scale*Math.exp(-event.deltaY*.0015),p.x,p.y);
 },{passive:false});
 
+// The native Rust/Tauri engine owns a single active game. Preserve the
+// entire existing puzzle state before temporarily loading a lesson board;
+// the lesson never touches the user's cached puzzle or resume pointer.
+function snapshotForLesson(){
+  if(!puzzle)return null;
+  if(!activeRawInput)throw Error('当前谜题还没有可恢复的原始数据');
+  return {
+    input:activeRawInput,puzzle,source:activeSource,entry:currentEntry,
+    cells:progress.cells.map(cloneCell),penLines:[...penLines],
+    penMarks:[...penMarks],camera:{...camera},
+    selectedCells:[...selectedCells],gridLines:showGridLines,
+    stack:navigationStack.map(item=>({...item})),
+    dictionary:mainDictionary,mode,alphabet,letterPage,
+    resumeRecord,lastCompletion
+  };
+}
+function practiceBanner(active){
+  $('lessonPracticeBar').hidden=!active;
+  $('checkButton').disabled=Boolean(active);
+  $('backButton').hidden=Boolean(active)||$('backButton').hidden;
+  if(!active){
+    $('lessonPracticeStatus').classList.remove('complete');
+    return;
+  }
+  $('lessonPracticeName').textContent='第 '+active.id+' 课 · '+active.goalLabel;
+  $('lessonPracticeStatus').textContent=active.task;
+  $('lessonPracticeStatus').classList.remove('complete');
+  $('lessonPracticeHint').textContent='查看思路';
+}
+async function beginLessonPractice(id){
+  if(pending||lessonPractice)throw Error('当前正在载入另一道谜题');
+  const practice=createLessonPractice(id);
+  if(puzzle)save();
+  const previous=snapshotForLesson();
+  lessonPractice={...practice,previous,completed:false};
+  activeSource=null;activeRawInput=practice.input;
+  currentEntry=null;navigationStack=[];mainDictionary={};
+  $('lessonScreen').hidden=true;
+  showGame();
+  pending=true;
+  try{
+    const result=await call('open_puzzle',{input:practice.input,localization:null});
+    await openResult(result);
+    progress=await call('restore_progress',{cells:practice.seed});
+    conflictHouses=buildConflictHouses(puzzle);
+    refreshConflicts();
+    mode=practice.goal.kind==='fill'?'value':'center';
+    alphabet=false;
+    letterPage=0;
+    lastCompletion=false;
+    updateControls();
+    setSelection([practice.goal.index]);
+    practiceBanner(lessonPractice);
+    updateBack();
+    requestDraw();
+  }catch(error){
+    try{await restoreOriginalAfterLesson();}catch(restoreError){
+      notify('原谜题恢复失败：'+String(restoreError));
+    }
+    $('lessonScreen').hidden=false;
+    $('gameScreen').hidden=true;
+    throw error;
+  }finally{pending=false;}
+}
+async function restoreOriginalAfterLesson(){
+  const former=lessonPractice?.previous??null;
+  if(former){
+    // Reopen the exact original raw puzzle in the same Rust/WASM engine,
+    // then reinstate its saved cells and UI view. Undo/redo stacks
+    // deliberately reset: the engine history belongs to the old session.
+    await call('open_puzzle',{input:former.input,
+      localization:former.entry?.id?localeZh[former.entry.id]||null:null});
+    puzzle=former.puzzle;
+    progress=await call('restore_progress',{cells:former.cells});
+    currentEntry=former.entry;activeSource=former.source;
+    activeRawInput=former.input;
+    navigationStack=former.stack;
+    mainDictionary=former.dictionary;
+    penLines=former.penLines;penMarks=former.penMarks;
+    camera={...former.camera};
+    selectedCells=[...former.selectedCells];
+    selected=selectedCells.at(-1)??-1;
+    showGridLines=former.gridLines;
+    mode=former.mode;alphabet=former.alphabet;letterPage=former.letterPage;
+    resumeRecord=former.resumeRecord;lastCompletion=former.lastCompletion;
+    undoStack=[];redoStack=[];
+    buildRegions();
+    updateInfo();
+    conflictHouses=buildConflictHouses(puzzle);
+  }else{
+    puzzle=null;progress=null;
+    currentEntry=null;activeSource=null;activeRawInput=null;
+    navigationStack=[];mainDictionary={};
+    penLines=[];penMarks=[];selected=-1;selectedCells=[];
+    undoStack=[];redoStack=[];lastCompletion=false;
+  }
+  lessonPractice=null;
+  practiceBanner(null);
+  if(puzzle){
+    refreshConflicts();
+    updateBack();updateGridButton();updateControls();requestDraw();
+    save();
+  }
+  updateHomeCard();
+}
+async function endLessonPractice(){
+  if(!lessonPractice||pending)return;
+  pending=true;
+  try{
+    await restoreOriginalAfterLesson();
+    lessonPage.returnFromPractice();
+  }finally{pending=false;}
+}
+async function resetLessonPractice(){
+  if(!lessonPractice||pending)return;
+  pending=true;
+  try{
+    progress=await call('restore_progress',{cells:lessonPractice.seed});
+    undoStack=[];redoStack=[];
+    lessonPractice.completed=false;
+    practiceBanner(lessonPractice);
+    refreshConflicts();updateControls();
+    setSelection([lessonPractice.goal.index]);
+    requestDraw();
+  }finally{pending=false;}
+}
 // Lessons are a separate page; opening them never unloads the puzzle or
 // resets the camera/progress. The rules shortcut saves before hiding play.
 const lessonPage=setupLessonPage({
@@ -1018,6 +1144,15 @@ const lessonPage=setupLessonPage({
   launchPractice:lesson=>beginLessonPractice(lesson.id)
 });
 $('lessonButton').addEventListener('click',()=>lessonPage.open());
+$('lessonPracticeReturn').addEventListener('click',()=>endLessonPractice().catch(notify));
+$('lessonPracticeReset').addEventListener('click',()=>resetLessonPractice().catch(notify));
+$('lessonPracticeHint').addEventListener('click',()=>{
+  if(!lessonPractice)return;
+  const shown=$('lessonPracticeHint').textContent==='收起思路';
+  $('lessonPracticeHint').textContent=shown?'查看思路':'收起思路';
+  $('lessonPracticeStatus').textContent=shown?lessonPractice.task:
+    '思路：'+lessonPractice.explanation;
+});
 $('lessonFromRulesButton').addEventListener('click',()=>{
   if($('rulesDialog').open)$('rulesDialog').close();
   if(lessonPractice){endLessonPractice().catch(notify);return;}
