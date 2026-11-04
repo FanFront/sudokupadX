@@ -59,6 +59,14 @@ jobs:
           test -s dist/puzzles/batch9/catalog-entries.json
           test -s dist/puzzles/batch9/generated-9x9-001.json
           test -s dist/puzzles/batch9/generated-9x9-100.json
+          test -s dist/puzzles/single-rule/catalog-entries.json
+          test -s dist/puzzles/single-rule/single-rule-lab-killer.json
+          test -s dist/puzzles/single-rule/single-rule-lab-kropki.json
+          test -s dist/puzzles/single-rule/single-rule-lab-thermo.json
+          test -s dist/puzzles/single-rule/single-rule-lab-renban.json
+          test -s dist/puzzles/single-rule/single-rule-lab-arrow.json
+          test -s dist/puzzles/single-rule/single-rule-lab-whisper.json
+          python3 -c "import json; p=json.load(open('dist/puzzles/single-rule/catalog-entries.json')); assert len(p['items']) == 6"
           python3 -c "import json; p=json.load(open('dist/puzzles/batch9/catalog-entries.json')); assert len(p['items']) == 100"
           grep -q '/sudokupadX/assets/' dist/index.html
       - name: Install Chromium browser checks
