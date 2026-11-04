@@ -697,6 +697,11 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       }
       continue;
     }
+    if(type==='arrow'&&cells.length===2){
+      relation(cells[0],cells[1],'arrow',(circle,shaft)=>circle===shaft,
+        '只有一格箭杆的箭头，其数字必须等于圆圈内的数字。');
+      continue;
+    }
     if(type==='kropki'){
       const [a,b]=cells;
       if(rule.dot==='white')
