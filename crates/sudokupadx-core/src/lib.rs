@@ -26,6 +26,9 @@ pub struct Puzzle {
     pub rows: usize,
     pub cols: usize,
     pub cells: Vec<Cell>,
+    /// Exact constraint definitions bundled by the local Rust creator.
+    #[serde(default, skip_serializing_if="Option::is_none")]
+    pub hint_rules: Option<Vec<creator::Rule>>,
     pub regions: Vec<Value>,
     pub lines: Vec<Value>,
     pub underlays: Vec<Value>,
@@ -290,8 +293,17 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         warnings.push("Some variant constraints are not yet drawn or validated.".into());
     }
     let key = root.get("id").and_then(as_text).unwrap_or_else(|| stable_key(&decoded));
+    let hint_rules=meta.get("solverRules")
+        .and_then(|v|serde_json::from_value::<Vec<creator::Rule>>(v.clone()).ok())
+        .or_else(||{
+            // Older locally generated *classic* puzzles have no extra rules.
+            // Do not infer variants from their visual strokes or descriptions.
+            if meta.get("variantFamily").and_then(Value::as_str)==Some("personal-created")
+                && meta.get("variantTypes").and_then(Value::as_array)
+                    .is_some_and(Vec::is_empty) {Some(Vec::new())} else {None}
+        });
     Ok(Puzzle {
-        key, title, author, rules, rows, cols, cells,
+        key, title, author, rules, rows, cols, cells, hint_rules,
         regions: marks(&root, "regions", "re", &mut warnings),
         lines: marks(&root, "lines", "l", &mut warnings),
         underlays: marks(&root, "underlays", "u", &mut warnings),
@@ -458,6 +470,30 @@ impl Session {
         } else {
             self.visible = vec![true; self.cells.len()];
         }
+    }
+    /// Capture a read-only, immutable snapshot for an off-thread hint solve.
+    pub fn hint_input(&self) -> Result<(usize,Vec<u8>,Vec<creator::Rule>),String> {
+        let n=self.puzzle.rows;
+        if self.puzzle.cols!=n || !matches!(n,4|6|9) {
+            return Err("提示只适用于标准 4×4、6×6、9×9 棋盘".into());
+        }
+        let rules=self.puzzle.hint_rules.clone().ok_or_else(||
+            "本题缺少可验证的变体规则数据，不能保证提示正确。请使用由本机生成器生成的题目。".to_owned())?;
+        // In a future fogged authoring format the visible-given distinction
+        // must be modelled, rather than revealing hidden original givens.
+        if self.visible.iter().any(|&visible|!visible) {
+            return Err("暂不对战争迷雾题目提供可能泄露隐藏线索的提示".into());
+        }
+        let grid=self.puzzle.cells.iter().zip(&self.cells).map(|(given,played)| {
+            let digit=given.given.as_ref().or(played.value.as_ref());
+            match digit {
+                None=>Ok(0),
+                Some(value)=>value.parse::<u8>().ok()
+                    .filter(|&d|d>=1&&d<=n as u8)
+                    .ok_or_else(||"当前棋盘含有非数字内容，无法使用数独提示".to_owned()),
+            }
+        }).collect::<Result<Vec<_>,_>>()?;
+        Ok((n,grid,rules))
     }
     pub fn snapshot(&self) -> Snapshot {
         Snapshot {
