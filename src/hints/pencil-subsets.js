@@ -71,8 +71,9 @@ export function findPencilSubsetHint(puzzle,progress,tier=4,focus=-1){
     if(!['row','column','box','region','unique'].includes(house.kind)||
        house.cells.length<3||house.cells.length>16)continue;
     const open=house.cells.filter(i=>visible(progress,i)&&!values[i]);
-    const eligible=open.filter(i=>marks[i].length>=2&&marks[i].length<=3);
-    for(const count of [3,2]){
+    const eligible=open.filter(i=>marks[i].length>=2&&marks[i].length<=8);
+    for(let count=Math.min(8,eligible.length,open.length-1);
+        count>=2;count--){
       if(open.length<=count||eligible.length<count)continue;
       for(const sources of combinations(eligible,count)){
         const group=unique(sources.flatMap(i=>marks[i]));
@@ -95,17 +96,18 @@ export function findPencilSubsetHint(puzzle,progress,tier=4,focus=-1){
           // edits to an actually recorded target candidate.
           if(!verified&&!annotated&&target!==focus&&
              !sources.includes(focus))continue;
+          const groupName=count===2?'数对':count===3?'三数组':count+' 数组';
           const reason=verified
             ?house.description+'中 '+sources.length+' 格的全部可行数字都属于 '+
               group.join('、')+'；由不重复约束可推出显性'+
-              (count===3?'三数组':'数对')+
+              groupName+
               '，该组其它格不可能再出现这些数字。'
             :'如果所标 '+sources.map(i=>'R'+(Math.floor(i/cols)+1)+
               'C'+(i%cols+1)).join('、')+
               ' 的候选数已经完整列出，'+
               sources.map(i=>marks[i].join('')).join('、')+
               ' 恰好组成 '+group.join('、')+' 的显性'+
-              (count===3?'三数组':'数对')+
+              groupName+
               '；那么'+house.description+'的其它格可排除这些数字。'+
               '这是一条基于手记的条件建议；求解器尚未独立证明这几格没有漏标候选。';
           const step={
@@ -119,7 +121,7 @@ export function findPencilSubsetHint(puzzle,progress,tier=4,focus=-1){
           const markedRemoved=removed.filter(d=>marks[target].includes(d)).length;
           const focusMatch=target===focus?3:sources.includes(focus)?1:0;
           const score=(verified?100000:0)+focusMatch*10000+
-            (annotated?1000:0)+(count===3?250:0)+
+            (annotated?1000:0)+count*75+
             markedRemoved*80-removed.length+remaining.length/100;
           options.push({step,score});
         }
@@ -138,10 +140,21 @@ export function preferPencilSubset(base,pencil,focus=-1){
   if(['conflict','complete'].includes(base?.status))return base;
   if(base?.status!=='step')return pencil;
   const step=pencil.step,baseStep=base.step;
-  if(step.cell===focus||step.sources.includes(focus))return pencil;
+  if(!step.assumptionBased&&
+      (step.cell===focus||step.sources.includes(focus)))return pencil;
+  if(step.assumptionBased&&
+      (step.cell===focus||step.sources.includes(focus))&&
+      ['peer_elimination','hidden_single','naked_single']
+        .includes(baseStep?.method))return pencil;
   if(!step.assumptionBased&&
      ['peer_elimination','naked_single'].includes(baseStep?.method))
     return pencil;
+  // A validated multi-constraint proof is always preferable to a
+  // speculative handwritten candidate set, even when focused.
+  if(step.assumptionBased&&
+     ['constraint_locked_digit','naked_subset','hidden_subset',
+       'killer_sum','arrow'].includes(baseStep?.method))
+    return base;
   if(step.assumptionBased&&baseStep?.method==='peer_elimination')
     return pencil;
   return base;
