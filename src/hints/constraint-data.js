@@ -3,7 +3,7 @@
 // The compact SudokuPad SCL format frequently stores artwork only.
 const TYPES=new Set([
   'killer','kropki','xv','whisper','thermo','renban','between',
-  'entropic','modular','region_sum','arrow'
+  'entropic','modular','region_sum','arrow','reverse_thermo'
 ]);
 const pos=(value,rows,cols)=>{
   if(Number.isInteger(value))return value>=0&&value<rows*cols?value:-1;
