@@ -88,9 +88,13 @@ export function findPencilSubsetHint(puzzle,progress,tier=4,focus=-1){
           const removed=prior.filter(d=>group.includes(d));
           const remaining=prior.filter(d=>!group.includes(d));
           if(!removed.length||!remaining.length)continue;
-          // Conditional evidence should lead to a concrete next pencil edit,
-          // not hundreds of speculative empty-cell suggestions.
-          if(!verified&&!annotated&&target!==focus)continue;
+          if(annotated&&!removed.some(d=>marks[target].includes(d)))
+            continue; // Do not suggest an exclusion the player already made.
+          // If the player selected a source of the triple, show one of the
+          // other cells even before they have annotated it. Otherwise prefer
+          // edits to an actually recorded target candidate.
+          if(!verified&&!annotated&&target!==focus&&
+             !sources.includes(focus))continue;
           const reason=verified
             ?house.description+'中 '+sources.length+' 格的全部可行数字都属于 '+
               group.join('、')+'；由不重复约束可推出显性'+
