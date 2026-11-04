@@ -3,6 +3,7 @@ export const TECHNIQUES=Object.freeze({
   peer_elimination:'已知数排除',hidden_single:'隐性唯一数',
   naked_single:'显性唯一数',
   naked_subset:'显性数组',hidden_subset:'隐性数组',
+  pencil_subset:'中心手记数组（条件提示）',
   locked_candidate:'区块排除',
   x_wing:'X-Wing',swordfish:'Swordfish',jellyfish:'Jellyfish',
   xy_wing:'XY-Wing',xyz_wing:'XYZ-Wing',skyscraper:'Skyscraper',
@@ -92,7 +93,9 @@ export function describeHint(response,size,cells=[]){
     step.method==='entropic'
       ?'每组三连格必须分别取自三个数字区间（'+entropicGroups+'），不符合分组的候选数可排除。'
       :ruleText[step.method]||'遵循已知数独规则。');
-  const placement=!step.forceElimination&&step.remaining?.length===1&&step.before?.length>1;
+  const conditional=step.assumptionBased===true;
+  const placement=!conditional&&!step.forceElimination&&
+    step.remaining?.length===1&&step.before?.length>1;
   const action=step.method==='search_contradiction'
     ?'经反证，可排除 '+removed
     :placement?'确定填入 '+remaining:'排除候选数 '+removed;
@@ -109,13 +112,18 @@ export function describeHint(response,size,cells=[]){
       :'求解器此步候选：'+before+' ｜ 排除：'+
         (step.removed||[]).join('、')+' ｜ 余下：'+remaining;
   return {
-    title:(TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
-    description:cellName(step.cell,size)+'：'+rationale+
+    title:(conditional?'待验证 · ':'')+
+      (step.method==='pencil_subset'
+        ?'中心手记'+(step.subsetSize===3?'三数组':'数对')
+        :TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
+    description:(conditional?'【条件推理，不是已证明的排除】 ':'')+
+      cellName(step.cell,size)+'：'+rationale+
       ' 由此'+action+'。'+(sourceCells.length?
         ' 参考格：'+sourceCells.slice(0,12).map(i=>cellName(i,size)).join('、')+
         (sourceCells.length>12?' 等':'')+'。':''),
     candidates:notesSummary,
     target:step.cell,sources:sourceCells,removed:effectiveRemoved,
-    placement:placement&&step.method!=='search_contradiction',level
+    placement:placement&&step.method!=='search_contradiction',
+    assumptionBased:conditional,level
   };
 }
