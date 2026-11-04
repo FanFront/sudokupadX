@@ -9,10 +9,10 @@ import {typedConstraints} from '../src/hints/constraint-data.js';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const names=[
-  ['digits-of-despair',56],
+  ['digits-of-despair',57],
   ['lineage-of-logic',10],
-  ['super-sudokoid-1',121],
-  ['super-sudokoid-2',169]
+  ['super-sudokoid-1',125],
+  ['super-sudokoid-2',172]
 ];
 const load=name=>{
   const scl=readFileSync(resolve(root,'public/puzzles',name+'.scl'),'utf8').trim();
@@ -80,10 +80,12 @@ test('every rule records its exact original artwork index for review',()=>{
     const {source,manifest}=load(name);
     const seen=new Set();
     for(const rule of manifest.constraints){
-      const key=rule.sourceKind+'#'+rule.sourceIndex;
+      const key=rule.sourceKind+'#'+rule.sourceIndex+'#'+rule.type;
       assert.ok(!seen.has(key),name+' duplicate '+key);
       seen.add(key);
-      const original=source[rule.sourceKind]?.[rule.sourceIndex];
+      const original=rule.sourceKind==='metadata.grids'
+        ?source.metadata?.grids?.[rule.sourceIndex]
+        :source[rule.sourceKind]?.[rule.sourceIndex];
       assert.ok(original,name+' missing '+key);
       if(rule.type==='killer'){
         assert.equal(original.unique,true);
@@ -92,6 +94,12 @@ test('every rule records its exact original artwork index for review',()=>{
       if(rule.type==='kropki')assert.ok(original.center);
       if(['whisper','thermo','reverse_thermo'].includes(rule.type))
         assert.ok(Array.isArray(original.wayPoints));
+      if(['anti_king','anti_knight','magic_square'].includes(rule.type))
+        assert.ok(original.width>=3&&original.height>=3,name);
+      if(rule.type==='crystal_cage'){
+        assert.equal(Number(original.value),rule.sum);
+        assert.ok(rule.groups.length>=4);
+      }
     }
   }
 });
