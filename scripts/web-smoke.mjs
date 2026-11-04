@@ -275,6 +275,9 @@ try{
   await page.waitForFunction(()=>
     document.querySelector('#creatorSaved')?.textContent?.includes('已完成'),
     null,{timeout:15000});
+  // Earlier smoke cases used ?puzzle=... deep links. Clear that URL
+  // parameter before reload so startup does not jump back into a boss.
+  await page.evaluate(()=>history.replaceState(null,'',location.pathname));
   await page.reload();
   await page.locator('#creatorButton').click();
   await page.waitForFunction(()=>
