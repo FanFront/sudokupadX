@@ -343,7 +343,8 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
         for(const target of house.cells){
           if(!visible(progress,target)||shaft.includes(target)||values[target])continue;
           add('constraint_locked_digit',target,[d],rule.cells,reason,3,
-            900,rule.type+':'+rule.cells.join(',')+':'+d);
+            900+(rule.cells.includes(focus)?2800:0),
+            rule.type+':'+rule.cells.join(',')+':'+d);
         }
       }
     }
