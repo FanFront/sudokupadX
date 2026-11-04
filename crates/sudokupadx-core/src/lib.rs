@@ -1023,7 +1023,7 @@ mod tests {
 
     #[test]
     fn explicit_adventure_hint_constraints_survive_parse_and_serialization() {
-        let raw = r#"{
+        let raw = r##"{
           "metadata":{"title":"Typed",
             "hintConstraints":[
               {"type":"whisper","cells":[[0,0],[0,1]]},
@@ -1032,7 +1032,7 @@ mod tests {
             ]},
           "cells":[[{},{}],[{},{}]],
           "lines":[{"wayPoints":[[0.5,0.5],[0.5,1.5]],"color":"#00aa00"}]
-        }"#;
+        }"##;
         let puzzle=load(raw).unwrap();
         assert_eq!(puzzle.hint_constraints.len(),2);
         assert_eq!(puzzle.hint_constraints[0]["type"],"whisper");
