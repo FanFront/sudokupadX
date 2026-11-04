@@ -255,39 +255,37 @@ function extract(name){
 const args=process.argv.slice(2);
 const check=args.includes('--check');
 const selected=args.filter(arg=>arg!=='--check');
+function normalize(value){
+  if(Array.isArray(value))return value.map(normalize);
+  if(value!==null&&typeof value==='object'){
+    return Object.fromEntries(Object.keys(value).sort()
+      .map(key=>[key,normalize(value[key])]));
+  }
+  return value;
+}
+function firstMismatch(actual,expected,location='root'){
+  if(JSON.stringify(normalize(actual))===JSON.stringify(normalize(expected)))return '';
+  if(actual===null||expected===null||
+     typeof actual!=='object'||typeof expected!=='object')
+    return location+' (actual '+JSON.stringify(actual)+
+      ', expected '+JSON.stringify(expected)+')';
+  const keys=[...new Set([...Object.keys(actual),...Object.keys(expected)])];
+  for(const key of keys){
+    if(!Object.hasOwn(actual,key)||!Object.hasOwn(expected,key))
+      return location+'.'+key+' (missing or extra key)';
+    const mismatch=firstMismatch(actual[key],expected[key],location+'.'+key);
+    if(mismatch)return mismatch;
+  }
+  return location;
+}
 for(const name of selected.length?selected:Object.keys(configurations)){
   if(!configurations[name])throw Error('Unknown bundled adventure: '+name);
   const output=extract(name);
   const expected=JSON.stringify(output,null,2)+'\n';
   if(check){
     const actual=JSON.parse(fs.readFileSync(destination(name),'utf8'));
-    // JSON member ordering is not semantic; compare every actual value and
-    // ordered constraint entry, but permit harmless member key reordering.
-    const normalized=obj=>JSON.stringify(obj,(key,value)=>
-      value&&!Array.isArray(value)&&typeof value==='object'
-        ?Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]]))
-        :value);
-    if(normalized(actual)!==normalized(output)){
-      const firstMismatch=(x,y,path='
-    fs.mkdirSync(path.dirname(destination(name).pathname),{recursive:true});
-    fs.writeFileSync(destination(name),expected);
-  }
-  console.log(check?'Verified':'Generated',name,output.sourceFingerprint,output.audit);
-}
-)=>{
-        if(normalized(x)===normalized(y))return '';
-        if(!x||!y||typeof x!=='object'||typeof y!=='object')return path+
-          ' (expected '+JSON.stringify(y)+', got '+JSON.stringify(x)+')';
-        const keys=[...new Set([...Object.keys(x),...Object.keys(y)])];
-        for(const key of keys){
-          const mismatch=firstMismatch(x[key],y[key],path+'.'+key);
-          if(mismatch)return mismatch;
-        }
-        return path;
-      };
-      throw Error(name+': curated manifest differs from source at '+
-        firstMismatch(actual,output));
-    }
+    const mismatch=firstMismatch(actual,output);
+    if(mismatch)throw Error(name+': curated manifest differs from source at '+mismatch);
   }else{
     fs.mkdirSync(path.dirname(destination(name).pathname),{recursive:true});
     fs.writeFileSync(destination(name),expected);
