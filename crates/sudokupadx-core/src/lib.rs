@@ -957,6 +957,28 @@ mod tests {
     }
 
     #[test]
+    fn explicit_adventure_hint_constraints_survive_parse_and_serialization() {
+        let raw = r#"{
+          "metadata":{"title":"Typed",
+            "hintConstraints":[
+              {"type":"whisper","cells":[[0,0],[0,1]]},
+              {"type":"kropki","cells":[[1,0],[1,1]],"dot":"white",
+               "unlockCells":[[0,1]]}
+            ]},
+          "cells":[[{},{}],[{},{}]],
+          "lines":[{"wayPoints":[[0.5,0.5],[0.5,1.5]],"color":"#00aa00"}]
+        }"#;
+        let puzzle=load(raw).unwrap();
+        assert_eq!(puzzle.hint_constraints.len(),2);
+        assert_eq!(puzzle.hint_constraints[0]["type"],"whisper");
+        assert_eq!(puzzle.hint_constraints[1]["dot"],"white");
+        let exported=serde_json::to_value(&puzzle).unwrap();
+        assert_eq!(exported["hintConstraints"][0]["type"],"whisper");
+        // The line remains a visual primitive and carries no inferred type.
+        assert!(exported["lines"][0].get("type").is_none());
+    }
+
+    #[test]
     fn reject_bad_payload_and_save() {
         assert!(load("sclnot@valid").is_err());
         assert!(load("{cells:[]}").is_err());
