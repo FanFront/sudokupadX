@@ -8,7 +8,8 @@ const CERTIFIED=[
   'super-linked-1hh6q5xl6l','super-linked-qfnpbofkiq',
   'super-linked-70qpd43i45','super-linked-f4c9vuptqj',
   'super-linked-gnp7aga2sx','super-linked-swxudk82v1',
-  'super-linked-kt6bb0wm0k','super-linked-lzer9x4edb'
+  'super-linked-kt6bb0wm0k','super-linked-lzer9x4edb',
+  'super-linked-jo12qmyc5v','super-linked-80kqa7jo0h'
 ];
 const GAPS={
   'digits-of-despair':['全地图交互与剧情相关的动态解谜状态'],
@@ -33,13 +34,11 @@ const GAPS={
   'boss-boss-the-witching-hour':['闪现最近目标','倍数/连续点','攀墙箭头'],
   'boss-boss-through-the-ringer':['模仿格旋转数值','弹弓箭头','黑点'],
   'super-linked-hf8r43jwsj':['1–3 迷你区域数独','温度计','拉链线'],
-  'super-linked-jo12qmyc5v':['奇数格','黑点','拉链线'],
   'super-linked-n4c0dem40c':['多层母脑变形及盘面动态结构'],
   'super-linked-u6cj0y3fzy':['藤蔓低语线','必须覆盖苹果的蛇身路径'],
   'super-linked-y4o6cjk9ao':['王后/主教视线与挡墙','合法穿越路径'],
   'super-linked-64c4lkb5ss':['奇偶双蛇','蛇邻域计数','方向不等号'],
   'super-linked-7asln8p2u1':['动态反弹的 Renban 导弹路径','局部 4×4 数独区域'],
-  'super-linked-80kqa7jo0h':['藤蔓低语线','供给缓存局部极大值','敌人格反马'],
   'super-linked-bpij5pdi3x':['未知屏障线机制','白色 SCAN 点'],
   'super-linked-dxr2zdfldv':['箭头圆圈求和','障碍反弹 Renban 路径'],
   'super-linked-dz1iu0r3tl':['九宫照片旋转复位','关联规则的动态匹配'],
