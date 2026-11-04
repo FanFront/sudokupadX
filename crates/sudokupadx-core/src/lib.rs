@@ -228,6 +228,8 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-1.json"),
         "fnv1a-20d4c9b9de5cbb80" =>
             include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-2.json"),
+        "fnv1a-cf8780e4c2d831cd" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-hfyjv8jqr5.json"),
         _ => return Vec::new(),
     };
     let Ok(manifest) = serde_json::from_str::<Value>(json) else {
@@ -990,6 +992,22 @@ mod tests {
         session.apply_many(&[1,2], "corner", "5").unwrap();
         assert!(session.snapshot().cells[1].corner.is_empty());
         assert!(session.snapshot().cells[2].corner.is_empty());
+    }
+
+    #[test]
+    fn caldera_chaos_boss_receives_all_its_original_typed_rules() {
+        let original=include_str!("../../../public/puzzles/super-linked-hfyjv8jqr5.scl");
+        let puzzle=load(original).unwrap();
+        assert_eq!((puzzle.rows,puzzle.cols),(9,9));
+        let count=|name:&str|puzzle.hint_constraints.iter()
+            .filter(|rule|rule.get("type").and_then(Value::as_str)==Some(name)).count();
+        assert_eq!(puzzle.hint_constraints.len(),10);
+        assert_eq!(count("classic_sudoku"),1);
+        assert_eq!(count("thermo"),2);
+        assert_eq!(count("arrow"),6);
+        assert_eq!(count("anti_knight_anchors"),1);
+        assert!(puzzle.hint_rules.is_none(),
+            "Legacy boss must use validated typed constraints, not fake generator rules");
     }
 
     #[test]
