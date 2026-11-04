@@ -642,6 +642,13 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
             status:"step".into(),level:level_of(&step.method),step:Some(step.clone())
         });
     }
+    // The solver may still have deductions, but all candidate removals are
+    // already absent from every annotated cell. Never recycle a stale hint or
+    // pretend these notes are validated premises for deeper techniques.
+    if !proof.trace.is_empty(){
+        return Ok(HintResponse{
+            status:"notes_current".into(),step:None,level:tier.min(4)});
+    }
     if tier<5 {
         return Ok(HintResponse{status:"stalled".into(),step:None,level:tier});
     }
@@ -1207,8 +1214,9 @@ mod tests{
         assert_eq!(loaded.key,"personal-demo-1");
         assert!(loaded.hint_rules.as_ref().is_some_and(Vec::is_empty));
         let session=crate::Session::new(loaded);
-        let (n,grid,rules)=session.hint_input().unwrap();
-        let response=next_hint(n,&grid,&rules,1).unwrap();
+        let (n,grid,rules,notes)=session.hint_input().unwrap();
+        assert_eq!(notes.len(),n*n);
+        let response=next_hint_with_notes(n,&grid,&rules,1,&notes).unwrap();
         assert_eq!(response.status,"step");
         let step=response.step.unwrap();
         assert_eq!(level_of(&step.method),1);
@@ -1218,6 +1226,53 @@ mod tests{
         assert!(!step.removed.contains(&digit),
             "Hint must not eliminate the known correct digit");
         assert!(step.sources.iter().all(|&cell|cell<n*n));
+    }
+    #[test]
+    fn hint_never_repeats_elimination_missing_from_center_notes(){
+        let n=9;
+        let mut grid=vec![0;n*n];
+        grid[1]=1;
+        let mut notes=vec![Vec::new();n*n];
+        notes[0]=vec![2,7];
+        let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
+        let step=hint.step.unwrap();
+        assert_ne!(step.cell,0,
+            "Removing 1 from R1C1 is redundant once its notes say {2,7}");
+        assert_eq!(hint.level,1);
+    }
+    #[test]
+    fn hint_prioritizes_provable_elimination_of_a_marked_candidate(){
+        let n=9;
+        let mut grid=vec![0;n*n];
+        grid[1]=2;
+        let mut notes=vec![Vec::new();n*n];
+        notes[0]=vec![2,7];
+        let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
+        let step=hint.step.unwrap();
+        assert_eq!(step.cell,0);
+        assert_eq!(step.removed,vec![2]);
+        assert!(step.remaining.contains(&7));
+    }
+    #[test]
+    fn incomplete_handwritten_candidates_cannot_force_a_false_single(){
+        let n=9;
+        let grid=vec![0;n*n];
+        let mut notes=vec![Vec::new();n*n];
+        notes[0]=vec![7]; // A one-digit note is not a confirmed placement.
+        let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
+        assert_eq!(hint.status,"stalled");
+        assert!(hint.step.is_none());
+    }
+    #[test]
+    fn correctly_annotated_eliminations_are_not_replayed(){
+        let n=4;
+        let mut grid=vec![0;n*n];
+        grid[1]=1;
+        let mut notes=vec![vec![2,3,4];n*n];
+        notes[1].clear();
+        let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
+        assert_eq!(hint.status,"notes_current");
+        assert!(hint.step.is_none());
     }
     #[test]
     fn level_five_is_a_real_unique_hard_classic_not_a_mocked_label(){
