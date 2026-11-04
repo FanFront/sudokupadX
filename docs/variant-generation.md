@@ -182,8 +182,11 @@ python3 scripts/generate_variants.py --seed 20261103 \
 ```
 
 The focused 9×9 puzzle is accepted only if the default proof actually
-uses `x_wing` **and** a separate full human solver, with `x_wing`
-disabled, can no longer finish. Other variants continue to be enforced.
+uses `x_wing`, a tier-3 human solver can finish the board,
+and a separate human solve **without X-Wing at tier 3 or below**
+can no longer finish. A more advanced technique may mathematically
+reproduce a simpler pattern; this should not invalidate its lower-tier
+lesson. Other variants continue to be enforced.
 If the requested teaching pattern is too rare for the specified
 seed/attempt budget, generation **fails explicitly**, rather than
 claiming a fake example. The generator doesn't yet guarantee an example
