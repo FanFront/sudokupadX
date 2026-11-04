@@ -314,11 +314,16 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
         }
       }
     }
+    // Index memberships first so a giant adventure map does not compare
+    // every house with hundreds of unrelated distant houses.
+    const houseMembership=Array.from({length:total},()=>[]);
+    completeHouses.forEach((h,j)=>h.cells.forEach(i=>houseMembership[i].push(j)));
     // Locked candidates across intersecting complete houses. The covered
     // region must contain ALL positions of a digit in the source house.
     for(let a=0;a<completeHouses.length;a++){
       const from=completeHouses[a];
-      for(let b=0;b<completeHouses.length;b++){
+      const touching=distinct(from.cells.flatMap(i=>houseMembership[i]));
+      for(const b of touching){
         if(a===b)continue;
         const dest=completeHouses[b],shared=from.cells.filter(i=>dest.cells.includes(i));
         if(shared.length<2||shared.length===from.cells.length)continue;
