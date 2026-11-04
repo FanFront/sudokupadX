@@ -645,10 +645,13 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
     // The solver may still have deductions, but all candidate removals are
     // already absent from every annotated cell. Never recycle a stale hint or
     // pretend these notes are validated premises for deeper techniques.
-    if !proof.trace.is_empty(){
+    if !proof.trace.is_empty() && (tier<5 || proof.solved){
         return Ok(HintResponse{
             status:"notes_current".into(),step:None,level:tier.min(4)});
     }
+    // If tier 4 genuinely stalled and all of its already-recorded
+    // eliminations are redundant, an explicitly requested tier 5 may still
+    // try a bounded search proof for one of the remaining handwritten digits.
     if tier<5 {
         return Ok(HintResponse{status:"stalled".into(),step:None,level:tier});
     }
