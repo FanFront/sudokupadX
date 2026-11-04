@@ -372,6 +372,81 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       }
       continue;
     }
+    if(type==='odd'||type==='even'){
+      for(const cell of cells){
+        if(values[cell]||!isVisible(progress,cell))continue;
+        const before=candidates[cell]||whole(domains[cell]||9);
+        const keep=before.filter(d=>type==='odd'?d%2===1:d%2===0);
+        add(type,cell,before.filter(d=>!keep.includes(d)),keep,[],
+          type==='odd'?'题目明确将此格标记为奇数。':
+            '题目明确将此格标记为偶数。',1,true);
+      }
+      continue;
+    }
+    if(type==='inequality'){
+      relation(cells[0],cells[1],type,(x,y)=>x<y,
+        '结构化不等号指定第一个格的数字严格小于第二个格。');
+      continue;
+    }
+    if(type==='clone'){
+      const groups=rule.groups;
+      for(let k=0;k<groups[0].length;k++)for(let j=1;j<groups.length;j++)
+        relation(groups[0][k],groups[j][k],type,(a,b)=>a===b,
+          '克隆区域中相同位置的数字必须完全相同。');
+      continue;
+    }
+    if(type==='indexing_rows'){
+      // Row-based column indexing: at RrCc digit X implies RrCX=C.
+      // The marked rule is global and should never be inferred from the
+      // displayed book illustration alone.
+      for(let row=0;row<9;row++)for(let col=0;col<9;col++){
+        const witness=row*9+col;
+        if(!isVisible(progress,witness)||!values[witness])continue;
+        const target=row*9+values[witness]-1,digitNeeded=col+1;
+        if(!isVisible(progress,target)||values[target])continue;
+        const before=candidates[target]||whole(9);
+        if(!before.includes(digitNeeded))continue;
+        add(type,target,before.filter(d=>d!==digitNeeded),
+          [digitNeeded],[witness],
+          '同行的 '+(col+1)+' 列填了 '+values[witness]+
+          '，因此该行第 '+values[witness]+' 列必须填 '+(col+1)+'。',
+          2,true);
+      }
+      continue;
+    }
+    if(type==='ambiguous_thermo'){
+      // A damaged thermometer can point either way, but must still be
+      // strictly monotonic in one entire direction, not switch mid-line.
+      const lists=cells.map(i=>values[i]?[values[i]]:
+        candidates[i]||whole(domains[i]||9));
+      if(cells.some(i=>!isVisible(progress,i))||
+         lists.some(list=>list.length===0))continue;
+      const supported=cells.map(()=>new Set()),assign=[];
+      let valid=false;
+      const walk=(k,ascending)=>{
+        if(k===cells.length){
+          valid=true;
+          assign.forEach((d,j)=>supported[j].add(d));
+          return;
+        }
+        for(const d of lists[k]){
+          if(k>0&&(ascending?d<=assign[k-1]:d>=assign[k-1]))continue;
+          assign.push(d);walk(k+1,ascending);assign.pop();
+        }
+      };
+      walk(0,true);walk(0,false);
+      if(!valid)continue;
+      for(let j=0;j<cells.length;j++){
+        const cell=cells[j],before=candidates[cell];
+        if(!before)continue;
+        const keep=before.filter(d=>supported[j].has(d));
+        add(type,cell,before.filter(d=>!keep.includes(d)),keep,
+          cells.filter(i=>i!==cell),
+          '破损温度计的圆头虽然未知，但整条线必须沿某一个方向严格递增。两种方向都不允许的候选数可以排除。',
+          2,true);
+      }
+      continue;
+    }
     if(type==='classic_sudoku')continue;
     if(type==='anti_kropki_black'||type==='anti_whisper_anchors'){
       const anchors=type==='anti_kropki_black'?cells:cells;
