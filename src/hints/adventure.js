@@ -396,7 +396,22 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
     if(type==='crystal_cage'){
       for(const group of rule.groups){
         if(group.length<2||group.length>5||
-          group.some(i=>!values[i]&&!candidates[i]))continue;
+           group.some(i=>!isVisible(progress,i)))continue;
+        const missing=group.filter(i=>!values[i]);
+        // Wall cells need not belong to a classic Sudoku domain. If every
+        // other cell in one crystal row/column is known, the last *positive*
+        // candidate can still be checked without assuming blank=impossible.
+        if(missing.length===1){
+          const target=missing[0];
+          const needed=rule.sum-group.filter(i=>i!==target)
+            .reduce((sum,i)=>sum+values[i],0);
+          if(needed>=1&&needed<=9)
+            add('crystal_cage',target,whole(9).filter(x=>x!==needed),
+              [needed],group.filter(i=>i!==target),
+              '晶体笼这一行或列总和为 '+rule.sum+
+              '，减去已填数字后，这格只可能是 '+needed+'。',1,true);
+        }
+        if(group.some(i=>!values[i]&&!candidates[i]))continue;
         constraints.push({method:'crystal_cage',cells:group,unique:false,
           goal:rule.sum,
           check:arr=>arr.reduce((a,b)=>a+b,0)===rule.sum,
@@ -526,7 +541,17 @@ export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
     return {status:'unsupported',level:0,step:null};
   }
   const {domains,houses,sectors}=gridsAndHouses(puzzle);
-  if(!houses.length)return {status:'unsupported',level:0,step:null};
+  const activeRules=typedConstraints(puzzle,progress);
+  // The 3×3 magic square in Super Sudokoid is a *separate* digit system,
+  // not a Sudoku sector: its author explicitly requires digits 1..9 once.
+  // Build that domain from the typed rule rather than visual 3×3 artwork.
+  for(const rule of activeRules)if(rule.type==='magic_square'){
+    for(const i of rule.cells)domains[i]=Math.max(domains[i],9);
+    houses.push({cells:rule.cells,kind:'magic',n:9,
+      description:'三阶魔方阵中 1 至 9 各出现一次'});
+  }
+  if(!houses.length&&!activeRules.length)
+    return {status:'unsupported',level:0,step:null};
   const state=runCandidates(puzzle,progress,houses,domains);
   // Visible duplicate digits contradict an all-different rule: no logical
   // deduction from an inconsistent premise should be suggested.
