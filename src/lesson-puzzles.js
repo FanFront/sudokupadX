@@ -1,232 +1,93 @@
-// A real SudokuPadX engine board for every Chinese lesson.
-//
-// Each exercise is a deliberately staged *candidate state*, not a
-// made-up uniquely-solvable full Sudoku. It is played in the normal
-// Rust/WASM puzzle engine with real number and pencilmark controls.
-// The target deduction is grounded in the Chinese guide's example.
-import {EXERCISES} from './lesson-data.js';
+// Lesson boards are taken exclusively from a checked solver trace.
+// Intermediate candidate notes are produced by replaying all earlier steps;
+// never hand-author a row of "possible" digits or infer an answer from a key.
+import {LESSON_FIXTURES} from './lesson-fixtures.js';
 
-const point=(r,c)=>[r-1,c-1];
-const center=(r,c)=>[r-.5,c-.5];
 const baseCell=()=>({value:null,corner:[],center:[],color:null});
-const validDigit=(digit,n)=>Number.isInteger(digit)&&digit>=1&&digit<=n;
+
+export function availableLessonPracticeIds(){
+  return Object.keys(LESSON_FIXTURES).map(Number).sort((a,b)=>a-b);
+}
+
+export function hasVerifiedLessonPractice(id){
+  return Object.prototype.hasOwnProperty.call(LESSON_FIXTURES,String(id));
+}
 
 export function createLessonPractice(id) {
-  const exercise=EXERCISES[id];
-  if(!exercise)throw Error('不存在这节数独训练课');
-  const n=(id===16||id===25)?6:9;
-  const boxHeight=n===6?2:3,boxWidth=3;
-  const puzzleCells=Array.from({length:n},()=>Array.from({length:n},()=>({})));
-  const seed=Array.from({length:n*n},baseCell);
-  const focus=new Set();
-  const lines=[],cages=[],overlays=[],underlays=[],arrows=[];
-  let goal=null;
-
-  const index=(r,c)=>{
-    if(!Number.isInteger(r)||!Number.isInteger(c)||r<1||c<1||r>n||c>n)
-      throw Error('课程格子超出棋盘范围');
-    return (r-1)*n+c-1;
-  };
-  const note=(r,c,values)=>{
-    const cell=index(r,c),digits=[...new Set(values)].sort((a,b)=>a-b);
-    if(!digits.length||digits.some(d=>!validDigit(d,n)))
-      throw Error('训练候选数字超出范围');
-    seed[cell].center=digits.map(String);
-    return cell;
-  };
-  const given=(r,c,digit)=>{
-    if(!validDigit(digit,n))throw Error('课程提示数字无效');
-    const idx=index(r,c);
-    puzzleCells[r-1][c-1]={value:String(digit)};
-    seed[idx].center=[];
-    return idx;
-  };
-  const mark=(...locations)=>{
-    for(const [r,c] of locations)focus.add(index(r,c));
-  };
-  const target=(r,c,correct,kind,choices)=>{
-    const cell=index(r,c);
-    if(kind==='remove'){
-      if(!choices?.includes(correct))throw Error('目标候选未在格中');
-      note(r,c,choices);
-    }else if(kind==='fill'){
-      if(!validDigit(correct,n))throw Error('课程答案数字错误');
-      if(choices)note(r,c,choices);
-    }else throw Error('未定义练习目标');
-    goal={index:cell,digit:String(correct),kind};
-  };
-  const path=(type,coords,color,width=12)=>{
-    lines.push({wayPoints:coords.map(([r,c])=>center(r,c)),
-      target:'underlay',color,thickness:width});
-  };
-  const cage=(coords,total)=>{
-    cages.push({cells:coords.map(([r,c])=>point(r,c)),
-      value:String(total),unique:true,outlineC:'#46728e',fontC:'#254967'});
-    mark(...coords);
-  };
-  const dot=(a,b)=>{
-    overlays.push({center:[
-      (a[0]+b[0])/2-.5,(a[1]+b[1])/2-.5],
-      width:.22,height:.22,rounded:true,
-      backgroundColor:'#ffffff',borderColor:'#24282e',borderSize:1.3});
-  };
-  const thermo=(coords)=>{
-    path('thermo',coords,'#b89acb',20);
-    underlays.push({center:center(...coords[0]),width:.65,height:.65,
-      rounded:true,backgroundColor:'#b89acb',borderColor:'#7c5b9a',borderSize:1});
-  };
-  const between=(coords)=>{
-    path('between',coords,'#a783d6',9);
-    for(const end of [coords[0],coords.at(-1)])
-      underlays.push({center:center(...end),width:.72,height:.72,
-        rounded:true,backgroundColor:'#f8f3ff',borderColor:'#a783d6',borderSize:2});
-  };
-  const strongRow=(row,digit,columns,notes=[1,2])=>{
-    for(let col=1;col<=n;col++)
-      note(row,col,columns.includes(col)?[...notes,digit]:notes);
-    mark(...columns.map(col=>[row,col]));
-  };
-  const strongColumn=(col,digit,rows,notes=[1,3])=>{
-    for(let row=1;row<=n;row++)
-      note(row,col,rows.includes(row)?[...notes,digit]:notes);
-    mark(...rows.map(row=>[row,col]));
-  };
-
-  switch(id){
-    case 1:
-      given(1,1,5);mark([1,1]);target(1,2,5,'remove',[2,5,7]);break;
-    case 2:
-      for(let col=1;col<=9;col++)note(5,col,col===7?[3,6,9]:[1,2,8]);
-      target(5,7,6,'fill',[3,6,9]);
-      mark([5,1],[5,4],[5,9]);break;
-    case 3:
-      note(4,1,[2,7]);note(4,5,[2,7]);
-      mark([4,1],[4,5]);target(4,6,5,'fill',[2,5,7]);break;
-    case 4:
-      note(4,1,[1,4]);note(4,3,[1,6]);note(4,5,[4,6]);
-      mark([4,1],[4,3],[4,5]);target(4,6,4,'remove',[2,4,9]);break;
-    case 5:
-      for(let col=1;col<=9;col++)
-        note(8,col,col===2?[1,3,6]:col===7?[3,5,6]:[1,2,7]);
-      target(8,2,1,'remove',[1,3,6]);
-      mark([8,7]);break;
-    case 6:
-      for(let row=1;row<=3;row++)for(let col=1;col<=3;col++)
-        note(row,col,row===2&&(col===1||col===3)?[2,7,9]:[1,2,4]);
-      mark([2,1],[2,3]);target(2,5,7,'remove',[1,4,7]);break;
-    case 7:
-      strongRow(2,4,[3,8],[1,2]);
-      strongRow(7,4,[3,8],[6,7]);
-      target(5,3,4,'remove',[1,4,8]);break;
-    case 8:
-      strongRow(1,6,[2,5],[1,2]);strongRow(4,6,[2,9],[3,4]);
-      strongRow(8,6,[5,9],[7,8]);
-      target(3,2,6,'remove',[3,6,9]);break;
-    case 9:
-      strongRow(1,2,[1,4],[3,4]);
-      strongRow(3,2,[4,7],[5,6]);
-      strongRow(6,2,[7,9],[1,8]);
-      strongRow(8,2,[1,9],[3,5]);
-      target(2,1,2,'remove',[2,3,7]);break;
-    case 10:
-      note(2,2,[1,2]);note(2,8,[1,5]);note(7,2,[2,5]);
-      mark([2,2],[2,8],[7,2]);target(7,8,5,'remove',[3,5,8]);break;
-    case 11:
-      note(2,2,[1,2,5]);note(2,3,[1,5]);note(4,2,[2,5]);
-      mark([2,2],[2,3],[4,2]);target(3,2,5,'remove',[3,5,7]);break;
-    case 12:
-      strongRow(2,7,[2,7],[1,3]);strongRow(6,7,[2,8],[2,4]);
-      target(5,7,7,'remove',[3,7,9]);break;
-    case 13:
-      given(1,8,1);cage([[1,8],[1,9]],3);
-      mark([1,8]);target(1,9,2,'fill',[1,2,3]);break;
-    case 14:
-      // Complete top-middle house (sum 45) and exactly one outside cell.
-      cage([[1,4],[1,5],[1,6]],21);
-      cage([[2,4],[2,5],[2,6]],15);
-      cage([[3,5],[3,6]],6);
-      cage([[3,4],[4,4]],10);
-      target(4,4,7,'fill',[5,7,9]);break;
-    case 15:
-      thermo([[2,2],[2,3],[2,4],[2,5]]);
-      given(2,3,3);given(2,5,7);
-      mark([2,3],[2,5]);target(2,2,3,'remove',[1,2,3]);break;
-    case 16:
-    case 25:
-      dot([1,1],[1,2]);dot([1,2],[1,3]);
-      path('renban',[[1,4],[1,5],[1,6]],'#85a8d8',16);
-      note(1,1,[1,3,4]);note(1,3,[1,3,6]);
-      note(1,4,[1,3,4]);note(1,5,[2,5,6]);note(1,6,[2,4,6]);
-      mark([1,1],[1,3],[1,4],[1,5],[1,6]);
-      target(1,2,id===16?1:6,'remove',[1,2,5,6]);break;
-    case 17:
-      path('renban',[[4,1],[4,2],[4,3]],'#85a8d8',16);
-      given(4,1,4);given(4,2,6);
-      mark([4,1],[4,2]);target(4,3,5,'fill',[3,5,7]);break;
-    case 18:
-      path('whisper',[[2,2],[2,3],[2,4]],'#7abe9a',12);
-      given(2,2,2);mark([2,2]);
-      target(2,3,3,'remove',[3,5,7]);break;
-    case 19:
-      arrows.push({wayPoints:[[3.5,2.5],[3.5,3.5],[3.5,4.5]],
-        color:'#d29754',thickness:4,headLength:.18});
-      underlays.push({center:center(4,3),width:.75,height:.75,
-        rounded:true,backgroundColor:'#fff6e4',
-        borderColor:'#d29754',borderSize:2});
-      given(4,3,7);given(4,4,3);
-      mark([4,3],[4,4]);target(4,5,4,'fill',[3,4,7]);break;
-    case 20:
-      path('region_sum',[[1,2],[1,3],[1,4],[1,5]],'#3b619c',10);
-      cage([[1,2],[1,3]],5);
-      given(1,4,2);mark([1,4]);target(1,5,3,'fill',[2,3,5]);break;
-    case 21:
-      path('entropic',[[2,1],[2,2],[2,3],[2,4]],'#d8a752',10);
-      given(2,1,2);given(2,3,8);
-      mark([2,1],[2,3]);target(2,2,9,'remove',[2,4,9]);break;
-    case 22:
-      path('modular',[[2,1],[2,2],[2,3],[2,4]],'#45a8ab',10);
-      given(2,1,1);given(2,3,2);
-      mark([2,1],[2,3]);target(2,2,4,'remove',[3,4,5]);break;
-    case 23:
-      path('entropic',[[2,1],[2,2],[2,3],[2,4]],'#d8a752',10);
-      path('modular',[[1,2],[2,2],[3,2],[4,2]],'#45a8ab',10);
-      given(2,1,2);given(2,3,8);given(1,2,3);given(3,2,5);
-      mark([2,1],[2,3],[1,2],[3,2]);target(2,2,4,'fill',[4,5,7]);break;
-    case 24:
-      between([[3,3],[3,4],[3,5],[3,6],[3,7]]);
-      given(3,3,2);given(3,7,8);
-      mark([3,3],[3,7]);target(3,5,8,'remove',[4,7,8]);break;
-    default:throw Error('该课程还没有训练棋盘');
+  const fixture=LESSON_FIXTURES[id];
+  if(!fixture){
+    throw Error('本课暂无通过唯一解和逻辑推理验证的练习棋盘，已拒绝加载未经证明的候选数。');
+  }
+  const n=fixture.n;
+  const puzzle=JSON.parse(JSON.stringify(fixture.puzzle));
+  const solution=puzzle.metadata?.solution;
+  const {goal,proof}=fixture;
+  const row=Math.floor(goal.index/n)+1,col=goal.index%n+1;
+  const goalLabel='R'+row+'C'+col;
+  if(!/^[1-9]$/.test(goal.digit) || !['fill','remove'].includes(goal.kind) ||
+     !Array.isArray(fixture.masks) || fixture.masks.length!==n*n ||
+     !Array.isArray(puzzle.cells) || puzzle.cells.length!==n ||
+     proof.method!==fixture.method || !proof.removed?.length ||
+     !Array.isArray(fixture.focus) ||
+     !fixture.focus.includes(goal.index) ||
+     !solution || solution.length!==n*n){
+    throw Error('课程验证数据损坏，禁止显示练习棋盘。');
   }
 
-  const regions=[];
-  for(let r=0;r<n;r+=boxHeight)for(let c=0;c<n;c+=boxWidth)
-    regions.push(Array.from({length:boxHeight*boxWidth},(_,i)=>[
-      r+Math.floor(i/boxWidth),c+i%boxWidth]));
-  const goalLabel='R'+(Math.floor(goal.index/n)+1)+'C'+(goal.index%n+1);
-  const task=goal.kind==='fill'?
-    '根据棋盘提示及候选数，在黄色目标格填入正确的大数字。':
-    '根据棋盘上的数字和候选结构，在黄色目标格用「中心」模式删去不可能的候选。';
-  const puzzle={
-    id:'sudokupadx-lesson-practice-'+id,
-    cells:puzzleCells,regions,cages,lines,underlays,overlays,arrows,
-    metadata:{
-      title:'技巧练习 '+id+' · '+exercise.target,
-      author:'SudokuPadX 中文数独课堂',
-      rules:'本关是用真实游戏棋盘练习一步候选推理的教学局部状态，未要求完成整个数独。'+
-        '蓝色格为推理相关位置，黄色格为操作目标。'+task+'\n'+exercise.context,
-      msgcorrect:'这是一节局部技巧练习，可通过上方“返回课程”继续学习。'
+  const seed=fixture.masks.map((values,i)=>{
+    const entry=baseCell();
+    const given=puzzle.cells[Math.floor(i/n)]?.[i%n]?.value;
+    if(!Array.isArray(values) || !values.length ||
+       values.some(d=>!Number.isInteger(d)||d<1||d>n) ||
+       !values.includes(Number(solution[i]))){
+      throw Error('课程候选数与已验证的答案矛盾。');
     }
+    if(given){
+      if(values.length!==1 || values[0]!==Number(given)){
+        throw Error('课程给定数字与候选状态不符。');
+      }
+    }else{
+      entry.center=values.map(String);
+    }
+    return entry;
+  });
+  if(puzzle.cells[Math.floor(goal.index/n)]?.[goal.index%n]?.value){
+    throw Error('课程目标不能是提示数字。');
+  }
+  if(!seed[goal.index].center.includes(goal.digit)){
+    throw Error('课程目标候选不在被证明的推理状态里。');
+  }
+  const task=goal.kind==='fill'
+    ?'根据真实棋盘及完整候选状态，在黄色目标格填入唯一确定的数字。'
+    :'根据真实棋盘及完整候选状态，在黄色目标格用「中心」模式删除一个可证明排除的候选。';
+  const explanation=goal.kind==='fill'
+    ?'逻辑求解器证明：利用「'+fixture.nameZh+'」，'+goalLabel+
+      ' 只能填 '+goal.digit+'。此结论来自当前棋盘，不是预设答案。'
+    :'逻辑求解器证明：利用「'+fixture.nameZh+'」，'+goalLabel+
+      ' 可以排除 '+goal.digit+'。此步骤由真实推理轨迹复现。';
+
+  puzzle.id='sudokupadx-lesson-practice-'+id;
+  puzzle.metadata={
+    ...puzzle.metadata,
+    title:'第 '+id+' 课 · '+fixture.nameZh+' · '+goalLabel,
+    author:'SudokuPadX 中文数独课堂',
+    rules:'本题来自经过唯一解验证的真实数独。盘面候选数是在无猜测求解器的中途步骤中获得的完整状态，'+
+      '不是任意设置的数字。蓝色格为相关位置，黄色格为目标。'+task+
+      '\n技巧：'+fixture.nameZh+'。\n'+(puzzle.metadata.rules||''),
+    msgcorrect:'训练只要求完成黄色目标格中的一步逻辑推理，不要求解完整盘面。'
   };
   return {
-    id,n,puzzle,seed,goal,focus:[...focus],task,goalLabel,
-    explanation:exercise.explanation,
+    id:Number(id),n,puzzle,seed,
+    goal:{...goal},
+    focus:[...fixture.focus],task,goalLabel,explanation,
+    proof:structuredClone(proof),
     input:JSON.stringify(puzzle)
   };
 }
 
 export function checkLessonMove(practice, before, after, action, symbol, indices) {
-  if(!practice||!before||!after||!indices.includes(practice.goal.index))return false;
+  if(!practice||!before||!after||!Array.isArray(indices)||
+     !indices.includes(practice.goal.index))return false;
   const {index,digit,kind}=practice.goal;
   if(kind==='fill')
     return action==='value' && String(symbol)===digit &&
