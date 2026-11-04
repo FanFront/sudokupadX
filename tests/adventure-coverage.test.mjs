@@ -32,8 +32,8 @@ test('every original adventure map and linked/Boss puzzle has a reviewed status'
         entry.id+'.json')),'certified challenges must have reviewed rule manifests');
     }
   }
-  assert.equal(counts.certified,12);
-  assert.equal(counts.partial,34);
+  assert.equal(counts.certified,14);
+  assert.equal(counts.partial,32);
 });
 test('a certified manifest matches the exact bundled SCL source file',()=>{
   for(const entry of entries){
