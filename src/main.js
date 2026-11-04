@@ -13,6 +13,7 @@ import {markBossCleared,lockedBossGate,bossGateAt,applyBossReveals} from './boss
 import {editableCellIndices} from './fog-editing.js';
 import {variantKeypadSymbols} from './variant-keypad.js';
 import {setupOnlineLibrary} from './online-ui.js';
+import {filterBundledEntries, bundledEntrySubtitle} from './bundled-library.js';
 import {setupLessonPage} from './lesson-page.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
@@ -288,10 +289,14 @@ function updateSector() {
 }
 function renderLibrary(){
   const list=$('libraryList');list.replaceChildren();
-  for(const entry of catalog.filter(x=>(x.kind==='main'||x.kind==='standalone')||$('showAllPuzzles').checked)){
+  for(const entry of filterBundledEntries(catalog, {
+    category:$('bundledCategory').value,
+    query:$('bundledSearch').value,
+    showLinked:$('showAllPuzzles').checked
+  })){
     const btn=document.createElement('button');btn.type='button';btn.className='library-entry';
     const title=document.createElement('strong');title.textContent=entry.title;
-    const sub=document.createElement('small');sub.textContent=entry.kind==='main'?'冒险地图':entry.kind==='standalone'?'独立谜题':entry.group+' · '+(entry.kind==='boss'?'首领谜题':'支线谜题');
+    const sub=document.createElement('small');sub.textContent=bundledEntrySubtitle(entry);
     btn.append(title,sub);
     btn.addEventListener('click',()=>openBundled(entry.id,false).catch(notify));
     list.appendChild(btn);
@@ -314,7 +319,12 @@ async function loadCatalog(){
     const response=await fetch('puzzles/variants/catalog-entries.json');
     if(response.ok)variants=await response.json();
   } catch {}
-  catalog=[...(items.items||[]),...(generated.items||[]),...(variants.items||[])];
+  let batch9={items:[]};
+  try {
+    const response=await fetch('puzzles/batch9/catalog-entries.json');
+    if(response.ok)batch9=await response.json();
+  } catch {}
+  catalog=[...(items.items||[]),...(generated.items||[]),...(variants.items||[]),...(batch9.items||[])];
   localeZh=translations;renderLibrary();
 }
 async function openBundled(id,push=false,backState=null){
@@ -1260,6 +1270,8 @@ $('libraryButton').addEventListener('click',()=>{
 });
 $('closeLibrary').addEventListener('click',()=>$('libraryDialog').close());
 $('showAllPuzzles').addEventListener('change',renderLibrary);
+$('bundledCategory').addEventListener('change',renderLibrary);
+$('bundledSearch').addEventListener('input',renderLibrary);
 $('backButton').addEventListener('click',()=>goBack().catch(notify));
 $('linkedPuzzleButton').addEventListener('click',()=>{
   if(!activeLinkedPuzzles.length || pending)return;
