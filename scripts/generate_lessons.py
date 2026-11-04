@@ -52,13 +52,32 @@ def clue_domains(n, givens):
 
 
 def focus_cells(n, cell, source, method, constraints=()):
+    """Highlight coordinates from a proof, never interpret axis/line IDs as cells."""
     found = {cell}
     units = houses(n)
-    if isinstance(source, int) and method in ("peer_elimination", "hidden_single") and 0 <= source < len(units):
-        found.update(units[source])
-    elif isinstance(source, int) and 0 <= source < len(constraints):
-        found.update(constraints[source]["cells"])
+    if isinstance(source, int):
+        if method in ("peer_elimination", "hidden_single") and 0 <= source < len(units):
+            found.update(units[source])
+        elif 0 <= source < len(constraints):
+            found.update(constraints[source]["cells"])
     elif isinstance(source, dict):
+        if method in ("x_wing", "swordfish", "jellyfish", "squirmbag"):
+            # Fish base/cover contain row/column numbers, not cell IDs.
+            vertical = bool(source.get("vertical"))
+            for base in source.get("base", ()):
+                for cover in source.get("cover", ()):
+                    index = cover*n+base if vertical else base*n+cover
+                    if 0 <= index < n*n:
+                        found.add(index)
+            return sorted(found)
+        for label in ("house", "sourceHouse", "targetHouse"):
+            house = source.get(label)
+            if isinstance(house, int) and 0 <= house < len(units):
+                found.update(units[house])
+        for label in ("line", "cage", "entropic", "modular"):
+            cid = source.get(label)
+            if isinstance(cid, int) and 0 <= cid < len(constraints):
+                found.update(constraints[cid]["cells"])
         def visit(value, key=""):
             if isinstance(value, dict):
                 for k, v in value.items():
@@ -69,7 +88,7 @@ def focus_cells(n, cell, source, method, constraints=()):
             elif (isinstance(value, int) and not isinstance(value, bool)
                   and 0 <= value < n*n and
                   ("cell" in key or key in
-                   ("pivot", "pincer", "wing", "a", "b", "tip", "base",
+                   ("pivot", "pincer", "wing", "a", "b", "tip",
                     "groups", "group", "segments", "roof", "pincers"))):
                 found.add(value)
         visit(source)
