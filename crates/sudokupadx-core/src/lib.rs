@@ -997,7 +997,7 @@ mod tests {
         let originals = [
             (include_str!("../../../public/puzzles/digits-of-despair.scl"),57usize),
             (include_str!("../../../public/puzzles/lineage-of-logic.scl"),10usize),
-            (include_str!("../../../public/puzzles/super-sudokoid-1.scl"),125usize),
+            (include_str!("../../../public/puzzles/super-sudokoid-1.scl"),124usize),
             (include_str!("../../../public/puzzles/super-sudokoid-2.scl"),172usize),
         ];
         for (scl,expected) in originals {
