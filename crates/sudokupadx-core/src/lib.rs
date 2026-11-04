@@ -228,7 +228,7 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-1.json"),
         "fnv1a-20d4c9b9de5cbb80" =>
             include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-2.json"),
-        "fnv1a-cf8780e4c2d831cd" =>
+        "fnv1a-bc4c15c770da3e75" =>
             include_str!("../../../public/puzzles/hint-constraints/super-linked-hfyjv8jqr5.json"),
         _ => return Vec::new(),
     };
@@ -997,7 +997,7 @@ mod tests {
     #[test]
     fn caldera_chaos_boss_receives_all_its_original_typed_rules() {
         let original=include_str!("../../../public/puzzles/super-linked-hfyjv8jqr5.scl");
-        assert_eq!(stable_key(original),"fnv1a-cf8780e4c2d831cd",
+        assert_eq!(stable_key(original.trim()),"fnv1a-bc4c15c770da3e75",
             "Boss package fingerprint must match the curated sidecar");
         let puzzle=load(original).unwrap();
         assert_eq!((puzzle.rows,puzzle.cols),(9,9));
