@@ -104,6 +104,25 @@ test('kropki is considered only after the matching region rule is revealed',()=>
   assert.equal(hint.step.method,'kropki');
   assert.ok(hint.step.removed.includes(1));
 });
+test('unlocked Super Sudokoid rule panel permits a proved Kropki elimination',()=>{
+  const target=idx(25,3,45),source=idx(25,4,45);
+  const panel={top:13,left:37,width:4,height:1,title:'SCAN DOTS',
+    rules:'Digits separated by a white SCAN DOT differ by exactly 1.',
+    cells:[13*45+37,13*45+38,13*45+39,13*45+40]};
+  const {puzzle,progress}=world(36,45,[panel],{
+    cages:[{unique:true,hidden:true,cells:[[25,3],[25,4]]}],
+    overlays:[{center:[25.5,4],backgroundColor:'#ffffff',width:.25,height:.25}]
+  });
+  progress.visible[target]=progress.visible[source]=true;
+  progress.cells[source].value='3';
+  progress.cells[target].center=['1','2','4'];
+  progress.visible[panel.cells[0]]=true;
+  const step=nextAdventureHint(puzzle,progress,4,target).step;
+  assert.equal(step?.method,'kropki');
+  assert.ok(step.removed.includes(1));
+  progress.visible[panel.cells[0]]=false;
+  assert.notEqual(nextAdventureHint(puzzle,progress,4,target).step?.method,'kropki');
+});
 test('actual bundled adventure packages load as independent, fog-safe map puzzles',()=>{
   for(const name of [
     'digits-of-despair','lineage-of-logic',
