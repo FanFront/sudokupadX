@@ -15,8 +15,10 @@ import {variantKeypadSymbols} from './variant-keypad.js';
 import {setupOnlineLibrary} from './online-ui.js';
 import {filterBundledEntries, bundledEntrySubtitle} from './bundled-library.js';
 import {setupLessonPage} from './lesson-page.js';
+import {setupCreatorUI} from './creator/ui.js';
+import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
-import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
+import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
 import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
 import {bilingualTitle,displayBilingual} from './bilingual.js';
@@ -133,7 +135,8 @@ function updateHomeCard() {
   if(!available)return;
   const previous=source?.type==='bundled'
     ?catalog.find(entry=>entry.id===source.id)
-    :source?.type==='online'?source.entry:null;
+    :source?.type==='online'?source.entry:
+      source?.type==='imported'?catalog.find(e=>e.id===source.key):null;
   $('homePuzzleTitle').textContent=puzzle?.title || previous?.title || '最近导入的谜题';
   $('homePuzzleMeta').textContent=puzzle
     ?puzzle.rows+' × '+puzzle.cols+' · 进度和棋盘位置已保存'
@@ -335,12 +338,21 @@ async function loadCatalog(){
     if(response.ok)advanced=await response.json();
   } catch {}
   catalog=[...(items.items||[]),...(generated.items||[]),...(variants.items||[]),...(batch9.items||[]),...(singleRules.items||[]),...(advanced.items||[])];
-  localeZh=translations;renderLibrary();
+  localeZh=translations;
+  try{await syncCreatedCatalog(await listCreated());}
+  catch(error){console.warn('Personal Sudoku database unavailable:',error);renderLibrary();}
 }
 async function openBundled(id,push=false,backState=null){
   if(pending)return;
   const entry=catalog.find(e=>e.id===id);
   if(!entry)throw Error('未找到已打包谜题: '+id);
+  if(entry.group==='personal-created'){
+    const record=await readCreated(id);
+    if(!record)throw Error('本机保存的生成题已被删除');
+    await openInput(JSON.stringify(record.puzzle),backState?.view);
+    if($('libraryDialog').open)$('libraryDialog').close();
+    return;
+  }
   const fromHome=$('gameScreen').hidden;
   if(currentEntry && push){
     save();navigationStack.push({id:currentEntry.id,
@@ -1275,9 +1287,41 @@ $('nextSector').addEventListener('click',()=>{
   sectorCursor=(sectorCursor+1)%matchingSectors.length;updateSector();
 });
 setupOnlineLibrary({openPuzzle:openIndexedPuzzle,notify});
-$('libraryButton').addEventListener('click',()=>{
-  renderLibrary();$('libraryDialog').showModal();
-});
+// Local-generated puzzle entries live in their own IndexedDB store,
+ // but participate in the ordinary library filters without any network.
+ async function syncCreatedCatalog(records){
+   catalog=[...catalog.filter(entry=>entry.group!=='personal-created'),
+     ...createdCatalogEntries(records)];
+   renderLibrary();updateHomeCard();
+ }
+ async function openCreatedRecord(record){
+   await openInput(JSON.stringify(record.puzzle));
+   if($('libraryDialog').open)$('libraryDialog').close();
+ }
+ async function handleDeletedCreated(id){
+   try{localStorage.removeItem('sudokupadx:v1:'+id);}catch{}
+   try{
+     const resume=parseResume(localStorage.getItem(RESUME_KEY));
+     if(resume?.source?.key===id)localStorage.removeItem(RESUME_KEY);
+   }catch{}
+   await deleteResumePuzzle(id);
+   if(puzzle?.key===id){
+     // Deleting the active puzzle must not allow save()/pagehide to silently
+     // recreate a removed checkpoint or the last-session pointer.
+     puzzle=null;progress=null;currentEntry=null;activeSource=null;
+     activeRawInput=null;resumeRecord=null;navigationStack=[];
+     showHome();
+   }
+ }
+ const personalCreator=setupCreatorUI({
+   openPuzzle:openCreatedRecord,
+   onCatalogChanged:syncCreatedCatalog,
+   handleDelete:handleDeletedCreated,
+   notify
+ });
+ $('libraryButton').addEventListener('click',()=>{
+   renderLibrary();$('libraryDialog').showModal();
+ });
 $('closeLibrary').addEventListener('click',()=>$('libraryDialog').close());
 $('showAllPuzzles').addEventListener('change',renderLibrary);
 $('bundledCategory').addEventListener('change',renderLibrary);
