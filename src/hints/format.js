@@ -1,6 +1,7 @@
 // Readable Chinese explanations reference the actual witness cells returned by Rust.
 export const TECHNIQUES=Object.freeze({
   peer_elimination:'已知数排除',hidden_single:'隐性唯一数',
+  naked_single:'显性唯一数',
   naked_subset:'显性数组',hidden_subset:'隐性数组',
   locked_candidate:'区块排除',
   x_wing:'X-Wing',swordfish:'Swordfish',jellyfish:'Jellyfish',
@@ -47,7 +48,9 @@ export function describeHint(response,size,cells=[]){
       stalled:'当前设定等级没有找到可继续的逻辑步骤；可提高提示等级或自行推理。',
       search_limit:'前四级逻辑已停滞；第五级搜索在安全计算上限内未能给出可证明的排除。',
       not_unique:'根据当前棋盘和已知规则无法证明唯一解，因此不会猜一个数字。',
-      notes_current:'已标记的候选数没有新排除项，且暂时找不到确定填数。玩家手记仅用于避免重复提示，可能需要补充其他格的候选。'
+      notes_current:'已标记的候选数没有新排除项，且暂时找不到确定填数。玩家手记仅用于避免重复提示，可能需要补充其他格的候选。',
+      fog_stalled:'当前已揭开的格子与可验证规则中暂时找不到新的无猜测步骤。请检查相邻已解锁区域和关联首领谜题；不能利用迷雾下的提示数字或未解锁规则偷看答案。',
+      unsupported:'当前大型地图缺乏可证实的数独行列宫或不重复约束，暂时不能安全生成提示。'
     };
     return {title:'暂无可验证步骤',description:status[response?.status]||'无法计算下一步。',
       candidates:'',sources:[],target:-1,level:response?.level??0};
@@ -68,12 +71,14 @@ export function describeHint(response,size,cells=[]){
   const removed=effectiveRemoved.join('、');
   const notedAfter=noted.filter(d=>!effectiveRemoved.includes(d));
 
+  const cellCount=cells?.length||size*size;
   const sourceCells=[...new Set((step.sources||[]).filter(i=>
-    Number.isInteger(i)&&i>=0&&i<size*size&&i!==step.cell))];
-  const entropicGroups=size===6?'1–2、3–4、5–6':'1–3、4–6、7–9';
-  const rationale=step.method==='entropic'
-    ?'每组三连格必须分别取自三个数字区间（'+entropicGroups+'），不符合分组的候选数可排除。'
-    :ruleText[step.method]||'遵循已知数独规则。';
+    Number.isInteger(i)&&i>=0&&i<cellCount&&i!==step.cell))];
+  const entropicGroups=(step.ruleSize||size)===6?'1–2、3–4、5–6':'1–3、4–6、7–9';
+  const rationale=step.reason||(
+    step.method==='entropic'
+      ?'每组三连格必须分别取自三个数字区间（'+entropicGroups+'），不符合分组的候选数可排除。'
+      :ruleText[step.method]||'遵循已知数独规则。');
   const placement=step.remaining?.length===1&&step.before?.length>1;
   const action=step.method==='search_contradiction'
     ?'经反证，可排除 '+removed
@@ -85,8 +90,11 @@ export function describeHint(response,size,cells=[]){
         ?'（仅表示手记只剩一个，尚未证明唯一）':'')+
       (notedAfter.length===0 && !placement
         ?'（请检查是否漏标了可能数字）':'')
-    :'求解器此步候选：'+before+' ｜ 排除：'+
-      (step.removed||[]).join('、')+' ｜ 余下：'+remaining;
+    :step.adventure
+      ?'本步可排除：'+(step.removed||[]).join('、')+
+        (placement?' ｜ 可确定：'+remaining:'')
+      :'求解器此步候选：'+before+' ｜ 排除：'+
+        (step.removed||[]).join('、')+' ｜ 余下：'+remaining;
   return {
     title:(TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
     description:cellName(step.cell,size)+'：'+rationale+
