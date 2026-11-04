@@ -158,6 +158,7 @@ Every published chapter supplies `logicProfile.education`:
   solver uses all sound methods.
 - `focusTechnique`: a method ID for a purpose-built technique lesson,
   or null for the regular workshop.
+- `requestedMinimumTier`: curriculum target selected with `--min-tier`.
 - `guideUrl`: stable link to the Chinese tutorial.
 
 To **try generating a focused example** (rather than just relabel a
@@ -166,6 +167,10 @@ random puzzle):
 ```sh
 python3 scripts/generate_variants.py --seed 20261103 \
   --focus-size 9 --focus-technique x_wing --attempts 200
+
+# Or try to require a tier-3 human solve in the 9×9 chapter:
+python3 scripts/generate_variants.py --seed 20261103 \
+  --focus-size 9 --min-tier 3 --attempts 200
 ```
 
 The focused 9×9 puzzle is accepted only if the default proof actually
