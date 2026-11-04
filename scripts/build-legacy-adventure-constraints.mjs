@@ -47,7 +47,7 @@ const configurations={
     scopes:[
       {kind:'fortressKing',grid:5,height:9,width:9},
       {kind:'fortressKnight',grid:5,height:9,width:9},
-      {kind:'hiddenKnight',grid:16,height:6,width:6},
+      {kind:'hiddenKnight',grid:16,height:6,width:6,rowOffset:1},
       {kind:'shrine',grid:15,height:3,width:3}
     ],
     dots:[
@@ -210,11 +210,16 @@ function extract(name){
   }
   for(const scope of cfg.scopes||[]){
     const grid=puzzle.metadata.grids[scope.grid];
-    if(!grid||scope.width>grid.width||scope.height>grid.height||
+    const rowOffset=scope.rowOffset||0;
+    if(!grid||scope.width>grid.width||rowOffset<0||
+       scope.height+rowOffset>grid.height||
        grid.left<0||grid.top<0)throw Error(name+': invalid scope '+scope.kind);
+    // Some authored rule panels include a decorative heading row. Their
+    // metadata rectangle is larger than the actual digit grid, so respect
+    // the curated content offset rather than applying rules to blank artwork.
     const cells=Array.from({length:scope.height*scope.width},(_,i)=>
-      asCell([grid.top+Math.floor(i/scope.width),grid.left+i%scope.width],
-        rows,cols));
+      asCell([grid.top+rowOffset+Math.floor(i/scope.width),
+        grid.left+i%scope.width],rows,cols));
     consider(scope.kind,cells.every(i=>i>=0)?cells:null,
       'metadata.grids',scope.grid,{boardCols:cols});
   }
