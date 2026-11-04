@@ -374,6 +374,10 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
   }
   function relation(a,b,method,test,description){
     if(!isVisible(progress,a)||!isVisible(progress,b))return;
+    // A neighboring cell without a proven 1..N domain must not be
+    // constrained by player pencil notes. At least one side needs a
+    // grounded domain or a visible placed digit to establish an exclusion.
+    if(!domains[a]&&!domains[b]&&!values[a]&&!values[b])return;
     const ca=values[a]?[values[a]]:(candidates[a]||whole(domains[a]||9));
     const cb=values[b]?[values[b]]:(candidates[b]||whole(domains[b]||9));
     if(!ca.length||!cb.length)return;
@@ -405,7 +409,7 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
   // Explicitly explained line rules only, within an unlocked Sudoku grid.
   for(const line of puzzle.lines||[]){
     const cells=lineCells(line,rows,cols);
-    if(cells.length<2||cells.some(i=>!isVisible(progress,i)||!candidates[i]&&!values[i]))continue;
+    if(cells.length<2||cells.some(i=>!isVisible(progress,i)))continue;
     const matched=sectors.find(s=>cells.every(i=>{
       const r=Math.floor(i/cols),c=i%cols;
       return r>=s.top&&r<s.top+s.height&&c>=s.left&&c<s.left+s.width;
