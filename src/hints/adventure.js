@@ -55,7 +55,7 @@ const keyword={
   renban:/renban|连续数线|连续线|连数线/i,
   entropic:/entropic|熵线/i,
   modular:/modular|模三线/i,
-  between:/between line|夹心线|介于.*两端/i,
+  between:/\bbetween\b|夹心线|介于.*两端/i,
   arrow:/arrow|箭头/i,
   killer:/killer|杀手笼|杀手隔间|killer cage|sum cage|求和笼/i,
   region_sum:/region.sum|区域和线|等和线/i
