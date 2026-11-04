@@ -621,6 +621,82 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       }
       continue;
     }
+    if(type==='little_killer'){
+      proveSum(cells,rule.sum,type,
+        '小杀手斜线上全部数字之和等于 '+rule.sum+'；对角线允许重复数字。');
+      continue;
+    }
+    if(type==='x_sums'){
+      const lead=cells[0],before=values[lead]?[values[lead]]:
+        candidates[lead]||whole(domains[lead]||9);
+      const possible=before.filter(n=>sumSupports(cells.slice(0,n),rule.sum,n));
+      if(!values[lead])
+        add(type,lead,before.filter(d=>!possible.includes(d)),possible,
+          cells.slice(1).filter(i=>isVisible(progress,i)),
+          '从提示所在边向内数前 N 格的和为 '+rule.sum+
+          '，其中 N 就是首格的数字。',2,true);
+      else if(possible.length){
+        const n=values[lead];
+        proveSum(cells.slice(0,n),rule.sum,type,
+          '本行或列的首格是 '+n+'，因此靠近外侧的前 '+n+
+          ' 格数字之和等于 '+rule.sum+'。');
+      }
+      continue;
+    }
+    if(type==='sandwich'){
+      if(cells.some(i=>!isVisible(progress,i)))continue;
+      const left=cells.findIndex(i=>values[i]===1);
+      const right=cells.findIndex(i=>values[i]===9);
+      if(left<0||right<0||left===right)continue;
+      const interior=cells.slice(Math.min(left,right)+1,Math.max(left,right));
+      if(interior.length){
+        proveSum(interior,rule.sum,type,
+          '两端数字 1 和 9 已确定，其间格子的数字之和等于 '+rule.sum+'。');
+      }
+      continue;
+    }
+    if(type==='skyscraper'){
+      // True skyline visibility is counted only when all nine distinct
+      // numbers form a proven row/column house. Search permutations in a
+      // bounded worker; an unfinished search never licenses elimination.
+      if(cells.length!==9||cells.some(i=>!isVisible(progress,i))||
+         !houses.some(h=>h.n===9&&h.cells.length===9&&
+           cells.every(i=>h.cells.includes(i))))continue;
+      const lists=cells.map(i=>values[i]?[values[i]]:candidates[i]||[]);
+      if(lists.some(list=>!list.length))continue;
+      const seenDigits=Array(9).fill(0),assign=[],supports=cells.map(()=>new Set());
+      let remainingBudget=500000,aborted=false,valid=false;
+      const walk=(k,tallest,seenCount)=>{
+        if(--remainingBudget<0){aborted=true;return;}
+        if(seenCount>rule.count||seenCount+9-k<rule.count)return;
+        if(k===9){
+          if(seenCount===rule.count){
+            valid=true;
+            assign.forEach((d,j)=>supports[j].add(d));
+          }
+          return;
+        }
+        for(const d of lists[k]){
+          if(seenDigits[d])continue;
+          seenDigits[d]=1;assign.push(d);
+          walk(k+1,Math.max(tallest,d),seenCount+(d>tallest?1:0));
+          assign.pop();seenDigits[d]=0;
+          if(aborted)return;
+        }
+      };
+      walk(0,0,0);
+      if(aborted||!valid)continue;
+      for(let k=0;k<9;k++){
+        const cell=cells[k],before=candidates[cell];
+        if(!before)continue;
+        const keep=before.filter(d=>supports[k].has(d));
+        add(type,cell,before.filter(d=>!keep.includes(d)),keep,
+          cells.filter(i=>i!==cell),
+          '从题目箭头方向看去，只有 '+rule.count+
+          ' 栋楼可见；高数字会遮挡后方较小的数字。',3,true);
+      }
+      continue;
+    }
     if(type==='kropki'){
       const [a,b]=cells;
       if(rule.dot==='white')
