@@ -40,11 +40,13 @@ export const TECHNIQUES=[
 export function availableVariants(size){
   return VARIANTS.filter(([, ,sizes])=>sizes.includes(Number(size)));
 }
+const METHOD_RULE={killer_sum:'killer',kropki:'kropki',thermo:'thermo',
+  renban:'renban',whisper:'whisper',arrow:'arrow',xv:'xv',
+  entropic:'entropic',modular:'modular',between:'between',region_sum:'region_sum'};
 export function availableTechniques(size,tier,selectedVariants=[]){
   if(Number(tier)===5)return TECHNIQUES.slice(0,1);
   return TECHNIQUES.filter(([name,,level])=>level<=Number(tier)&&
-    (name===''||!VARIANTS.some(([kind])=>kind===name)||
-       selectedVariants.includes(name)));
+    (!METHOD_RULE[name]||selectedVariants.includes(METHOD_RULE[name])));
 }
 export function validateCreatorOptions({size,tier,variants,focus,density,attempts}){
   size=Number(size);tier=Number(tier);attempts=Number(attempts);
