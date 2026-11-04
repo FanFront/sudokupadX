@@ -621,6 +621,50 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       }
       continue;
     }
+    if(type==='renban'){
+      if(cells.length>9||cells.some(i=>!isVisible(progress,i)))continue;
+      const lists=cells.map(i=>values[i]?[values[i]]:
+        candidates[i]||whole(domains[i]||9));
+      const m=cells.length,maximum=Math.max(...cells.map(i=>domains[i]||9));
+      if(m>maximum||lists.some(list=>!list.length))continue;
+      const supported=lists.map(()=>new Set()),seenIntervals=[];
+      function matching(start,forcedAt=-1,forcedDigit=0){
+        const allowed=lists.map((list,i)=>list.filter(d=>
+          d>=start&&d<start+m&&
+          (i!==forcedAt||d===forcedDigit)));
+        if(allowed.some(a=>!a.length))return false;
+        const owner=Array(maximum+1).fill(-1);
+        const visit=(i,visited)=>{
+          for(const d of allowed[i]){
+            if(visited.has(d))continue;
+            visited.add(d);
+            if(owner[d]<0||visit(owner[d],visited)){
+              owner[d]=i;return true;
+            }
+          }
+          return false;
+        };
+        return allowed.every((_,i)=>visit(i,new Set()));
+      }
+      for(let first=1;first+m-1<=maximum;first++){
+        if(matching(first))seenIntervals.push(first);
+      }
+      if(!seenIntervals.length)continue;
+      for(let j=0;j<m;j++)for(const d of lists[j]){
+        if(seenIntervals.some(start=>matching(start,j,d)))
+          supported[j].add(d);
+      }
+      for(let j=0;j<m;j++){
+        const cell=cells[j],prior=candidates[cell];
+        if(!prior)continue;
+        const keep=prior.filter(d=>supported[j].has(d));
+        add(type,cell,prior.filter(d=>!keep.includes(d)),keep,
+          cells.filter(i=>i!==cell),
+          '连续线中所有数字必须恰好构成一段互不重复的连续整数，排除无法参与任何完整匹配的候选数。',
+          2,true);
+      }
+      continue;
+    }
     if(type==='little_killer'){
       proveSum(cells,rule.sum,type,
         '小杀手斜线上全部数字之和等于 '+rule.sum+'；对角线允许重复数字。');
