@@ -660,3 +660,55 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .bundled-filters{display:grid;grid-template-columns:minmax(135px,1fr) minmax(160px,2fr);gap:8px;flex-shrink:0}
 .bundled-filters select,.bundled-filters input{min-width:0;width:100%;height:42px;padding:8px 10px;background:#112638;color:#e6f5fc;border:1px solid #496981;border-radius:8px;font:inherit;font-size:13px}
 @media(max-width:440px){.bundled-filters{grid-template-columns:1fr}}
+
+
+/* On-device creator: a dedicated scrollable, touch-friendly library screen.
+ * Keep options and saved puzzles readable on narrow Android displays. */
+#creatorDialog{width:min(95vw,900px);max-height:92dvh}
+#creatorDialog .creator-content{display:flex;flex-direction:column;gap:13px;max-height:90dvh;overflow:auto}
+#creatorDialog .creator-description{margin:0;color:#b9d8e5;font-size:13px;line-height:1.55}
+#creatorDialog .creator-options{display:flex;flex-direction:column;gap:12px;border:1px solid #31546b;border-radius:12px;padding:13px;background:#102a3b}
+#creatorDialog .creator-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+#creatorDialog .creator-settings label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#bed5e3;min-width:0}
+#creatorDialog .creator-settings select,#creatorDialog .creator-settings input,
+#creatorDialog #creatorSearch{width:100%;min-width:0;min-height:42px;padding:7px 10px;
+  border:1px solid #537386;border-radius:9px;background:#102538;color:#f3ffff;font:inherit;font-size:14px}
+#creatorDialog .creator-hint{margin:0;color:#b3d5df;font-size:12px;line-height:1.5}
+#creatorDialog .creator-variant-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+#creatorDialog .creator-variant-heading div{display:flex;gap:8px}
+#creatorDialog .creator-variant-heading button{font-size:12px;min-height:34px;padding:5px 10px}
+#creatorDialog .creator-variants{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#creatorDialog .creator-variant{display:flex;align-items:center;gap:8px;min-height:40px;
+  padding:7px;border:1px solid #35556d;border-radius:8px;background:#193449;font-size:12px}
+#creatorDialog .creator-variant input{width:18px;height:18px;flex-shrink:0;accent-color:#a6e8c5}
+#creatorDialog .creator-generate-bar{display:flex;flex-wrap:wrap;gap:9px}
+#creatorDialog .creator-generate-bar button{min-height:44px}
+#creatorDialog #creatorGenerate{flex:1}
+#creatorDialog #creatorCancel{border-color:#d0a184;color:#ffd8c9}
+#creatorDialog #creatorCancel[hidden]{display:none!important}
+#creatorDialog .creator-status{min-height:20px;font-size:12px;color:#b9ddec;margin:0;overflow-wrap:anywhere}
+#creatorDialog .creator-library{display:flex;flex-direction:column;gap:10px;min-height:110px;padding:3px 0}
+#creatorDialog .creator-library-heading{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+#creatorDialog .creator-library-heading strong{font-size:18px}
+#creatorDialog #creatorCount{font-size:12px;color:#a6c8db}
+#creatorDialog .creator-saved-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:45dvh;overflow:auto}
+#creatorDialog .creator-saved-item{display:flex;flex-direction:column;gap:6px;
+  padding:11px;border:1px solid #3c6077;border-radius:10px;background:#173047;min-width:0}
+#creatorDialog .creator-saved-item strong{font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+#creatorDialog .creator-saved-item small{color:#adcfde;font-size:11px;line-height:1.5}
+#creatorDialog .creator-saved-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+#creatorDialog .creator-saved-actions button{min-height:35px;font-size:11px;flex:1 1 auto;padding:6px 9px}
+#creatorDialog .creator-saved-actions .creator-play{background:#286c60;color:#f0fff7;border-color:#51a18c}
+#creatorDialog .creator-saved-actions .creator-delete{color:#ffd9d0;border-color:#aa685a}
+#creatorDialog .creator-empty{font-size:12px;color:#a6c8db;line-height:1.5}
+#libraryDialog .creator-library-action{width:100%;min-height:38px;flex-shrink:0;font-size:12px}
+@media(max-width:650px){
+  #creatorDialog{width:96vw;max-height:94dvh}
+  #creatorDialog .creator-content{max-height:92dvh;padding:13px}
+  #creatorDialog .creator-settings{grid-template-columns:1fr 1fr}
+  #creatorDialog .creator-variants{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #creatorDialog .creator-saved-list{grid-template-columns:1fr}
+}
+@media(max-width:390px){
+  #creatorDialog .creator-settings{grid-template-columns:1fr}
+}
