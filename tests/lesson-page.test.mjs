@@ -30,6 +30,7 @@ test('search and category filtering return the right lessons',()=>{
 test('only genuinely verified lesson boards are playable and every state remains satisfiable',()=>{
   assert.equal(LESSON_IDS.length,25);
   const available=availableLessonPracticeIds();
+  assert.equal(available.length,25,'all lessons must have verified boards');
   assert.ok(available.includes(1),'peer elimination must be playable');
   assert.ok(available.includes(2),'hidden single must be playable');
   assert.ok(available.every(id=>id>=1&&id<=25));
