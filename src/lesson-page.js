@@ -1,5 +1,5 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
-import {STAGES, parseLessonGuide, filterLessons, EXERCISES} from './lesson-data.js';
+import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS} from './lesson-data.js';
 import {hasVerifiedLessonPractice} from './lesson-puzzles.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
@@ -181,7 +181,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   function renderExercise(){
     const root=$('lessonExercise');
     root.replaceChildren();
-    if(!EXERCISES[selected.id])return;
+    if(!LESSON_IDS.includes(selected.id))return;
     const verified=hasVerifiedLessonPractice(selected.id);
     const heading=element('div','lesson-exercise-heading');
     heading.append(element('strong','',
