@@ -13,6 +13,7 @@ import {markBossCleared,lockedBossGate,bossGateAt,applyBossReveals} from './boss
 import {editableCellIndices} from './fog-editing.js';
 import {variantKeypadSymbols} from './variant-keypad.js';
 import {setupOnlineLibrary} from './online-ui.js';
+import {setupLessonPage} from './lesson-page.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
 import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
@@ -131,6 +132,7 @@ function updateHomeCard() {
     :'进度和棋盘位置已保存 · 点击继续恢复';
 }
 function showGame() {
+  $('lessonScreen').hidden=true;
   $('homeScreen').hidden=true;
   $('gameScreen').hidden=false;
   // Canvas is zero-sized on Home; measure it after Game becomes visible.
@@ -139,6 +141,7 @@ function showGame() {
 function showHome() {
   if(puzzle && !$('gameScreen').hidden)save();
   $('gameScreen').hidden=true;
+  $('lessonScreen').hidden=true;
   $('homeScreen').hidden=false;
   updateHomeCard();
 }
@@ -976,6 +979,15 @@ board.addEventListener('wheel',event=>{
   const p=locationInFrame(event);setZoom(camera.scale*Math.exp(-event.deltaY*.0015),p.x,p.y);
 },{passive:false});
 
+// Lessons are a separate page; opening them never unloads the puzzle or
+// resets the camera/progress. The rules shortcut saves before hiding play.
+const lessonPage=setupLessonPage({showHome,showGame});
+$('lessonButton').addEventListener('click',()=>lessonPage.open());
+$('lessonFromRulesButton').addEventListener('click',()=>{
+  save();
+  if($('rulesDialog').open)$('rulesDialog').close();
+  lessonPage.open();
+});
 $('homeButton').addEventListener('click',showHome);
 $('continueButton').addEventListener('click',async()=>{
   if(puzzle){showGame();return;}

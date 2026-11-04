@@ -27,6 +27,9 @@
           <button id="libraryButton" class="home-action" type="button" aria-label="打开谜题库">
             <span class="home-action-icon" aria-hidden="true">▦</span><span><strong>谜题库</strong><small>冒险地图 · 在线探索 · 离线下载</small></span><span class="home-chevron" aria-hidden="true">›</span>
           </button>
+          <button id="lessonButton" class="home-action" type="button" aria-label="打开数独解题技巧课堂">
+            <span class="home-action-icon" aria-hidden="true">◇</span><span><strong>解题技巧课堂</strong><small>25 节中文课程 · 候选数练习 · 离线学习</small></span><span class="home-chevron" aria-hidden="true">›</span>
+          </button>
           <button id="importButton" class="home-action" type="button" aria-label="导入谜题">
             <span class="home-action-icon" aria-hidden="true">＋</span><span><strong>导入谜题</strong><small>SudokuPad SCL / JSON · Penpa+</small></span><span class="home-chevron" aria-hidden="true">›</span>
           </button>
@@ -35,6 +38,42 @@
           </button>
         </div>
         <p class="home-footnote">解题进度自动保存在本机。返回首页不会重置当前棋盘。</p>
+      </div>
+    </section>
+    <section id="lessonScreen" class="lesson-screen" aria-label="数独解题技巧课堂" hidden>
+      <div class="lesson-shell">
+        <header class="lesson-toolbar">
+          <button id="lessonBack" type="button" class="lesson-back">‹ 返回</button>
+          <div class="lesson-toolbar-title"><strong>解题技巧课堂</strong><small>用逻辑解题，不靠猜数</small></div>
+          <span id="lessonProgressText" class="lesson-progress-count" aria-live="polite">已学 0 / 25 课</span>
+        </header>
+        <div class="lesson-progress-track" aria-hidden="true"><div id="lessonProgressBar"></div></div>
+        <div class="lesson-layout">
+          <aside class="lesson-sidebar" aria-label="课程目录">
+            <div class="lesson-sidebar-heading"><h2>课程目录</h2><span id="lessonResultCount">25 节课程</span></div>
+            <label class="lesson-search-label" for="lessonSearch">搜索技巧或候选数示例</label>
+            <input id="lessonSearch" type="search" placeholder="搜索 X-Wing、数对、Kropki…" autocomplete="off" aria-label="搜索解题课程">
+            <div id="lessonFilters" class="lesson-filters" aria-label="按技巧类别筛选"></div>
+            <nav id="lessonList" class="lesson-list" aria-label="选择课程"></nav>
+          </aside>
+          <article id="lessonDetail" class="lesson-detail" aria-labelledby="lessonTitle">
+            <div class="lesson-article-heading">
+              <span id="lessonStage" class="lesson-stage">基础排除</span>
+              <span id="lessonSummary" class="lesson-position">第 1 课 / 共 25 课</span>
+              <h1 id="lessonTitle">解题技巧</h1>
+              <p class="lesson-article-help">看懂候选数的变化，再试着自己做一步。例题是局部推理，不会修改当前游戏存档。</p>
+            </div>
+            <div id="lessonReading" class="lesson-reading"></div>
+            <section id="lessonExercise" class="lesson-exercise" aria-label="互动候选数练习"></section>
+            <div class="lesson-finish">
+              <button id="lessonComplete" type="button" aria-pressed="false">标记为已掌握</button>
+            </div>
+            <nav class="lesson-navigation" aria-label="切换课程">
+              <button id="lessonPrev" type="button">‹ 上一课</button>
+              <button id="lessonNext" type="button">下一课 ›</button>
+            </nav>
+          </article>
+        </div>
       </div>
     </section>
     <main id="gameScreen" class="workspace" aria-label="谜题游玩" hidden>
@@ -149,7 +188,10 @@
       <a id="originalPuzzleLink" class="source-link" target="_blank" rel="noopener noreferrer" hidden>在原版 SudokuPad 中对比此谜题</a>
       <a id="lmdSourceLink" class="source-link" target="_blank" rel="noopener noreferrer" hidden>查看 Logic Masters 原题与完整规则</a>
       <div id="modalLinks" class="sector-links"></div>
-      <button id="dismissRules" class="primary-btn" type="button">返回棋盘</button>
+      <div class="lesson-rules-actions">
+        <button id="lessonFromRulesButton" type="button">学习解题技巧</button>
+        <button id="dismissRules" class="primary-btn" type="button">返回棋盘</button>
+      </div>
     </div>
   </dialog>
 <dialog id="libraryDialog" class="modal">
