@@ -8,12 +8,13 @@
   ],
   "audit": {
     "basis": "Author rule legend + original drawing identity; each accepted constraint checked against the solution OFFLINE",
-    "accepted": 169,
+    "accepted": 172,
     "rejectedCandidates": 0,
     "byType": {
       "kropki": 126,
       "whisper": 25,
-      "reverse_thermo": 18
+      "reverse_thermo": 18,
+      "crystal_cage": 3
     }
   },
   "constraints": [
@@ -2860,6 +2861,143 @@
       ],
       "sourceKind": "lines",
       "sourceIndex": 113
+    },
+    {
+      "type": "crystal_cage",
+      "cells": [
+        1397,
+        1398,
+        1441,
+        1442,
+        1443,
+        1486,
+        1487
+      ],
+      "sum": 9,
+      "groups": [
+        [
+          1397,
+          1398
+        ],
+        [
+          1441,
+          1442,
+          1443
+        ],
+        [
+          1486,
+          1487
+        ],
+        [
+          1397,
+          1442,
+          1487
+        ],
+        [
+          1398,
+          1443
+        ],
+        [
+          1441,
+          1486
+        ]
+      ],
+      "unlockCells": [
+        [
+          18,
+          37
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 0
+    },
+    {
+      "type": "crystal_cage",
+      "cells": [
+        1444,
+        1445,
+        1489,
+        1490
+      ],
+      "sum": 13,
+      "groups": [
+        [
+          1444,
+          1445
+        ],
+        [
+          1489,
+          1490
+        ],
+        [
+          1444,
+          1489
+        ],
+        [
+          1445,
+          1490
+        ]
+      ],
+      "unlockCells": [
+        [
+          18,
+          37
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 1
+    },
+    {
+      "type": "crystal_cage",
+      "cells": [
+        1262,
+        1263,
+        1306,
+        1307,
+        1308,
+        1351,
+        1352,
+        1353
+      ],
+      "sum": 12,
+      "groups": [
+        [
+          1262,
+          1263
+        ],
+        [
+          1306,
+          1307,
+          1308
+        ],
+        [
+          1351,
+          1352,
+          1353
+        ],
+        [
+          1262,
+          1307,
+          1352
+        ],
+        [
+          1263,
+          1308,
+          1353
+        ],
+        [
+          1306,
+          1351
+        ]
+      ],
+      "unlockCells": [
+        [
+          18,
+          37
+        ]
+      ],
+      "sourceKind": "cages",
+      "sourceIndex": 2
     }
   ]
 }
