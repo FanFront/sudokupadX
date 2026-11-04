@@ -363,6 +363,28 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       continue;
     }
     if(type==='classic_sudoku')continue;
+    if(type==='anti_kropki_black'||type==='anti_whisper_anchors'){
+      const anchors=type==='anti_kropki_black'?cells:cells;
+      const group=new Set(cells);
+      for(const a of anchors){
+        const r=Math.floor(a/cols),c=a%cols;
+        const adjacent=type==='anti_kropki_black'?
+          [[1,0],[0,1]]:[[1,0],[-1,0],[0,1],[0,-1]];
+        for(const [dr,dc] of adjacent){
+          const rr=r+dr,cc=c+dc;
+          if(rr<0||rr>=rows||cc<0||cc>=cols)continue;
+          const b=rr*cols+cc;
+          if(type==='anti_kropki_black'&&!group.has(b))continue;
+          relation(a,b,type,type==='anti_kropki_black'
+            ?(x,y)=>Math.max(x,y)!==2*Math.min(x,y)
+            :(x,y)=>Math.abs(x-y)<5,
+            type==='anti_kropki_black'
+              ?'反黑点规则：任意正交相邻两格的数字不能成 2:1 倍数关系。'
+              :'灰色格与任一正交邻格的数字差不能达到 5。');
+        }
+      }
+      continue;
+    }
     if(type==='anti_knight_anchors'){
       // Only marked alien/enemy cells are anchors. Every surrounding
       // chess-knight neighbor, whether or not also marked, is constrained.
