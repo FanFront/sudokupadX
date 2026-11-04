@@ -134,6 +134,7 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
   // Conservative fixed-point propagation. We do not use unvalidated center
   // pencil marks as premises and do not run speculative solution search.
   const pairs=pairRules(puzzle,localRules);
+  let earliestSupported=null;
   for(let pass=0;pass<8;pass++){
     changed=false;
     for(const r of localRules){
@@ -170,6 +171,10 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
       restrict(p.a,left);restrict(p.b,right);
     }
     if(invalid)break;
+    // Keep the first *verified* arithmetic support snapshot before later
+    // hidden singles or N-tuples solve the interesting arrow shaft. It is
+    // often the short human-readable "35 + 45 = 89" aha moment.
+    if(pass===0)earliestSupported=bound.map(a=>a?[...a]:null);
     for(const house of houseList){
       const open=house.cells.filter(i=>bound[i]&&bound[i].length>0);
       const seen=new Set();
@@ -296,14 +301,43 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
       if(!holders.length||holders.some(i=>values[i]===d))continue;
       for(const house of houseList){
         if(!holders.every(i=>house.cells.includes(i)))continue;
+        // Prefer the earliest independently established domains whenever
+        // they already prove this locked digit within the very same house.
+        // Never use them if the early digit might still be outside the house.
+        let proofLists=lists,proofCircles=circles;
+        if(earliestSupported&&rule.cells.every(i=>earliestSupported[i]?.length)){
+          const earlyLists=shaft.map(i=>earliestSupported[i]);
+          const earlyCircles=rule.type==='arrow'
+            ?earliestSupported[rule.cells[0]]:[rule.sum];
+          const possible=sumsPossible(earlyLists,Math.max(...earlyCircles));
+          const withoutD=sumsPossible(earlyLists,Math.max(...earlyCircles),d);
+          const earlyHolders=shaft.filter((i,j)=>earlyLists[j].includes(d));
+          if(earlyCircles.some(sum=>possible.has(sum))&&
+             !earlyCircles.some(sum=>withoutD.has(sum))&&
+             earlyHolders.every(i=>house.cells.includes(i))){
+            proofLists=earlyLists;proofCircles=earlyCircles;
+          }
+        }
         const label=rule.type==='arrow'?'箭头求和':'求和约束';
         const fmt=i=>'R'+(Math.floor(i/cols)+1)+'C'+(i%cols+1);
-        const sourceDetails=shaft.map(i=>fmt(i)+'∈{'+bound[i].join('、')+'}').join('、');
+        const sourceDetails=shaft.map((i,j)=>fmt(i)+'∈{'+
+          proofLists[j].join('、')+'}').join('、');
         const circleDetail=rule.type==='arrow'
-          ?'，圆圈 '+fmt(rule.cells[0])+'∈{'+bound[rule.cells[0]].join('、')+'}'
+          ?'，圆圈 '+fmt(rule.cells[0])+'∈{'+proofCircles.join('、')+'}'
           :'，总和为 '+rule.sum;
-        const reason=label+'要求 '+sourceDetails+circleDetail+
-          '。如果所有这些格都不填 '+d+'，就无法满足总和；因此至少一格必有 '+d+
+        // Two-shaft arrows admit a compact exhaustive list that a person
+        // can read and check without any hidden solver search.
+        const triples=rule.type==='arrow'&&shaft.length===2
+          ?proofLists[0].flatMap(a=>proofLists[1].filter(b=>
+            proofCircles.includes(a+b)).map(b=>'('+a+'，'+b+'，'+(a+b)+')'))
+          :[];
+        const combinationsText=triples.length>0&&triples.length<=8
+          ?' 合法的（'+fmt(shaft[0])+'，'+fmt(shaft[1])+'，圆圈）组合：'+
+             triples.join('、')+'。'
+          :'';
+        const reason=label+'要求 '+sourceDetails+circleDetail+'。'+
+          combinationsText+
+          '如果所有这些格都不填 '+d+'，就无法满足总和；因此至少一格必有 '+d+
           '。这些可能位置全部位于'+house.description+
           '，可以从该组其他格排除 '+d+'。';
         for(const target of house.cells){
