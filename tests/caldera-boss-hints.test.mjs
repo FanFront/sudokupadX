@@ -60,7 +60,7 @@ test('original Caldera Chaos boss has all ten pinned, separately verified rules'
     if(rule.type==='arrow')
       assert.equal(values[rule.cells[0]],
         rule.cells.slice(1).reduce((s,i)=>s+values[i],0),
-        'every arrow's shaft sums to its exact circular bulb');
+        "Every arrow shaft sums to its exact circular bulb");
     if(rule.type==='anti_knight_anchors'){
       for(const a of rule.cells){
         const r=Math.floor(a/9),c=a%9;
