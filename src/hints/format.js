@@ -8,7 +8,7 @@ export const TECHNIQUES=Object.freeze({
   xy_wing:'XY-Wing',xyz_wing:'XYZ-Wing',skyscraper:'Skyscraper',
   xy_chain:'XY-Chain',killer_sum:'杀手笼求和',kropki:'黑白点',
   thermo:'温度计',renban:'连续数线',whisper:'低语线',
-  arrow:'箭头求和',xv:'XV 和',entropic:'熵线',
+  arrow:'箭头求和',xv:'XV 和',entropic:'熵线',reverse_thermo:'逆温度计',
   modular:'模三线',between:'夹心线',region_sum:'区域等和线',
   search_contradiction:'穷举反证'
 });
