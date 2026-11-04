@@ -17,7 +17,7 @@ from pathlib import Path
 from variant_logic import BOXES, VARIANTS, count_solutions, deduce, houses
 from line_generation import add_line_motifs
 from technique_catalog import (METHODS, GUIDE_URL, lesson_profile,
-                               minimum_tier, replay_trace)
+                               minimum_tier, replay_trace, technique_tier)
 
 FAMILY = "variant-workshop"
 SIZES = (4, 6, 9)
@@ -416,10 +416,18 @@ def quality(n, clues, constraints, solution, diagnostic=None,
     if focus_method:
         if not proof["techniques"].get(focus_method):
             return reject("focused technique not used: " + focus_method)
-        # A teaching-focus puzzle must *need* the demonstrated method
-        # under our implemented no-guess repertoire. Merely labelling
-        # a step in one trace would not be a meaningful lesson.
+        # A lesson should be finishable at the target technique's
+        # curriculum tier. A *harder* general chain can sometimes
+        # reproduce a named shorter pattern; do not use that as a reason
+        # to reject a good lower-tier lesson.
+        target_tier = technique_tier(focus_method)
+        if not deduce(n, clues, constraints, trace=False,
+                      max_tier=target_tier)["solved"]:
+            return reject("focused puzzle needs higher-tier techniques")
+        # Under this curriculum (the selected tier and simpler methods),
+        # the selected technique must actually be necessary.
         without = deduce(n, clues, constraints, trace=False,
+                         max_tier=target_tier,
                          disabled_methods=(focus_method,))
         if without["solved"]:
             return reject("focused technique is redundant: " + focus_method)
