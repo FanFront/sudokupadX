@@ -299,8 +299,11 @@ try{
   await page.locator('#creatorClose').click();
   console.log('On-device Rust/WASM creator, automatic IndexedDB save, marking, reload and deletion passed.');
 
+  // After personal deletion the app is already at Home, whereas earlier
+  // smoke suites finished on the game board. Both entry states are valid.
   // The bundled index is usable without reaching the online JSON provider.
-  await page.locator('#homeButton').click();
+  if(await page.locator('#gameScreen').isVisible())
+    await page.locator('#homeButton').click();
   await page.locator('#libraryButton').click();
   await page.locator('#onlineLibraryTab').click();
   await page.locator('#onlineIndexList .online-entry').first().waitFor({timeout:15000});
