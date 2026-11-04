@@ -320,7 +320,7 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
         '题目指定这两格的数字之和为 '+sum+'。');
       continue;
     }
-    if(type==='whisper'||type==='thermo'){
+    if(type==='whisper'||type==='thermo'||type==='reverse_thermo'){
       for(let j=1;j<cells.length;j++){
         if(type==='whisper')
           relation(cells[j-1],cells[j],'whisper',
