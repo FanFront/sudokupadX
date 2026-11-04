@@ -213,6 +213,41 @@ fn marks(v: &Value, field: &str, alias: &str, warnings: &mut Vec<String>) -> Vec
     }).collect()
 }
 
+/// Curated constraint sidecars are pinned to the *exact* original SCL
+/// package bytes. An arbitrary imported puzzle, even with the same id, must
+/// never silently inherit mathematical rules from an unrelated game.
+fn bundled_legacy_hint_constraints(input: &str, root: &Value,
+    rows: usize, cols: usize) -> Vec<Value> {
+    if !input.starts_with("scl") { return Vec::new(); }
+    let json = match stable_key(input).as_str() {
+        "fnv1a-5c6daa6106a9c478" =>
+            include_str!("../../../public/puzzles/hint-constraints/digits-of-despair.json"),
+        "fnv1a-67182433ced04d65" =>
+            include_str!("../../../public/puzzles/hint-constraints/lineage-of-logic.json"),
+        "fnv1a-b9af8139af00db7a" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-1.json"),
+        "fnv1a-20d4c9b9de5cbb80" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-2.json"),
+        _ => return Vec::new(),
+    };
+    let Ok(manifest) = serde_json::from_str::<Value>(json) else {
+        return Vec::new();
+    };
+    let fingerprint = stable_key(input);
+    if manifest.get("sourceFingerprint").and_then(Value::as_str)
+            != Some(fingerprint.as_str()) ||
+       manifest.get("sourcePuzzleId").and_then(Value::as_str)
+            != root.get("id").and_then(Value::as_str) ||
+       manifest.get("sourceDimensions") !=
+            Some(&serde_json::json!([rows,cols])) ||
+       manifest.get("schemaVersion").and_then(Value::as_u64) != Some(1) {
+        return Vec::new();
+    }
+    manifest.get("constraints").and_then(Value::as_array)
+        .map(|rules|rules.iter().take(4000).cloned().collect())
+        .unwrap_or_default()
+}
+
 /// Accept raw JSON, JSON5-compatible SudokuMaker compact literals, or
 /// SudokuPad's `scl` + LZ-String Base64. Never eval third-party strings.
 pub fn load(input: &str) -> Result<Puzzle, String> {
@@ -306,11 +341,12 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
                 && meta.get("variantTypes").and_then(Value::as_array)
                     .is_some_and(Vec::is_empty) {Some(Vec::new())} else {None}
         });
-    let hint_constraints=meta.get("hintConstraints")
+    let mut hint_constraints: Vec<Value> = meta.get("hintConstraints")
         .or_else(||root.get("hintConstraints"))
         .and_then(Value::as_array)
         .map(|rules|rules.iter().take(4000).cloned().collect())
         .unwrap_or_default();
+    hint_constraints.extend(bundled_legacy_hint_constraints(input, &root, rows, cols));
     Ok(Puzzle {
         key, title, author, rules, rows, cols, cells, hint_rules, hint_constraints,
         regions: marks(&root, "regions", "re", &mut warnings),
