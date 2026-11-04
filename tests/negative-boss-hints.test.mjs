@@ -54,6 +54,9 @@ test('anti-black Kropki eliminates a double from adjacent player notes',()=>{
 });
 test('gray cell forbids a difference of five or more in an adjacent cell',()=>{
   const {puzzle,progress}=prepare();
+  // Isolate the gray-cell implication from unrelated original givens,
+  // which can already exclude the same digits using ordinary Sudoku.
+  puzzle.cells=puzzle.cells.map(()=>({given:null}));
   progress.cells[0].value='3';
   progress.cells[9].center=['9','2'];
   const response=nextAdventureHint(puzzle,progress,4,9);
