@@ -173,7 +173,7 @@ test('renban and between lines require their geometric evidence and rule text',(
     for(const i of [a,b,c])progress.visible[i]=true;
     puzzle.cells[a].given=variant==='renban'?'1':'2';
     puzzle.cells[c].given=variant==='renban'?'3':'6';
-    progress.cells[b].center=['2','4'];
+    progress.cells[b].center=variant==='renban'?['2','4']:['1','4'];
     const hint=nextAdventureHint(puzzle,progress,4,b);
     assert.equal(hint.step?.method,variant,variant);
     if(variant==='renban')assert.ok(hint.step.removed.includes(4));
