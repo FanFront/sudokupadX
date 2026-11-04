@@ -63,7 +63,7 @@ export function typedConstraints(puzzle,progress){
       if(cells.length!==2||![5,10].includes(raw.sum))continue;
       rule.sum=raw.sum;
     }
-    if(['thermo','whisper','renban','between','arrow','entropic','modular','region_sum']
+    if(['thermo','reverse_thermo','whisper','renban','between','arrow','entropic','modular','region_sum']
       .includes(type)&&cells.length>20)continue;
     if(type==='region_sum'){
       if(!Array.isArray(raw.segments)||raw.segments.length<2)continue;
