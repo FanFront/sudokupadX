@@ -3,6 +3,7 @@ export const TECHNIQUES=Object.freeze({
   peer_elimination:'已知数排除',hidden_single:'隐性唯一数',
   naked_single:'显性唯一数',
   naked_subset:'显性数组',hidden_subset:'隐性数组',
+  constraint_locked_digit:'变体强制数字与区块排除',
   pencil_subset:'中心手记数组（条件提示）',
   locked_candidate:'区块排除',
   x_wing:'X-Wing',swordfish:'Swordfish',jellyfish:'Jellyfish',
@@ -29,6 +30,7 @@ const ruleText={
   peer_elimination:'同行、同列或同宫中已有的确定数字，不能再次出现在目标格。',
   hidden_single:'在这条行、列或宫中，剩余候选位置使目标数字只能落在目标格。',
   naked_subset:'这些来源格的候选数合起来恰好占满相同数量的格，其他同一区域的格不能再使用这些数。',
+  constraint_locked_digit:'变体求和的所有可行组合都包含指定数字；其可能位置被限制在同一行、列或宫内，因此可从其他格排除该数字。',
   hidden_subset:'这些数字在同一行、列或宫里只能出现在来源格中，因此这些格的其他候选数可删去。',
   locked_candidate:'某数字在一个行、列或宫中的位置都被限制在交集内，因此可从交集所在的另一单位其余位置排除。',
   x_wing:'两行或两列把某个数字限制在相同两列或两行，形成矩形，覆盖单位的其他位置可排除该数字。',
@@ -114,7 +116,8 @@ export function describeHint(response,size,cells=[]){
   return {
     title:(conditional?'待验证 · ':'')+
       (step.method==='pencil_subset'
-        ?'中心手记'+(step.subsetSize===3?'三数组':'数对')
+        ?'中心手记'+(step.subsetSize===2?'数对':
+          step.subsetSize===3?'三数组':step.subsetSize+' 数组')
         :TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
     description:(conditional?'【条件推理，不是已证明的排除】 ':'')+
       cellName(step.cell,size)+'：'+rationale+
