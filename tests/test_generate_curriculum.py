@@ -66,10 +66,12 @@ class ClassicCurriculumTests(unittest.TestCase):
         self.assertGreater(result["techniques"].get("xy_wing", 0), 0)
 
         masks = blank()
-        masks[10], masks[11], masks[19] = {1, 2, 5}, {1, 5}, {2, 5}
-        masks[20] = {3, 5, 7}
+        # Wing 2 sits outside the pivot's box so a simpler naked
+        # triple cannot make the same deduction first.
+        masks[10], masks[11], masks[28] = {1, 2, 5}, {1, 5}, {2, 5}
+        masks[19] = {3, 5, 7}
         result = deduce(9, {}, [], domains=masks)
-        self.assertNotIn(5, result["domains"][20])
+        self.assertNotIn(5, result["domains"][19])
         self.assertGreater(result["techniques"].get("xyz_wing", 0), 0)
 
     def test_skyscraper(self):
