@@ -938,6 +938,8 @@ fn render_puzzle(request:&CreateRequest,seed:u64,givens:&[u8],
     }
     if request.tier==5{
         description.push_str("技巧等级 5：客户端前四级逻辑技巧无法完成此题，唯一解由精确搜索确认。可能需要尝试、穷举或更高阶逻辑。");
+    }else if request.tier==1{
+        description.push_str("技巧等级 1：基础排除、隐性唯一数和变体局部逻辑即可完成，无需猜测。");
     }else{
         description.push_str(&format!("技巧等级 {}：已证明前一级技巧无法完成，当前技巧可以无猜测完成。",request.tier));
     }
@@ -949,7 +951,8 @@ fn render_puzzle(request:&CreateRequest,seed:u64,givens:&[u8],
     let given_count=givens.iter().filter(|&&d|d!=0).count();
     let methods=proof.methods.clone();
     let logic=json!({"minimumTier":request.tier,
-        "requiresGuessing":request.tier==5,
+        "requiresGuessing":if request.tier==5{Value::Null}else{json!(false)},
+        "mayNeedSearch":request.tier==5,
         "clientCurriculum":true,"searchCertified":true,
         "techniques":methods,"focusTechnique":request.focus});
     let puzzle=json!({
