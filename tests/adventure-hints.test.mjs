@@ -141,6 +141,12 @@ test('unlocked Super Sudokoid rule panel permits a proved Kropki elimination',()
   assert.equal(step?.method,'kropki');
   assert.ok(step.removed.includes(1));
   progress.visible[panel.cells[0]]=false;
+  // A visible generic "hints" tile may mention this later rule, but that
+  // must not unlock the specific SCAN DOTS technique ahead of time.
+  puzzle.sectors.push({top:0,left:44,width:1,height:1,title:'提示',
+    rules:'Future Kropki and whisper rules are described here.',
+    cells:[44]});
+  progress.visible[44]=true;
   assert.notEqual(nextAdventureHint(puzzle,progress,4,target).step?.method,'kropki');
 });
 test('visible German-whisper and thermometer rules give proven eliminations',()=>{
