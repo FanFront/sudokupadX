@@ -504,6 +504,7 @@ def quality(n, clues, constraints, solution, diagnostic=None, focus_method=None)
                                  "kropki_partition")
            and len(step["remaining"]) == 1]
     education = lesson_profile(n, proof)
+    education["focusTechnique"] = focus_method
     education["minimumTier"] = minimum_tier(n, clues, constraints, deduce)
     if education["minimumTier"] is None:
         return reject("curriculum cannot fully solve puzzle")
