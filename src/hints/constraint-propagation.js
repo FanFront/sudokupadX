@@ -204,7 +204,7 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
   }
   if(invalid)return null;
   const options=[];
-  const add=(method,target,removed,sources,reason,level=2,weight=0)=>{
+  const add=(method,target,removed,sources,reason,level=2,weight=0,groupKey=null)=>{
     if(!visible(progress,target)||values[target]||!removed.length)return;
     const before=baseline[target]||digits(domains[target]||9);
     const eliminated=unique(removed.filter(d=>before.includes(d))).sort((a,b)=>a-b);
@@ -218,7 +218,8 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
     options.push({score,step:{
       method,cell:target,removed:eliminated,remaining:remain,before,
       sources:unique(sources).filter(i=>i!==target&&visible(progress,i)),
-      reason,level,adventure:true,forceElimination:true
+      reason,level,adventure:true,forceElimination:true,
+      ...(groupKey?{lockedGroupKey:groupKey,lockedDigit:eliminated[0]}:{})
     }});
   };
   // General naked N-tuples made possible by the cross-constraint narrowing.
@@ -281,12 +282,26 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
           '，可以从该组其他格排除 '+d+'。';
         for(const target of house.cells){
           if(!visible(progress,target)||shaft.includes(target)||values[target])continue;
-          add('constraint_locked_digit',target,[d],rule.cells,reason,3,900);
+          add('constraint_locked_digit',target,[d],rule.cells,reason,3,
+            900,rule.type+':'+rule.cells.join(',')+':'+d);
         }
       }
     }
   }
   options.sort((a,b)=>b.score-a.score||
     a.step.cell-b.step.cell||a.step.method.localeCompare(b.step.method));
-  return options[0]?.step||null;
+  const chosen=options[0]?.step;
+  if(chosen?.method==='constraint_locked_digit'){
+    // A locked digit proves the same elimination in *every* other visible
+    // cell of the shared houses. Highlight all of them while retaining
+    // one precise target for conventional keyboard/board interactions.
+    chosen.affectedCells=unique(options.filter(o=>
+      o.step.lockedGroupKey===chosen.lockedGroupKey)
+      .map(o=>o.step.cell)).sort((a,b)=>a-b);
+  }
+  if(chosen){
+    delete chosen.lockedGroupKey;
+    delete chosen.lockedDigit;
+  }
+  return chosen||null;
 }
