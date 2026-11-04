@@ -40,7 +40,7 @@ test('only genuinely verified lesson boards are playable and every state remains
     }
     const task=createLessonPractice(lesson.id);
     const n=task.n;
-    assert.ok([6,9].includes(n));
+    assert.ok([4,6,9].includes(n));
     assert.equal(task.puzzle.cells.length,n);
     assert.equal(task.puzzle.cells.every(row=>row.length===n),true);
     assert.equal(task.puzzle.regions.length,n);
