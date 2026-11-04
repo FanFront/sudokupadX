@@ -298,7 +298,13 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
       const without=sumsPossible(lists,maxSum,d);
       if(circles.some(sum=>without.has(sum)))continue;
       const holders=shaft.filter(i=>bound[i].includes(d));
-      if(!holders.length||holders.some(i=>values[i]===d))continue;
+      const earliestHolders=shaft.filter(i=>
+        (earliestSupported?.[i]||bound[i]).includes(d));
+      // This technique is a *group* lock: at least two shaft cells must
+      // initially be possible homes for the digit. If there is only one,
+      // prefer a direct arrow placement or ordinary single instead.
+      if(earliestHolders.length<2||!holders.length||
+         holders.some(i=>values[i]===d))continue;
       const sharedHouses=houseList.filter(h=>
         holders.every(i=>h.cells.includes(i))&&h.cells.some(i=>
           !shaft.includes(i)&&!values[i]&&visible(progress,i)&&
