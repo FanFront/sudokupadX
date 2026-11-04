@@ -997,6 +997,8 @@ mod tests {
     #[test]
     fn caldera_chaos_boss_receives_all_its_original_typed_rules() {
         let original=include_str!("../../../public/puzzles/super-linked-hfyjv8jqr5.scl");
+        assert_eq!(stable_key(original),"fnv1a-cf8780e4c2d831cd",
+            "Boss package fingerprint must match the curated sidecar");
         let puzzle=load(original).unwrap();
         assert_eq!((puzzle.rows,puzzle.cols),(9,9));
         let count=|name:&str|puzzle.hint_constraints.iter()
