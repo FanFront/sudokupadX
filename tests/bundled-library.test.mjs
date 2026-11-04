@@ -1,12 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {filterBundledEntries, bundledEntrySubtitle,
-  GENERATED_9X9_GROUP} from '../src/bundled-library.js';
+  GENERATED_9X9_GROUP, SINGLE_RULE_GROUP} from '../src/bundled-library.js';
 
 const sample = [
   {id: 'adventure', title: '冒险地图', kind: 'main', group: 'adventure'},
   {id: 'boss', title: '隐藏首领', kind: 'boss', group: 'adventure'},
   {id: 'classic', title: '独立谜题', kind: 'standalone', group: 'workshop'},
+  ...['killer','kropki','thermo','renban','arrow','whisper'].map((name,i)=>({
+    id: SINGLE_RULE_GROUP+'-'+name, title: '单规则 '+name,
+    kind:'standalone',group:SINGLE_RULE_GROUP,tier:2,givens:15+i
+  })),
   ...Array.from({length:100},(_,i)=>({
     id: GENERATED_9X9_GROUP+'-'+String(i+1).padStart(3,'0'),
     title:'九宫逻辑工坊 · 第 '+String(i+1).padStart(3,'0')+' 题',
@@ -29,8 +33,8 @@ test('all 100 generated Sudoku entries are discoverable without spoilers',()=>{
 test('category filters preserve adventure and other bundled puzzles',()=>{
   assert.deepEqual(filterBundledEntries(sample,{category:'adventure'}).map(x=>x.id),['adventure']);
   assert.deepEqual(filterBundledEntries(sample,{category:'other'}).map(x=>x.id),['classic']);
-  assert.equal(filterBundledEntries(sample).length,102);
-  assert.equal(filterBundledEntries(sample,{showLinked:true}).length,103);
+  assert.equal(filterBundledEntries(sample).length,108);
+  assert.equal(filterBundledEntries(sample,{showLinked:true}).length,109);
 });
 
 test('generated 9x9 collection supports search by title, id, tier',()=>{
@@ -40,4 +44,12 @@ test('generated 9x9 collection supports search by title, id, tier',()=>{
     .map(x=>x.id), ['generated-9x9-100']);
   assert.ok(filterBundledEntries(sample,{category:'generated',query:'4'})
     .some(x=>x.tier===4));
+});
+
+test('sparse single-rule puzzles have their own category and clue counts',()=>{
+  const entries=filterBundledEntries(sample,{category:'single'});
+  assert.equal(entries.length,6);
+  assert.equal(entries[0].id,'single-rule-lab-killer');
+  assert.match(bundledEntrySubtitle(entries[0]),/15 个提示数/);
+  assert.deepEqual(filterBundledEntries(sample,{category:'single',query:'thermo'}).map(x=>x.id),['single-rule-lab-thermo']);
 });
