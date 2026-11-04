@@ -7,7 +7,8 @@ const TYPES=new Set([
   'palindrome','parity_line','zipline','prime_sum','anti_xv',
   'anti_king','anti_knight','lava','reverse_whisper',
   'shadow_lower','greater_neighbors','magic_square','crystal_cage',
-  'classic_sudoku','anti_knight_anchors'
+  'classic_sudoku','anti_knight_anchors','anti_kropki_black',
+  'anti_whisper_anchors'
 ]);
 const pos=(value,rows,cols)=>{
   if(Number.isInteger(value))return value>=0&&value<rows*cols?value:-1;
@@ -49,7 +50,8 @@ export function typedConstraints(puzzle,progress){
       ?[...raw.circle,...raw.shaft]:raw.cells;
     const cells=positions(items,rows,cols,
       ['anti_king','anti_knight','anti_xv','lava',
-        'classic_sudoku','anti_knight_anchors'].includes(type)?121:20);
+        'classic_sudoku','anti_knight_anchors','anti_kropki_black',
+        'anti_whisper_anchors'].includes(type)?121:20);
     // An unlocked constraint may span fog. Its already visible local parts
     // can be used independently; the solver must still reject hidden
     // witnesses and targets when applying each specific deduction.
@@ -63,7 +65,10 @@ export function typedConstraints(puzzle,progress){
       if(rows!==9||cols!==9||cells.length!==81||
          cells.some((cell,i)=>cell!==i))continue;
     }
-    if(type==='anti_knight_anchors'&&(rows!==9||cols!==9))continue;
+    if(['anti_knight_anchors','anti_kropki_black','anti_whisper_anchors']
+      .includes(type)&&(rows!==9||cols!==9))continue;
+    if(type==='anti_kropki_black'&&
+       (cells.length!==81||cells.some((v,i)=>v!==i)))continue;
     if(type==='killer'){
       const sum=raw.sum;
       if(!Number.isInteger(sum)||sum<1||sum>180||cells.length>9)continue;
