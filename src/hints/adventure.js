@@ -345,6 +345,47 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
     if(!values[a])add(method,a,ca.filter(v=>!keepA.includes(v)),keepA,[b],description,1,true);
     if(!values[b])add(method,b,cb.filter(v=>!keepB.includes(v)),keepB,[a],description,1,true);
   }
+  // Exact sum support via prefix/suffix dynamic programming. Unlike
+  // 9^N tuple enumeration this remains inexpensive for 9-cell diagonals,
+  // large cages and sandwich interiors. Relaxing all-different only makes
+  // the result conservative (never a false elimination).
+  function sumSupports(indices,goal,forceFirst=null){
+    if(indices.some(i=>!isVisible(progress,i)))return null;
+    const lists=indices.map((cell,k)=>{
+      const found=values[cell]?[values[cell]]:
+        candidates[cell]||whole(domains[cell]||9);
+      return k===0&&forceFirst!==null?found.filter(d=>d===forceFirst):found;
+    });
+    if(lists.some(list=>list.length===0))return null;
+    const n=lists.length,prefix=[new Set([0])],suffix=Array(n+1);
+    for(let k=0;k<n;k++){
+      const next=new Set();
+      for(const sum of prefix[k])for(const d of lists[k])
+        if(sum+d<=goal)next.add(sum+d);
+      prefix.push(next);
+    }
+    if(!prefix[n].has(goal))return null;
+    suffix[n]=new Set([0]);
+    for(let k=n-1;k>=0;k--){
+      const next=new Set();
+      for(const sum of suffix[k+1])for(const d of lists[k])
+        if(sum+d<=goal)next.add(sum+d);
+      suffix[k]=next;
+    }
+    return lists.map((list,k)=>new Set(list.filter(d=>
+      [...prefix[k]].some(left=>suffix[k+1].has(goal-left-d)))));
+  }
+  function proveSum(indices,goal,method,reason){
+    const supported=sumSupports(indices,goal);
+    if(!supported)return;
+    for(let j=0;j<indices.length;j++){
+      const cell=indices[j],before=candidates[cell];
+      if(!before)continue;
+      const keep=before.filter(d=>supported[j].has(d));
+      add(method,cell,before.filter(d=>!keep.includes(d)),keep,
+        indices.filter(i=>i!==cell),reason,2,true);
+    }
+  }
   // Type, cell sequence, numeric values and optional fog unlock conditions
   // are all taken directly from authored constraint records. In particular,
   // no line, dot or cage becomes a rule because of its display color.
