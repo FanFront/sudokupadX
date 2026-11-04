@@ -230,6 +230,8 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/super-sudokoid-2.json"),
         "fnv1a-bc4c15c770da3e75" =>
             include_str!("../../../public/puzzles/hint-constraints/super-linked-hfyjv8jqr5.json"),
+        "fnv1a-5dfb43927e90e7d6" =>
+            include_str!("../../../public/puzzles/hint-constraints/boss-6cn54q09sv.json"),
         _ => return Vec::new(),
     };
     let Ok(manifest) = serde_json::from_str::<Value>(json) else {
@@ -1011,6 +1013,18 @@ mod tests {
         session.apply_many(&[1,2], "corner", "5").unwrap();
         assert!(session.snapshot().cells[1].corner.is_empty());
         assert!(session.snapshot().cells[2].corner.is_empty());
+    }
+
+    #[test]
+    fn negative_constraint_boss_loads_both_authenticated_global_rules() {
+        let src=include_str!("../../../public/puzzles/boss-6cn54q09sv.scl");
+        let puzzle=load(src).unwrap();
+        let count=|kind:&str|puzzle.hint_constraints.iter()
+            .filter(|rule|rule.get("type").and_then(Value::as_str)==Some(kind)).count();
+        assert_eq!(count("classic_sudoku"),1);
+        assert_eq!(count("anti_kropki_black"),1);
+        assert_eq!(count("anti_whisper_anchors"),1);
+        assert_eq!(puzzle.hint_constraints.len(),3);
     }
 
     #[test]
