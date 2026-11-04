@@ -90,6 +90,9 @@ export function describeHint(response,size,cells=[]){
   const cellCount=cells?.length||size*size;
   const sourceCells=[...new Set((step.sources||[]).filter(i=>
     Number.isInteger(i)&&i>=0&&i<cellCount&&i!==step.cell))];
+  const affectedCells=[...new Set((step.affectedCells||[]).filter(i=>
+    Number.isInteger(i)&&i>=0&&i<cellCount))];
+  const also=affectedCells.filter(i=>i!==step.cell);
   const entropicGroups=(step.ruleSize||size)===6?'1–2、3–4、5–6':'1–3、4–6、7–9';
   const rationale=step.reason||(
     step.method==='entropic'
@@ -123,9 +126,13 @@ export function describeHint(response,size,cells=[]){
       cellName(step.cell,size)+'：'+rationale+
       ' 由此'+action+'。'+(sourceCells.length?
         ' 参考格：'+sourceCells.slice(0,12).map(i=>cellName(i,size)).join('、')+
-        (sourceCells.length>12?' 等':'')+'。':''),
+        (sourceCells.length>12?' 等':'')+'。':'')+
+      (also.length?' 同一证明还可以从 '+also.slice(0,18).map(i=>
+        cellName(i,size)).join('、')+
+        (also.length>18?' 等':'')+' 排除相同数字。':''),
     candidates:notesSummary,
-    target:step.cell,sources:sourceCells,removed:effectiveRemoved,
+    target:step.cell,sources:sourceCells,
+    affectedCells,removed:effectiveRemoved,
     placement:placement&&step.method!=='search_contradiction',
     assumptionBased:conditional,level
   };
