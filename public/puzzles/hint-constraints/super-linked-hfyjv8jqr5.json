@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "sourcePuzzleId": "sxsm_TheM_2ee2fb3dadf8220ff155765725e91223",
+  "sourceFingerprint": "fnv1a-cf8780e4c2d831cd",
+  "sourceDimensions": [
+    9,
+    9
+  ],
+  "audit": {
+    "basis": "Verified original author rules, original bulb/circle/alien artwork positions and all constraint values against published solution OFFLINE",
+    "accepted": 10,
+    "byType": {
+      "classic_sudoku": 1,
+      "thermo": 2,
+      "arrow": 6,
+      "anti_knight_anchors": 1
+    }
+  },
+  "constraints": [
+    {
+      "type": "classic_sudoku",
+      "cells": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ],
+      "sourceKind": "metadata.rules"
+    },
+    {
+      "type": "thermo",
+      "cells": [
+        36,
+        27,
+        18,
+        28,
+        37,
+        47,
+        56,
+        66
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 0
+    },
+    {
+      "type": "thermo",
+      "cells": [
+        44,
+        35,
+        25,
+        34,
+        42,
+        51,
+        59,
+        68
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 1
+    },
+    {
+      "type": "arrow",
+      "cells": [
+        67,
+        58,
+        49,
+        40
+      ],
+      "circle": [
+        67
+      ],
+      "shaft": [
+        58,
+        49,
+        40
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 0
+    },
+    {
+      "type": "arrow",
+      "cells": [
+        63,
+        73,
+        65
+      ],
+      "circle": [
+        63
+      ],
+      "shaft": [
+        73,
+        65
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 1
+    },
+    {
+      "type": "arrow",
+      "cells": [
+        71,
+        70,
+        61
+      ],
+      "circle": [
+        71
+      ],
+      "shaft": [
+        70,
+        61
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 2
+    },
+    {
+      "type": "arrow",
+      "cells": [
+        78,
+        77,
+        76
+      ],
+      "circle": [
+        78
+      ],
+      "shaft": [
+        77,
+        76
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 3
+    },
+    {
+      "type": "arrow",
+      "cells": [
+        9,
+        19,
+        10
+      ],
+      "circle": [
+        9
+      ],
+      "shaft": [
+        19,
+        10
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 4
+    },
+    {
+      "type": "arrow",
+      "cells": [
+        5,
+        6,
+        16
+      ],
+      "circle": [
+        5
+      ],
+      "shaft": [
+        6,
+        16
+      ],
+      "sourceKind": "arrows",
+      "sourceIndex": 5
+    },
+    {
+      "type": "anti_knight_anchors",
+      "cells": [
+        1,
+        31,
+        26,
+        52,
+        57,
+        75
+      ],
+      "sourceKind": "underlays",
+      "sourceIndices": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  ]
+}
