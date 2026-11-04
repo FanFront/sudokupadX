@@ -140,7 +140,7 @@ impl Solver {
         if self.disabled.as_deref()==Some(method)||level_of(method)>self.tier {
             return Ok(false);
         }
-        let before=self.masks[i],after=before&allowed;
+        let before=self.masks[i];let after=before&allowed;
         if after==0 {return Err("候选数字无解".into());}
         if before==after {return Ok(false);}
         self.masks[i]=after;
@@ -154,7 +154,7 @@ impl Solver {
     }
     fn binary(&mut self,a:usize,b:usize,kind:&str,
               relation:impl Fn(u8,u8)->bool)->Result<bool,String>{
-        let mut left=0,right=0;
+        let mut left=0;let mut right=0;
         for x in values(self.masks[a],self.n) {
             for y in values(self.masks[b],self.n) {
                 if relation(x,y) {left|=bit(x);right|=bit(y);}
@@ -670,8 +670,11 @@ fn make_solution(n:usize,rng:&mut Rng)->Vec<u8>{
         rng.shuffle(&mut inner);cols.extend(inner);
     }
     let mut digits:Vec<u8>=(1..=n as u8).collect();rng.shuffle(&mut digits);
-    rows.iter().flat_map(|&r|cols.iter()
-        .map(|&c|digits[(r*w + r/h + c)%n])).collect()
+    let mut grid=Vec::with_capacity(n*n);
+    for r in rows {
+        for &c in &cols {grid.push(digits[(r*w+r/h+c)%n]);}
+    }
+    grid
 }
 fn neighbors(n:usize,i:usize)->Vec<usize>{
     let mut out=Vec::new();let r=i/n;let c=i%n;
@@ -845,12 +848,8 @@ fn certify(n:usize,givens:&[u8],solution:&[u8],rules:&[Rule],
     Some(full)
 }
 fn point(n:usize,cell:usize)->Value{json!([cell/n,cell%n])}
-fn coordinates(n:usize,cells:&[usize])->Value{
-    Value::Array(cells.iter().map(|&i|json!([i/n as usize, i%n]))
-        .collect())
-}
 fn centers(n:usize,cells:&[usize])->Vec<Value>{
-    cells.iter().map(|&i|json!([i/n as f64+0.5,(i%n) as f64+0.5]))
+    cells.iter().map(|&i|json!([(i/n) as f64+0.5,(i%n) as f64+0.5]))
         .collect()
 }
 fn render(n:usize,rules:&[Rule])->(Vec<Value>,Vec<Value>,Vec<Value>,Vec<Value>,Vec<Value>){
