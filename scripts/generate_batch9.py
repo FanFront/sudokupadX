@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
 import hashlib
 import json
 from pathlib import Path
@@ -133,6 +134,69 @@ def build(seed=DEFAULT_SEED, count=DEFAULT_COUNT, max_attempts=180, progress=Non
     return games, report
 
 
+def _generate_partition(spec):
+    """A separately seeded partition, executed by a worker process."""
+    return build(*spec)
+
+
+def build_parallel(seed=DEFAULT_SEED, count=DEFAULT_COUNT,
+                   max_attempts=180, workers=4, progress=None):
+    """Build independent puzzles on several cores, retaining stable IDs.
+
+    Each partition has its own seeded RNG, so workers can run in any order
+    without altering the collection. The complete result still rejects
+    duplicate solutions and puzzle fingerprints.
+    """
+    if workers < 1:
+        raise ValueError("Worker count must be positive")
+    if count <= 1 or workers == 1:
+        return build(seed, count, max_attempts, progress)
+    chunks = min(workers, count)
+    sizes = [count // chunks + (1 if i < count % chunks else 0)
+             for i in range(chunks)]
+    specs = [(seed + i * 10007, size, max_attempts)
+             for i, size in enumerate(sizes)]
+    with ProcessPoolExecutor(max_workers=chunks) as pool:
+        partitions = list(pool.map(_generate_partition, specs))
+    games, records = [], []
+    failures = Counter()
+    for chunk_index, (part_games, part_report) in enumerate(partitions):
+        failures.update(part_report["failures"])
+        for game, record in zip(part_games, part_report["puzzles"]):
+            number = len(games) + 1
+            identifier = f"{GROUP}-{number:03d}"
+            related = [f"{GROUP}-{i:03d}" for i in
+                       (number-1, number+1) if 1 <= i <= count]
+            related.append("variant-workshop-9")
+            game["id"] = identifier
+            game["metadata"]["title"] = f"九宫逻辑工坊 · 第 {number:03d} 题"
+            game["metadata"]["generatorIndex"] = number
+            game["metadata"]["batchSeed"] = seed
+            game["metadata"]["relatedPuzzles"] = related
+            game["metadata"]["rules"] = (
+                game["metadata"]["rules"].split("\n关联谜题：")[0]
+                + "\n关联谜题："
+                + "、".join("sudokupadx:puzzle/" + name for name in related)
+            )
+            record["id"] = identifier
+            record["partitionSeed"] = specs[chunk_index][0]
+            games.append(game)
+            records.append(record)
+        if progress:
+            progress(f"Validated {len(games)}/{count} unique 9x9 logic puzzles")
+    report = {
+        "generator": "scripts/generate_batch9.py",
+        "seed": seed, "count": count, "type": GROUP,
+        "workers": chunks,
+        "difficultyTiers": dict(sorted(Counter(
+            str(r["minimumTier"]) for r in records).items())),
+        "failures": dict(sorted(failures.items())),
+        "puzzles": records
+    }
+    validate(games, report)
+    return games, report
+
+
 def validate(games, report):
     if len(games) != report["count"] or len(report["puzzles"]) != len(games):
         raise AssertionError("Incorrect generated puzzle count")
@@ -185,9 +249,12 @@ def main():
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--count", type=int, default=DEFAULT_COUNT)
     parser.add_argument("--attempts", type=int, default=180)
+    parser.add_argument("--workers", type=int, default=4,
+                        help="Parallel workers for the full 100-puzzle build")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
-    games, report = build(args.seed, args.count, args.attempts, print)
+    games, report = build_parallel(args.seed, args.count, args.attempts,
+                                   args.workers, print)
     validate(games, report)
     export(args.output, games, report)
     print(f"Exported {len(games)} unique 9x9 puzzles to {args.output}")
