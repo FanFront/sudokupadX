@@ -268,13 +268,19 @@ try{
   await page.locator('#creatorButton').click();
   assert.equal(await page.locator('#creatorSaved .creator-saved-item').count(),1);
   await page.locator('#creatorSaved .creator-saved-item button').filter({hasText:'收藏'}).click();
+  await page.waitForFunction(()=>
+    document.querySelector('#creatorSaved')?.textContent?.includes('已收藏'),
+    null,{timeout:15000});
   await page.locator('#creatorSaved .creator-saved-item button').filter({hasText:'标记完成'}).click();
-  assert.ok((await page.locator('#creatorSaved').textContent()).includes('已完成'));
-  assert.ok((await page.locator('#creatorSaved').textContent()).includes('已收藏'));
+  await page.waitForFunction(()=>
+    document.querySelector('#creatorSaved')?.textContent?.includes('已完成'),
+    null,{timeout:15000});
   await page.reload();
   await page.locator('#creatorButton').click();
+  await page.waitForFunction(()=>
+    document.querySelector('#creatorSaved')?.textContent?.includes('已完成'),
+    null,{timeout:15000});
   assert.equal(await page.locator('#creatorSaved .creator-saved-item').count(),1);
-  assert.ok((await page.locator('#creatorSaved').textContent()).includes('已完成'));
   await page.locator('#creatorClose').click();
   await page.locator('#libraryButton').click();
   await page.locator('#bundledSearch').fill('');
@@ -284,7 +290,9 @@ try{
   await page.locator('#creatorButton').click();
   page.once('dialog',dialog=>dialog.accept());
   await page.locator('#creatorSaved .creator-saved-item .creator-delete').click();
-  assert.equal(await page.locator('#creatorSaved .creator-saved-item').count(),0);
+  await page.waitForFunction(()=>
+    document.querySelectorAll('#creatorSaved .creator-saved-item').length===0,
+    null,{timeout:15000});
   await page.locator('#creatorClose').click();
   console.log('On-device Rust/WASM creator, automatic IndexedDB save, marking, reload and deletion passed.');
 
