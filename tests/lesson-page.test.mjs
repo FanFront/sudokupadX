@@ -64,6 +64,61 @@ test('all 25 lessons initialize an editable engine puzzle with a real deduction 
     .map(l=>createLessonPractice(l.id).n),[6,6]);
 });
 
+test('lesson 2 is a unique, consistent Sudoku with a proved hidden single',()=>{
+  const practice=createLessonPractice(2);
+  const board=practice.puzzle.cells.map(row=>row.map(cell=>Number(cell.value||0)));
+  const candidates=(r,c)=>{
+    if(board[r][c])return [];
+    const used=new Set();
+    for(let i=0;i<9;i++){
+      if(board[r][i])used.add(board[r][i]);
+      if(board[i][c])used.add(board[i][c]);
+    }
+    for(let rr=Math.floor(r/3)*3;rr<Math.floor(r/3)*3+3;rr++)
+      for(let cc=Math.floor(c/3)*3;cc<Math.floor(c/3)*3+3;cc++)
+        if(board[rr][cc])used.add(board[rr][cc]);
+    return Array.from({length:9},(_,i)=>i+1).filter(d=>!used.has(d));
+  };
+
+  const spotsForSix=[];
+  for(let c=0;c<9;c++){
+    if(board[4][c])continue;
+    const legal=candidates(4,c);
+    // Center notes on the showcased row must match real Sudoku domains.
+    assert.deepEqual(practice.seed[4*9+c].center,legal.map(String),
+      'R5C'+(c+1)+' must not contain fabricated candidate notes');
+    if(legal.includes(6))spotsForSix.push(c+1);
+  }
+  assert.deepEqual(spotsForSix,[7]);
+  assert.deepEqual(candidates(4,6),[3,6,9]);
+  assert.equal(practice.goal.index,42);
+  assert.deepEqual(practice.goal,{index:42,digit:'6',kind:'fill'});
+
+  // Verify that the underlying puzzle is a real Sudoku, not an
+  // unsatisfiable exercise with a predetermined target answer.
+  let solutions=0;
+  function search(){
+    if(solutions>=2)return;
+    let best=null;
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+      if(board[r][c])continue;
+      const options=candidates(r,c);
+      if(!options.length)return;
+      if(!best||options.length<best.options.length)
+        best={r,c,options};
+    }
+    if(!best){solutions++;return;}
+    for(const digit of best.options){
+      board[best.r][best.c]=digit;
+      search();
+      board[best.r][best.c]=0;
+      if(solutions>=2)return;
+    }
+  }
+  search();
+  assert.equal(solutions,1,'lesson board must have exactly one completion');
+});
+
 test('visual variant examples use real SudokuPad cages, lines and clue overlays',()=>{
   const killer=createLessonPractice(14);
   assert.equal(killer.puzzle.cages.length,4);
