@@ -48,7 +48,10 @@ export function typedConstraints(puzzle,progress){
       ?[...raw.circle,...raw.shaft]:raw.cells;
     const cells=positions(items,rows,cols,
       ['anti_king','anti_knight','anti_xv','lava'].includes(type)?121:20);
-    if(!cells||cells.length<2||cells.some(i=>progress.visible[i]!==true))continue;
+    // An unlocked constraint may span fog. Its already visible local parts
+    // can be used independently; the solver must still reject hidden
+    // witnesses and targets when applying each specific deduction.
+    if(!cells||cells.length<2||cells.every(i=>progress.visible[i]!==true))continue;
     const unlock=raw.unlockCells===undefined?null:positions(raw.unlockCells,rows,cols);
     if(raw.unlockCells!==undefined&&!unlock)continue;
     if(unlock&&!unlock.some(i=>progress.visible[i]===true))continue;
