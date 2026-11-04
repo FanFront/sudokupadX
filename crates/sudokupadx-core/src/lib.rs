@@ -349,6 +349,25 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         .map(|rules|rules.iter().take(4000).cloned().collect())
         .unwrap_or_default();
     hint_constraints.extend(bundled_legacy_hint_constraints(input, &root, rows, cols));
+    // These are *semantic booleans* authored by SudokuMaker, not
+    // interpretations of the artwork. Imported standalone nine-by-nine
+    // puzzles can safely inherit global chess constraints when declared.
+    if rows==9 && cols==9 {
+        for (field,kind) in [
+            ("antiknight","anti_knight"),
+            ("antiking","anti_king"),
+        ] {
+            if meta.get(field).and_then(Value::as_bool)==Some(true)
+                && !hint_constraints.iter().any(|r|
+                    r.get("type").and_then(Value::as_str)==Some(kind)) {
+                hint_constraints.push(serde_json::json!({
+                    "type":kind,
+                    "cells":(0..81).collect::<Vec<usize>>(),
+                    "sourceKind":format!("metadata.{field}")
+                }));
+            }
+        }
+    }
     Ok(Puzzle {
         key, title, author, rules, rows, cols, cells, hint_rules, hint_constraints,
         regions: marks(&root, "regions", "re", &mut warnings),
