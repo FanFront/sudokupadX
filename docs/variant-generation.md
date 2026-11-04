@@ -284,12 +284,14 @@ clues), requires a real variant dependency and a complete replayable proof,
 and records SHA-256 fingerprints in a validation summary.
 
 ```sh
-python3 scripts/generate_batch9.py --seed 20261104 --count 100
+python3 scripts/generate_batch9.py --seed 20261104 --count 100 --workers 4
 # Quick local smoke sample:
 python3 scripts/generate_batch9.py --seed 20261104 --count 1 --output /tmp/sudokupadx-batch9
 ```
 
-For reproducibility the default seed and puzzle count are fixed. `npm run dev`
+For reproducibility the default seed and puzzle count are fixed. The four worker
+partitions have fixed derived seeds and deterministic ordering; 1-puzzle
+smoke tests run sequentially. `npm run dev`
 and `npm run build` export 100 offline files to `public/puzzles/batch9/`
 which Vite copies to the final web/Android assets. Since those files are
 reproducible build outputs, they are ignored by Git and regenerated rather
@@ -302,3 +304,6 @@ the solver, and progress uses the stable `generated-9x9-001` through
 `generated-9x9-100` puzzle IDs. Puzzle metadata includes the generator
 seed, authored constraint types and a technique profile; the compact
 `validation.json` lists uniqueness/proof fingerprints and difficulty tiers.
+
+The PWA service worker also precaches every file listed in the generated catalog,
+so these puzzles remain playable offline after a successful shell install.
