@@ -246,6 +246,12 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/super-linked-f4c9vuptqj.json"),
         "fnv1a-ada1b832691b6c20" =>
             include_str!("../../../public/puzzles/hint-constraints/super-linked-gnp7aga2sx.json"),
+        "fnv1a-9648ba2e2d389e0a" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-swxudk82v1.json"),
+        "fnv1a-d782461116066084" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-kt6bb0wm0k.json"),
+        "fnv1a-ed89cd7b91270cb2" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-lzer9x4edb.json"),
         _ => return Vec::new(),
     };
     let Ok(manifest) = serde_json::from_str::<Value>(json) else {
@@ -1037,6 +1043,9 @@ mod tests {
             (include_str!("../../../public/puzzles/super-linked-70qpd43i45.scl"),18),
             (include_str!("../../../public/puzzles/super-linked-f4c9vuptqj.scl"),34),
             (include_str!("../../../public/puzzles/super-linked-gnp7aga2sx.scl"),11),
+            (include_str!("../../../public/puzzles/super-linked-swxudk82v1.scl"),14),
+            (include_str!("../../../public/puzzles/super-linked-kt6bb0wm0k.scl"),10),
+            (include_str!("../../../public/puzzles/super-linked-lzer9x4edb.scl"),9),
         ] {
             let puzzle=load(scl).unwrap();
             assert_eq!(puzzle.hint_constraints.len(),expected,
