@@ -17,6 +17,7 @@ import {filterBundledEntries, bundledEntrySubtitle} from './bundled-library.js';
 import {setupLessonPage} from './lesson-page.js';
 import {setupCreatorUI} from './creator/ui.js';
 import {computeBrowserHint,computeAdventureHint} from './hints/runner.js';
+import {usesTypedHintEngine} from './hints/mode.js';
 import {describeHint} from './hints/format.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
@@ -111,14 +112,14 @@ async function requestHint(){
   requestDraw();
   const tier=Number($('hintTier').value);
   const cells=progress.cells.map(cloneCell);
-  const adventure=puzzle.rows>16||puzzle.cols>16;
-  $('hintSupportNote').textContent=adventure
-    ?'绿色：依据格；橙色：目标格。变体规则必须由题目明确声明类型；彩色线条、装饰圆点不会自动当成约束。迷雾下的数字和未解锁规则不参与推理；巨型棋盘不进行等级 5 穷举。'
+  const typed=usesTypedHintEngine(puzzle);
+  $('hintSupportNote').textContent=typed
+    ?'绿色：依据格；橙色：目标格。旧版冒险与首领题采用题目明确声明的约束类型，不会根据颜色猜测规则；迷雾下的数字不参与推理。此路径不使用等级 5 穷举。'
     :'绿色：依据格；橙色：目标格。中心/角标手记只用来跳过重复排除，不作为已证明的事实。提示不改盘面。';
   try{
-    // Huge overlapping maps cannot be modelled as one ordinary 9×9 grid.
-    // Both Android and the browser use a worker for visible, local proofs.
-    const task=adventure
+    // Legacy standalone 9×9 linked/Boss SCLs lack local-generator solverRules.
+    // Route them to independently verified typed constraints on both platforms.
+    const task=typed
       ?computeAdventureHint(puzzle,{cells,visible:[...progress.visible]},tier,selected)
       :native?{promise:call('hint_step',{tier})}
         :computeBrowserHint(activeRawInput,cells,tier);
@@ -128,7 +129,7 @@ async function requestHint(){
     hintTask=null;
     const data=describeHint(result,puzzle.cols,cells);
     currentHint=result.status==='step'?data:null;
-    if(adventure&&currentHint)focusHintTarget(data.target);
+    if(typed&&currentHint)focusHintTarget(data.target);
     $('hintTitle').textContent=data.title;
     $('hintDescription').textContent=data.description;
     $('hintCandidates').textContent=data.candidates;
@@ -638,14 +639,14 @@ function updateControls() {
   $('undoButton').disabled=undoStack.length===0;
   $('redoButton').disabled=redoStack.length===0;
   $('hintButton').disabled=Boolean(lessonPractice);
-  const giant=puzzle.rows>16||puzzle.cols>16;
+  const typed=usesTypedHintEngine(puzzle);
   const small=puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9;
   for(const option of $('hintTier').options){
-    option.disabled=(giant&&Number(option.value)===5)||
+    option.disabled=(typed&&Number(option.value)===5)||
       (small&&Number(option.value)>2);
   }
   if(small&&Number($('hintTier').value)>2)$('hintTier').value='2';
-  if(giant&&Number($('hintTier').value)===5)$('hintTier').value='4';
+  if(typed&&Number($('hintTier').value)===5)$('hintTier').value='4';
   $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
   updateSelection();
 }
