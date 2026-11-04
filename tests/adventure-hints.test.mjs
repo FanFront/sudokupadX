@@ -11,7 +11,8 @@ const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 function world(rows=40,cols=50,sectors=[],extra={}){
   const n=rows*cols;
   return {puzzle:{rows,cols,cells:Array.from({length:n},()=>({given:null})),
-    sectors,regions:[],cages:[],overlays:[],underlays:[],arrows:[],lines:[],...extra},
+    sectors,regions:[],cages:[],overlays:[],underlays:[],arrows:[],lines:[],
+    hintRules:[],hintConstraints:[],...extra},
     progress:{cells:Array.from({length:n},()=>({value:null,center:[],corner:[]})),
       visible:Array(n).fill(false)}};
 }
@@ -79,7 +80,8 @@ test('Super Sudokoid 2 unique-only regions support safe notes without invented 1
 test('visible numeric killer sum can prove a digit while decorative sums are ignored',()=>{
   const {puzzle,progress}=world(40,50,[sector(21,0,6,
     '数独每行每列和 2×3 宫含 1 至 6，杀手笼（Killer）数字相加必须等于角标。')],{
-    cages:[{cells:[[21,0],[21,1]],value:3,unique:true}]
+    cages:[{cells:[[21,0],[21,1]],value:3,unique:true}],
+    hintConstraints:[{type:'killer',cells:[[21,0],[21,1]],sum:3,unique:true}]
   });
   const known=idx(21,0),target=idx(21,1);
   progress.visible[known]=progress.visible[target]=true;
@@ -110,10 +112,11 @@ test('duplicate visible numbers do not become a false proof',()=>{
   progress.cells[c].center=['2','4'];
   assert.equal(nextAdventureHint(puzzle,progress,4,c).status,'conflict');
 });
-test('kropki is considered only after the matching region rule is revealed',()=>{
+test('kropki hints use a declared dot type rather than overlay background',()=>{
   const {puzzle,progress}=world(40,50,[sector(21,0,6,
     '数独，每行、每列每宫 1–6；白点 Kropki 相差 1。')],{
-    overlays:[{center:[21.5,1],backgroundColor:'#ffffff',rounded:true,width:.25,height:.25}]
+    overlays:[{center:[21.5,1],backgroundColor:'#ffffff',rounded:true,width:.25,height:.25}],
+    hintConstraints:[{type:'kropki',cells:[[21,0],[21,1]],dot:'white'}]
   });
   const target=idx(21,0),source=idx(21,1);
   progress.visible[target]=progress.visible[source]=true;
@@ -131,7 +134,9 @@ test('unlocked Super Sudokoid rule panel permits a proved Kropki elimination',()
     cells:[13*45+37,13*45+38,13*45+39,13*45+40]};
   const {puzzle,progress}=world(36,45,[panel],{
     cages:[{unique:true,hidden:true,cells:[[25,3],[25,4]]}],
-    overlays:[{center:[25.5,4],backgroundColor:'#ffffff',width:.25,height:.25}]
+    overlays:[{center:[25.5,4],backgroundColor:'#ffffff',width:.25,height:.25}],
+    hintConstraints:[{type:'kropki',cells:[[25,3],[25,4]],dot:'white',
+      unlockCells:[panel.cells[0]]}]
   });
   progress.visible[target]=progress.visible[source]=true;
   progress.cells[source].value='3';
@@ -157,7 +162,8 @@ test('visible German-whisper and thermometer rules give proven eliminations',()=
       color:variant==='whisper'?'#62b873':'#b89acb',thickness:14};
     const {puzzle,progress}=world(40,50,[base],{
       lines:[line],underlays:variant==='thermo'?
-        [{center:[21.5,.5],rounded:true,width:.75,height:.75}]:[]
+        [{center:[21.5,.5],rounded:true,width:.75,height:.75}]:[],
+      hintConstraints:[{type:variant,cells:[[21,0],[21,1]]}]
     });
     const known=idx(21,0),target=idx(21,1);
     progress.visible[known]=progress.visible[target]=true;
@@ -170,12 +176,13 @@ test('visible German-whisper and thermometer rules give proven eliminations',()=
     assert.ok(hint.step.removed.includes(variant==='whisper'?4:1),variant);
   }
 });
-test('renban and between lines require their geometric evidence and rule text',()=>{
+test('renban and between lines use typed rules regardless of display color',()=>{
   for(const variant of ['renban','between']){
     const {puzzle,progress}=world(40,50,[sector(21,0,6,
       '标准数独，每行列和 2×3 宫填 1 至 6；'+variant+' 已解锁。')],{
       lines:[{wayPoints:[[21.5,.5],[21.5,1.5],[21.5,2.5]],
-        color:variant==='renban'?'#85a8d8':'#a783d6'}]
+        color:variant==='renban'?'#a783d6':'#85a8d8'}],
+      hintConstraints:[{type:variant,cells:[[21,0],[21,1],[21,2]]}]
     });
     const a=idx(21,0),b=idx(21,1),c=idx(21,2);
     for(const i of [a,b,c])progress.visible[i]=true;
@@ -195,7 +202,8 @@ test('entropic and modular lines use three-way class logic rather than guesses',
   for(const item of variants){
     const {puzzle,progress}=world(40,50,[sector(21,0,9,
       '9×9 标准数独：每行每列3×3宫填 1 至 9；'+item.kind+' 规则已解锁。')],{
-      lines:[{wayPoints:[[21.5,.5],[21.5,1.5],[21.5,2.5]],color:item.color}]
+      lines:[{wayPoints:[[21.5,.5],[21.5,1.5],[21.5,2.5]],color:'#888888'}],
+      hintConstraints:[{type:item.kind,cells:[[21,0],[21,1],[21,2]]}]
     });
     const cells=[idx(21,0),idx(21,1),idx(21,2)];
     cells.forEach(i=>progress.visible[i]=true);
@@ -211,7 +219,8 @@ test('arrow arithmetic never interprets the full solution as a clue',()=>{
   const {puzzle,progress}=world(40,50,[sector(21,0,6,
     '标准数独；1 至 6；arrow 箭头圈内数字等于箭杆总和。')],{
     arrows:[{wayPoints:[[21.5,.5],[21.5,1.5],[21.5,2.5]]}],
-    underlays:[{center:[21.5,.5],rounded:true,width:.7,height:.7}]
+    underlays:[{center:[21.5,.5],rounded:true,width:.7,height:.7}],
+    hintConstraints:[{type:'arrow',cells:[[21,0],[21,1],[21,2]]}]
   });
   const [circle,target,last]=[idx(21,0),idx(21,1),idx(21,2)];
   for(const i of [circle,target,last])progress.visible[i]=true;
@@ -221,6 +230,18 @@ test('arrow arithmetic never interprets the full solution as a clue',()=>{
   const hint=nextAdventureHint(puzzle,progress,4,target);
   assert.equal(hint.step?.method,'arrow');
   assert.ok(hint.step.removed.includes(4));
+});
+test('a decorative colored line cannot silently become a logical rule',()=>{
+  const {puzzle,progress}=world(40,50,[sector(21,0,6,
+    '数独、连续线、夹心线、低语线、熵线、箭头等规则的介绍。')],{
+    lines:[{wayPoints:[[21.5,.5],[21.5,1.5]],color:'#00ff00'}],
+    overlays:[{center:[21.5,1],backgroundColor:'#ffffff',rounded:true}],
+    cages:[{cells:[[21,0],[21,1]],value:3,unique:true}]
+  });
+  const a=idx(21,0),b=idx(21,1);
+  progress.visible[a]=progress.visible[b]=true;
+  progress.cells[a].center=['2','7'];
+  assert.notEqual(nextAdventureHint(puzzle,progress,4,a).status,'step');
 });
 test('actual bundled adventure packages load as independent, fog-safe map puzzles',()=>{
   for(const name of [
