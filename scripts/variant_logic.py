@@ -18,6 +18,8 @@ from variant_lines import (LINE_VARIANTS, validate_line, propagate_line,
 from classic_techniques import (hidden_subsets, basic_fish, xy_wings,
                                 xyz_wings, skyscrapers)
 from technique_catalog import technique_tier
+from chain_techniques import (two_string_kites, w_wings, simple_colors,
+                              remote_pairs, xy_chains, x_chains)
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
@@ -172,6 +174,20 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
         changed |= xy_wings(n, masks, reduce)
         changed |= xyz_wings(n, masks, reduce)
         changed |= skyscrapers(n, masks, reduce)
+
+        # Short connected patterns from Sudopedia. Run these only at a
+        # genuine stall after elementary deductions: their proof steps
+        # should be the player's breakthrough, not redundant decorations.
+        # Tier-3 kite/W-Wing/remote-pair steps are inspected first; tier-4
+        # coloring and chains need more careful candidate-link reading.
+        if not changed and (max_tier is None or max_tier >= 3):
+            changed |= two_string_kites(n, masks, units, reduce)
+            changed |= w_wings(n, masks, units, reduce)
+            changed |= remote_pairs(n, masks, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= simple_colors(n, masks, units, reduce)
+            changed |= xy_chains(n, masks, reduce)
+            changed |= x_chains(n, masks, units, reduce)
 
         # A candidate confined to a row/box intersection cannot occur
         # elsewhere in the other house (pointing / claiming).
