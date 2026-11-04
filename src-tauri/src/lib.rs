@@ -88,6 +88,18 @@ fn restore_progress(
     with_session(&state, |session| session.restore(cells))
 }
 
+// Copy only the live values and original rule constraints while holding
+// the mutex. Expensive level-5 verification never blocks the game's session.
+#[tauri::command]
+async fn hint_step(
+    tier: u8, state: State<'_, AppState>
+) -> Result<sudokupadx_core::creator::HintResponse, String> {
+    let (n, grid, rules)=with_session(&state, |session|session.hint_input())?;
+    tauri::async_runtime::spawn_blocking(move ||
+        sudokupadx_core::creator::next_hint(n,&grid,&rules,tier)
+    ).await.map_err(|error|format!("提示计算中断：{error}"))?
+}
+
 // The CPU-heavy creator runs on a worker thread, not Android's UI thread.
 #[tauri::command]
 async fn generate_puzzle(
