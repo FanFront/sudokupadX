@@ -112,6 +112,9 @@ async function requestHint(){
   const tier=Number($('hintTier').value);
   const cells=progress.cells.map(cloneCell);
   const adventure=puzzle.rows>16||puzzle.cols>16;
+  $('hintSupportNote').textContent=adventure
+    ?'绿色：依据格；橙色：目标格。只依据已解锁且可见的规则推理，绝不读取迷雾下的提示数字。未知或未建模的变体不参与排除；巨型棋盘不进行等级 5 穷举。'
+    :'绿色：依据格；橙色：目标格。中心/角标手记只用来跳过重复排除，不作为已证明的事实。提示不改盘面。';
   try{
     // Huge overlapping maps cannot be modelled as one ordinary 9×9 grid.
     // Both Android and the browser use a worker for visible, local proofs.
