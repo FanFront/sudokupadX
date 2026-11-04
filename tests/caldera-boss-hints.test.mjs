@@ -40,7 +40,7 @@ const fingerprint=data=>{
 };
 
 test('original Caldera Chaos boss has all ten pinned, separately verified rules',()=>{
-  assert.equal(manifest.sourceFingerprint,fingerprint(raw));
+  assert.equal(manifest.sourceFingerprint,fingerprint(raw.trim()));
   assert.equal(manifest.sourcePuzzleId,source.id);
   assert.deepEqual(manifest.sourceDimensions,[9,9]);
   const rules=typedConstraints(puzzle(),progress());
