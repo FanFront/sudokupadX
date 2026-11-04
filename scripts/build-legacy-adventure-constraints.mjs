@@ -192,11 +192,19 @@ function extract(name){
   };
   return result;
 }
-const selected=process.argv.slice(2);
+const args=process.argv.slice(2);
+const check=args.includes('--check');
+const selected=args.filter(arg=>arg!=='--check');
 for(const name of selected.length?selected:Object.keys(configurations)){
   if(!configurations[name])throw Error('Unknown bundled adventure: '+name);
   const output=extract(name);
-  fs.mkdirSync(path.dirname(destination(name).pathname),{recursive:true});
-  fs.writeFileSync(destination(name),JSON.stringify(output,null,2)+'\n');
-  console.log(name,output.sourceFingerprint,output.audit);
+  const expected=JSON.stringify(output,null,2)+'\n';
+  if(check){
+    const actual=fs.readFileSync(destination(name),'utf8');
+    if(actual!==expected)throw Error(name+': committed typed manifest is stale; regenerate and review');
+  }else{
+    fs.mkdirSync(path.dirname(destination(name).pathname),{recursive:true});
+    fs.writeFileSync(destination(name),expected);
+  }
+  console.log(check?'Verified':'Generated',name,output.sourceFingerprint,output.audit);
 }
