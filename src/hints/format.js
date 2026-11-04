@@ -57,13 +57,17 @@ export function describeHint(response,size){
   const remaining=(step.remaining||[]).join('、');
   const sourceCells=[...new Set((step.sources||[]).filter(i=>
     Number.isInteger(i)&&i>=0&&i<size*size&&i!==step.cell))];
+  const entropicGroups=size===6?'1–2、3–4、5–6':'1–3、4–6、7–9';
+  const rationale=step.method==='entropic'
+    ?'每组三连格必须分别取自三个数字区间（'+entropicGroups+'），不符合分组的候选数可排除。'
+    :ruleText[step.method]||'遵循已知数独规则。';
   const placement=step.remaining?.length===1&&step.before?.length>1;
   const action=step.method==='search_contradiction'
     ?'经反证，可排除 '+removed
     :placement?'确定填入 '+remaining:'排除候选数 '+removed;
   return {
     title:(TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
-    description:cellName(step.cell,size)+'：'+(ruleText[step.method]||'遵循已知数独规则。')+
+    description:cellName(step.cell,size)+'：'+rationale+
       ' 由此'+action+'。'+(sourceCells.length?
         ' 参考格：'+sourceCells.slice(0,12).map(i=>cellName(i,size)).join('、')+
         (sourceCells.length>12?' 等':'')+'。':''),
