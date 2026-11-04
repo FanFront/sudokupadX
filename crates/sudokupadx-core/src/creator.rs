@@ -587,8 +587,20 @@ pub struct HintResponse {
 
 pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
     -> Result<HintResponse,String> {
+    next_hint_with_notes(n,grid,rules,tier,&[])
+}
+
+/// Use center (or fallback corner) notes to avoid re-teaching eliminations
+/// already recorded on the board. Notes are NEVER passed into the deduction
+/// solver as assumed facts: incomplete notes must not create false proofs.
+pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
+    notes:&[Vec<u8>]) -> Result<HintResponse,String> {
     if !matches!(n,4|6|9) || !(1..=5).contains(&tier) || grid.len()!=n*n {
         return Err("仅支持 4×4 / 6×6 / 9×9 与提示等级 1–5".into());
+    }
+    if (!notes.is_empty() && notes.len()!=n*n) ||
+       notes.iter().flatten().any(|&digit|digit==0||digit>n as u8) {
+        return Err("玩家候选标记格式错误".into());
     }
     if rules.len()>100 || rules.iter().any(|rule|
         !matches!(rule.kind.as_str(),
@@ -601,21 +613,45 @@ pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
     if proof.solved && proof.trace.is_empty() {
         return Ok(HintResponse{status:"complete".into(),step:None,level:0});
     }
-    // Prefer an actual placement when its prerequisites are only elementary
-    // eliminations. Otherwise show the earliest new reduction, so no higher
-    // tier deduction is presented without its prerequisite reasoning.
-    let preferred=proof.trace.iter().position(|step|
-        step.remaining.len()==1 && step.before.len()>1);
-    let preferred=preferred.filter(|&idx|
-        proof.trace[..idx].iter().all(|step|
-            level_of(&step.method)==1));
-    let chosen=preferred.and_then(|idx|proof.trace.get(idx))
-        .or_else(||proof.trace.first());
+    // The solver trace begins from all possible digits, while the player may
+    // have already crossed out many of them in center notes. The earliest raw
+    // elimination is often redundant (e.g. remove 1 from annotated {2,7}).
+    // Prefer a proven removal that still appears in a player's notes.
+    let noted_progress=proof.trace.iter().find(|step|
+        notes.get(step.cell).is_some_and(|candidates|
+            !candidates.is_empty() && step.removed.iter().any(|digit|
+                candidates.contains(digit))));
+    // When no written candidate can be removed, a genuine determined digit
+    // is more useful than another elementary reduction of a blank cell.
+    let placement=proof.trace.iter().enumerate().find(|(idx,step)|
+        step.remaining.len()==1 && step.before.len()>1 &&
+        proof.trace[..*idx].iter().all(|prior|
+            level_of(&prior.method)==1)).map(|(_,step)|step);
+    // When there are annotations, do not fall back to eliminating candidates
+    // that were *already absent* from the marked cell. Instead pick another
+    // cell for which the player has not recorded candidates.
+    let unannotated=proof.trace.iter().find(|step|
+        notes.get(step.cell).is_none_or(|candidates|candidates.is_empty()));
+    let chosen=noted_progress.or(placement)
+        .or_else(||proof.trace.iter().find(|step|
+            step.remaining.len()==1 && step.before.len()>1))
+        .or(unannotated)
+        .or_else(||if notes.is_empty(){proof.trace.first()}else{None});
     if let Some(step)=chosen {
         return Ok(HintResponse{
             status:"step".into(),level:level_of(&step.method),step:Some(step.clone())
         });
     }
+    // The solver may still have deductions, but all candidate removals are
+    // already absent from every annotated cell. Never recycle a stale hint or
+    // pretend these notes are validated premises for deeper techniques.
+    if !proof.trace.is_empty() && (tier<5 || proof.solved){
+        return Ok(HintResponse{
+            status:"notes_current".into(),step:None,level:tier.min(4)});
+    }
+    // If tier 4 genuinely stalled and all of its already-recorded
+    // eliminations are redundant, an explicitly requested tier 5 may still
+    // try a bounded search proof for one of the remaining handwritten digits.
     if tier<5 {
         return Ok(HintResponse{status:"stalled".into(),step:None,level:tier});
     }
@@ -632,10 +668,18 @@ pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
     }
     let mut choices:Vec<usize>=(0..n*n)
         .filter(|&i|count(proof.masks[i])>1).collect();
-    choices.sort_by_key(|&i|count(proof.masks[i]));
+    choices.sort_by_key(|&i|(
+        notes.get(i).is_none_or(|marked|marked.is_empty()),
+        count(proof.masks[i])
+    ));
     for &cell in choices.iter().take(4) {
-        for candidate in values(proof.masks[cell],n) {
-            if candidate==answer[cell]{continue;}
+        let candidates=values(proof.masks[cell],n);
+        let prioritized=notes.get(cell).filter(|marked|!marked.is_empty());
+        for candidate in candidates {
+            if candidate==answer[cell] ||
+                prioritized.is_some_and(|marked|!marked.contains(&candidate)) {
+                continue;
+            }
             let mut hypothetical=grid.to_vec();
             hypothetical[cell]=candidate;
             if let Ok((0,_))=exact_count(n,&hypothetical,rules,20_000) {
@@ -1172,9 +1216,17 @@ mod tests{
         assert_eq!(loaded.cols,4);
         assert_eq!(loaded.key,"personal-demo-1");
         assert!(loaded.hint_rules.as_ref().is_some_and(Vec::is_empty));
-        let session=crate::Session::new(loaded);
-        let (n,grid,rules)=session.hint_input().unwrap();
-        let response=next_hint(n,&grid,&rules,1).unwrap();
+        let mut session=crate::Session::new(loaded);
+        let (n,initial_grid,_,_)=session.hint_input().unwrap();
+        let first_blank=initial_grid.iter().position(|&digit|digit==0).unwrap();
+        session.apply(first_blank,"center","2").unwrap();
+        let (n,grid,rules,notes)=session.hint_input().unwrap();
+        assert_eq!(notes.len(),n*n);
+        assert_eq!(notes[first_blank],vec![2],
+            "The live hint snapshot must carry the player's center notes");
+        assert_eq!(grid[first_blank],0,
+            "Writing center notes must never become a solver given");
+        let response=next_hint_with_notes(n,&grid,&rules,1,&notes).unwrap();
         assert_eq!(response.status,"step");
         let step=response.step.unwrap();
         assert_eq!(level_of(&step.method),1);
@@ -1184,6 +1236,53 @@ mod tests{
         assert!(!step.removed.contains(&digit),
             "Hint must not eliminate the known correct digit");
         assert!(step.sources.iter().all(|&cell|cell<n*n));
+    }
+    #[test]
+    fn hint_never_repeats_elimination_missing_from_center_notes(){
+        let n=9;
+        let mut grid=vec![0;n*n];
+        grid[1]=1;
+        let mut notes=vec![Vec::new();n*n];
+        notes[0]=vec![2,7];
+        let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
+        let step=hint.step.unwrap();
+        assert_ne!(step.cell,0,
+            "Removing 1 from R1C1 is redundant once its notes say 2 and 7");
+        assert_eq!(hint.level,1);
+    }
+    #[test]
+    fn hint_prioritizes_provable_elimination_of_a_marked_candidate(){
+        let n=9;
+        let mut grid=vec![0;n*n];
+        grid[1]=2;
+        let mut notes=vec![Vec::new();n*n];
+        notes[0]=vec![2,7];
+        let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
+        let step=hint.step.unwrap();
+        assert_eq!(step.cell,0);
+        assert_eq!(step.removed,vec![2]);
+        assert!(step.remaining.contains(&7));
+    }
+    #[test]
+    fn incomplete_handwritten_candidates_cannot_force_a_false_single(){
+        let n=9;
+        let grid=vec![0;n*n];
+        let mut notes=vec![Vec::new();n*n];
+        notes[0]=vec![7]; // A one-digit note is not a confirmed placement.
+        let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
+        assert_eq!(hint.status,"stalled");
+        assert!(hint.step.is_none());
+    }
+    #[test]
+    fn correctly_annotated_eliminations_are_not_replayed(){
+        let n=4;
+        let mut grid=vec![0;n*n];
+        grid[1]=1;
+        let mut notes=vec![vec![2,3,4];n*n];
+        notes[1].clear();
+        let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
+        assert_eq!(hint.status,"notes_current");
+        assert!(hint.step.is_none());
     }
     #[test]
     fn level_five_is_a_real_unique_hard_classic_not_a_mocked_label(){

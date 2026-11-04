@@ -472,7 +472,7 @@ impl Session {
         }
     }
     /// Capture a read-only, immutable snapshot for an off-thread hint solve.
-    pub fn hint_input(&self) -> Result<(usize,Vec<u8>,Vec<creator::Rule>),String> {
+    pub fn hint_input(&self) -> Result<(usize,Vec<u8>,Vec<creator::Rule>,Vec<Vec<u8>>),String> {
         let n=self.puzzle.rows;
         if self.puzzle.cols!=n || !matches!(n,4|6|9) {
             return Err("提示只适用于标准 4×4、6×6、9×9 棋盘".into());
@@ -493,7 +493,21 @@ impl Session {
                     .ok_or_else(||"当前棋盘含有非数字内容，无法使用数独提示".to_owned()),
             }
         }).collect::<Result<Vec<_>,_>>()?;
-        Ok((n,grid,rules))
+        // A nonempty center note set (or corner notes when center notes are
+        // absent) records candidates the player has already considered. It is
+        // only used to find useful hints, never to prove a deduction: pencil
+        // marks can be incomplete or mistaken.
+        let notes=self.cells.iter().enumerate().map(|(i,played)|{
+            if grid[i]!=0{return Vec::new();}
+            let marks=if played.center.is_empty(){&played.corner}else{&played.center};
+            let mut digits=marks.iter().filter_map(|mark|
+                mark.parse::<u8>().ok().filter(|&digit|digit>=1&&digit<=n as u8)
+            ).collect::<Vec<_>>();
+            digits.sort_unstable();
+            digits.dedup();
+            digits
+        }).collect::<Vec<_>>();
+        Ok((n,grid,rules,notes))
     }
     pub fn snapshot(&self) -> Snapshot {
         Snapshot {
