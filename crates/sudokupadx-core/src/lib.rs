@@ -29,6 +29,10 @@ pub struct Puzzle {
     /// Exact constraint definitions bundled by the local Rust creator.
     #[serde(default, skip_serializing_if="Option::is_none")]
     pub hint_rules: Option<Vec<creator::Rule>>,
+    /// Explicitly typed adventure constraints (metadata.hintConstraints).
+    /// Untyped strokes, colors and author prose are never inferred as rules.
+    #[serde(default, skip_serializing_if="Vec::is_empty")]
+    pub hint_constraints: Vec<Value>,
     pub regions: Vec<Value>,
     pub lines: Vec<Value>,
     pub underlays: Vec<Value>,
@@ -302,8 +306,13 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
                 && meta.get("variantTypes").and_then(Value::as_array)
                     .is_some_and(Vec::is_empty) {Some(Vec::new())} else {None}
         });
+    let hint_constraints=meta.get("hintConstraints")
+        .or_else(||root.get("hintConstraints"))
+        .and_then(Value::as_array)
+        .map(|rules|rules.iter().take(4000).cloned().collect())
+        .unwrap_or_default();
     Ok(Puzzle {
-        key, title, author, rules, rows, cols, cells, hint_rules,
+        key, title, author, rules, rows, cols, cells, hint_rules, hint_constraints,
         regions: marks(&root, "regions", "re", &mut warnings),
         lines: marks(&root, "lines", "l", &mut warnings),
         underlays: marks(&root, "underlays", "u", &mut warnings),
