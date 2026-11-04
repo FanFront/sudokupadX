@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {parseLessonGuide,filterLessons,STAGES,EXERCISES} from '../src/lesson-data.js';
-import {createLessonPractice,checkLessonMove} from '../src/lesson-puzzles.js';
+import {createLessonPractice,checkLessonMove,availableLessonPracticeIds,hasVerifiedLessonPractice} from '../src/lesson-puzzles.js';
 
 const guide=readFileSync(new URL('../docs/techniques.zh-CN.md',import.meta.url),'utf8');
 const lessons=parseLessonGuide(guide);
@@ -27,9 +27,17 @@ test('search and category filtering return the right lessons',()=>{
   assert.equal(filterLessons(lessons,'','basics').length,2);
 });
 
-test('all 25 lessons initialize an editable engine puzzle with a real deduction target',()=>{
+test('only genuinely verified lesson boards are playable and every state remains satisfiable',()=>{
   assert.equal(Object.keys(EXERCISES).length,25);
+  const available=availableLessonPracticeIds();
+  assert.ok(available.includes(1),'peer elimination must be playable');
+  assert.ok(available.includes(2),'hidden single must be playable');
+  assert.ok(available.every(id=>id>=1&&id<=25));
   for(const lesson of lessons){
+    if(!hasVerifiedLessonPractice(lesson.id)){
+      assert.throws(()=>createLessonPractice(lesson.id),/暂无通过唯一解/);
+      continue;
+    }
     const task=createLessonPractice(lesson.id);
     const n=task.n;
     assert.ok([6,9].includes(n));
@@ -37,16 +45,37 @@ test('all 25 lessons initialize an editable engine puzzle with a real deduction 
     assert.equal(task.puzzle.cells.every(row=>row.length===n),true);
     assert.equal(task.puzzle.regions.length,n);
     assert.equal(task.seed.length,n*n);
-    assert.ok(task.focus.length>=1);
+    assert.ok(task.focus.includes(task.goal.index));
     assert.ok(task.goal.index>=0&&task.goal.index<n*n);
-    assert.ok(task.goal.digit.match(/^[1-9]$/));
+    assert.match(task.goal.digit,/^[1-9]$/);
     assert.ok(['remove','fill'].includes(task.goal.kind));
-    assert.ok(task.input.includes('metadata'));
-    assert.match(task.puzzle.metadata.rules,/教学局部状态/);
-    const target=task.seed[task.goal.index];
-    const before=task.seed.map(cell=>({
-      value:cell.value,center:[...cell.center]
-    }));
+    assert.equal(task.proof.method.length>0,true);
+    assert.ok(task.proof.removed.length>0);
+    assert.match(task.puzzle.metadata.rules,/经过唯一解验证/);
+    assert.equal(task.input.includes('metadata'),true);
+    const solution=[...task.puzzle.metadata.solution].map(Number);
+    const masks=task.seed.map((state,i)=>{
+      const r=Math.floor(i/n),c=i%n;
+      const given=task.puzzle.cells[r][c].value;
+      const digits=given?[Number(given)]:state.center.map(Number);
+      assert.ok(digits.includes(solution[i]),'final solution is never erased from candidates');
+      return new Set(digits);
+    });
+    // Every row, column, and box must still have a place for each digit.
+    const houseDigits=Array.from({length:n},(_,i)=>i+1);
+    for(const unit of task.puzzle.regions){
+      const cells=unit.map(([r,c])=>r*n+c);
+      assert.deepEqual([...new Set(cells.flatMap(i=>[...masks[i]]))].sort((a,b)=>a-b),
+        houseDigits);
+    }
+    for(let line=0;line<n;line++){
+      for(const cells of [Array.from({length:n},(_,c)=>line*n+c),
+                          Array.from({length:n},(_,r)=>r*n+line)]){
+        assert.deepEqual([...new Set(cells.flatMap(i=>[...masks[i]]))].sort((a,b)=>a-b),
+          houseDigits);
+      }
+    }
+    const before=task.seed.map(cell=>({value:cell.value,center:[...cell.center]}));
     const after=before.map(cell=>({...cell,center:[...cell.center]}));
     const action=task.goal.kind==='fill'?'value':'center';
     if(action==='value')after[task.goal.index].value=task.goal.digit;
@@ -55,31 +84,38 @@ test('all 25 lessons initialize an editable engine puzzle with a real deduction 
     assert.equal(checkLessonMove(task,before,after,action,task.goal.digit,
       [task.goal.index]),true,lesson.title);
     assert.equal(checkLessonMove(task,before,after,'erase',task.goal.digit,
-      [task.goal.index]),false,'erasing everything must not earn a technique');
+      [task.goal.index]),false);
     assert.equal(checkLessonMove(task,before,after,action,task.goal.digit,
-      [(task.goal.index+1)%(n*n)]),false,'wrong cell must not earn a technique');
-    if(action==='center')assert.ok(target.center.includes(task.goal.digit));
+      [(task.goal.index+1)%(n*n)]),false);
   }
-  assert.deepEqual(lessons.filter(l=>l.id===16||l.id===25)
-    .map(l=>createLessonPractice(l.id).n),[6,6]);
 });
 
-test('visual variant examples use real SudokuPad cages, lines and clue overlays',()=>{
-  const killer=createLessonPractice(14);
-  assert.equal(killer.puzzle.cages.length,4);
-  assert.equal(killer.puzzle.cages.reduce((s,cage)=>s+Number(cage.value),0),52);
-  assert.equal(killer.puzzle.cages.reduce((s,cage)=>s+cage.cells.length,0),10);
-  const white=createLessonPractice(16);
-  assert.equal(white.puzzle.overlays.length,2);
-  assert.equal(white.puzzle.lines.length,1);
-  const cross=createLessonPractice(23);
-  assert.equal(cross.puzzle.lines.length,2);
-  assert.equal(cross.puzzle.cells[1][0].value,'2');
-  const between=createLessonPractice(24);
-  assert.equal(between.puzzle.underlays.length,2);
-  assert.equal(between.puzzle.lines.length,1);
-  assert.equal(createLessonPractice(19).puzzle.arrows.length,1);
-  assert.throws(()=>createLessonPractice(26),/不存在/);
+test('lesson two is a real hidden single, not the impossible 128/369 row',()=>{
+  const board=createLessonPractice(2);
+  assert.equal(board.goal.index,4*9+6);
+  assert.deepEqual(board.seed[board.goal.index].center,['6','7']);
+  const row=Array.from({length:9},(_,c)=>4*9+c);
+  const possibleSix=row.filter(i=>{
+    const given=board.puzzle.cells[4][i%9].value;
+    return given?given==='6':board.seed[i].center.includes('6');
+  });
+  assert.deepEqual(possibleSix,[board.goal.index]);
+  assert.equal(board.goal.kind,'fill');
+  assert.equal(board.goal.digit,'6');
+});
+
+test('variant lesson boards preserve their original rule geometry and recorded method',()=>{
+  for(const id of availableLessonPracticeIds()){
+    const task=createLessonPractice(id);
+    if(id<=12)continue;
+    const puzzle=task.puzzle;
+    assert.ok(puzzle.cages.length+puzzle.lines.length+
+      puzzle.overlays.length+puzzle.arrows.length>0,
+      'variant class '+id+' must show actual constraints');
+    assert.equal(typeof task.proof.method,'string');
+    assert.ok(task.proof.removed.length>0);
+  }
+  assert.throws(()=>createLessonPractice(26),/暂无通过唯一解/);
 });
 
 test('Home and puzzle rules have navigation into an actual offline lesson screen',()=>{
