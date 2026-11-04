@@ -712,3 +712,21 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 @media(max-width:390px){
   #creatorDialog .creator-settings{grid-template-columns:1fr}
 }
+
+
+/* Solver hints: keep the board usable while displaying the proof. */
+.hint-panel{display:flex;flex-direction:column;gap:9px;padding:12px;background:#192f43;border:1px solid #527b91;border-radius:12px;box-shadow:0 9px 22px #0004;min-width:0}
+.hint-panel[hidden]{display:none!important}
+.hint-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hint-heading strong{font-size:13px;color:#d9f7e8}
+.hint-heading button{min-height:30px;width:34px;font-size:13px}
+.hint-tier-label{display:flex;justify-content:space-between;align-items:center;gap:9px;color:#b2ccdb;font-size:11px}
+.hint-tier-label select{min-width:0;max-width:67%;background:#0f2537;color:#e2efff;border:1px solid #50758b;border-radius:8px;padding:7px;font-size:12px}
+#hintDescription{margin:0;font-size:12px;line-height:1.6;color:#ecf5fa;white-space:pre-wrap;max-height:120px;overflow:auto}
+#hintCandidates{font-size:11px;color:#ffd59b;line-height:1.5}
+.hint-footnote{color:#9eb5c5;font-size:10px;line-height:1.45}
+@media(max-width:850px){
+  .controls{position:relative}
+  .hint-panel{position:absolute;bottom:calc(100% + 5px);left:0;right:0;z-index:5;max-height:min(38dvh,290px);overflow-y:auto;padding:10px;box-shadow:0 -5px 22px #0008}
+  #hintDescription{max-height:none}
+}

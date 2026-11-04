@@ -180,6 +180,7 @@ def export_entry(kind,tier,seed,data):
             "msgcorrect":"成功！本题已通过高阶、无需猜测的逻辑求解。",
             "variantFamily":FAMILY,
             "variantTypes":[kind],
+            "solverRules":workshop.hint_solver_rules(data["rules"]),
             "generatorSeed":seed,
             "generatorAttempt":data["attempt"],
             "logicProfile":{

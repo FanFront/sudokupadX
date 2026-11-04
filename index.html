@@ -156,7 +156,26 @@
           <button id="undoButton" type="button" aria-label="撤销">↶</button>
           <button id="redoButton" type="button" aria-label="重做">↷</button>
           <button id="checkButton" type="button" aria-label="检查">✓</button>
+          <button id="hintButton" type="button" aria-label="获取下一步逻辑提示" title="下一步提示">💡</button>
         </div>
+        <section id="hintPanel" class="hint-panel" aria-label="数独解题提示" aria-live="polite" hidden>
+          <div class="hint-heading">
+            <strong id="hintTitle">逻辑提示</strong>
+            <button id="hintClose" type="button" aria-label="关闭提示并清除高亮">✕</button>
+          </div>
+          <label class="hint-tier-label" for="hintTier">最高技巧等级
+            <select id="hintTier">
+              <option value="1">1 · 基础排除与变体</option>
+              <option value="2">2 · 数组与锁定候选</option>
+              <option value="3">3 · 鱼与翼</option>
+              <option value="4" selected>4 · 高级链与翼</option>
+              <option value="5">5 · 允许穷举反证</option>
+            </select>
+          </label>
+          <p id="hintDescription">根据当前填写的大数字查找下一步。</p>
+          <small id="hintCandidates"></small>
+          <small class="hint-footnote">绿色：依据格；橙色：目标格。提示不会修改盘面。等级 5 可能需要穷举，不代表人类逻辑技巧。</small>
+        </section>
         <div class="detail-panel">
           <div class="detail-heading"><span id="sectorHeading">谜题规则</span><button id="moreRules" type="button">展开</button></div>
           <p id="rulesPreview">导入 SudokuPad 谜题后查看规则。</p>

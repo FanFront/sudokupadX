@@ -67,6 +67,34 @@ def make_solution(n, rng):
             for r in range(n) for c in range(n)]
 
 
+# Preserve machine-readable original variant rules for the Rust hint engine.
+# A puzzle only advertises hints if *every* printed constraint is supported.
+def hint_solver_rules(constraints):
+    supported = {"killer", "kropki", "thermo", "renban", "whisper",
+                 "arrow", "xv", "entropic", "modular", "between", "region_sum"}
+    enumerated = {"killer", "renban", "arrow", "between", "region_sum"}
+    output = []
+    for rule in constraints:
+        kind = rule.get("type")
+        cells = rule.get("cells")
+        if (kind not in supported or not isinstance(cells, (list, tuple))
+                or len(cells) < 2 or any(not isinstance(i, int) or i < 0 for i in cells)
+                or (kind in enumerated and len(cells) > 5)):
+            return None
+        encoded = {"type": kind, "cells": list(cells)}
+        if kind in ("killer", "xv"):
+            if not isinstance(rule.get("sum"), int):
+                return None
+            encoded["sum"] = rule["sum"]
+        if kind == "kropki":
+            dot = rule.get("kind", rule.get("dot"))
+            if dot not in ("white", "black"):
+                return None
+            encoded["dot"] = dot
+        output.append(encoded)
+    return output
+
+
 def neighbors(n, i):
     r, c = divmod(i, n)
     for dr, dc in ((-1, 0), (0, -1), (0, 1), (1, 0)):
@@ -663,6 +691,7 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
             "msgcorrect": "Solved without guessing! Explore the next variant chapter.",
             "variantFamily": FAMILY,
             "variantTypes": sorted({c["type"] for c in constraints}),
+            "solverRules": hint_solver_rules(constraints),
             "relatedPuzzles": other,
             "generatorSeed": seed,
             "logicProfile": {

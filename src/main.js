@@ -16,6 +16,8 @@ import {setupOnlineLibrary} from './online-ui.js';
 import {filterBundledEntries, bundledEntrySubtitle} from './bundled-library.js';
 import {setupLessonPage} from './lesson-page.js';
 import {setupCreatorUI} from './creator/ui.js';
+import {computeBrowserHint} from './hints/runner.js';
+import {describeHint} from './hints/format.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
 import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
@@ -38,6 +40,9 @@ let selected = -1;
 let selectedCells = [];
 let highlightedNumber = null;
 let lastBoardTap = null;
+let currentHint = null;
+let hintTask = null;
+let hintSerial = 0;
 let mode = 'value';
 let penLines = [];
 let penMarks = [];
@@ -76,6 +81,48 @@ function cloneCell(v) {
   return {value:v.value ?? null,corner:[...(v.corner || [])],center:[...(v.center || [])],color:v.color ?? null};
 }
 function clearCell() { return {value:null,corner:[],center:[],color:null}; }
+function clearHint(){
+  hintSerial++;
+  if(hintTask){hintTask.cancel?.();hintTask=null;}
+  currentHint=null;
+  $('hintPanel').hidden=true;
+  requestDraw();
+}
+async function requestHint(){
+  if(!puzzle||!progress||pending||lessonPractice)return;
+  const serial=++hintSerial;
+  if(hintTask){hintTask.cancel?.();hintTask=null;}
+  currentHint=null;
+  $('hintPanel').hidden=false;
+  $('hintTitle').textContent='正在计算逻辑步骤…';
+  $('hintDescription').textContent='使用当前盘面中的大数字与题面规则重新计算候选数，不信任玩家手记。';
+  $('hintCandidates').textContent='';
+  requestDraw();
+  const tier=Number($('hintTier').value);
+  try{
+    const task=native
+      ?{promise:call('hint_step',{tier})}
+      :computeBrowserHint(activeRawInput,progress.cells.map(cloneCell),tier);
+    hintTask=task;
+    const result=await task.promise;
+    if(serial!==hintSerial)return;
+    hintTask=null;
+    const data=describeHint(result,puzzle.rows);
+    currentHint=result.status==='step'?data:null;
+    $('hintTitle').textContent=data.title;
+    $('hintDescription').textContent=data.description;
+    $('hintCandidates').textContent=data.candidates;
+    requestDraw();
+  }catch(error){
+    if(serial!==hintSerial)return;
+    hintTask=null;
+    $('hintTitle').textContent='无法安全提示';
+    $('hintDescription').textContent=String(error?.message||error);
+    $('hintCandidates').textContent='';
+    requestDraw();
+  }
+}
+
 function refreshConflicts() {
   // Tutorial candidates deliberately include the one to eliminate.
   // Treat them as a staged logical state rather than flashing red hints.
@@ -441,6 +488,7 @@ function updateInfo() {
   }
 }
 async function openResult(result) {
+  clearHint();
   puzzle=result.puzzle;
   progress=result.progress;
   undoStack=[];redoStack=[];penLines=[];penMarks=[];
@@ -569,6 +617,11 @@ function updateControls() {
   }
   $('undoButton').disabled=undoStack.length===0;
   $('redoButton').disabled=redoStack.length===0;
+  $('hintButton').disabled=Boolean(lessonPractice);
+  for(const option of $('hintTier').options){
+    option.disabled=puzzle.rows!==9 && Number(option.value)>2;
+  }
+  if(puzzle.rows!==9 && Number($('hintTier').value)>2)$('hintTier').value='2';
   $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
   updateSelection();
 }
@@ -685,6 +738,12 @@ function draw() {
       ctx.fillStyle='#ffca7366';
       ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
     }
+    if(currentHint?.sources.includes(idx)){
+      ctx.fillStyle='#4bcc9c55';ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+    }
+    if(currentHint?.target===idx){
+      ctx.fillStyle='#ffad5b88';ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+    }
     if(selectedCells.includes(idx)){ctx.fillStyle='#a0d5eb6d';ctx.fillRect(x,y,CELL,CELL);}
     // Highlight matching visible givens/entries beneath authored constraints.
     if(highlightedNumber!==null && isVisible(progress,idx) &&
@@ -749,6 +808,26 @@ function draw() {
     const idx=r*puzzle.cols+c;
     drawCellInk(idx,c*CELL,r*CELL,!isVisible(progress,idx));
   }
+  if(currentHint && currentHint.target>=0){
+    ctx.save();
+    for(const source of currentHint.sources){
+      const x=(source%puzzle.cols)*CELL,y=Math.floor(source/puzzle.cols)*CELL;
+      ctx.strokeStyle='#169a74';ctx.lineWidth=2.5;
+      ctx.strokeRect(x+2,y+2,CELL-4,CELL-4);
+    }
+    const index=currentHint.target;
+    const x=(index%puzzle.cols)*CELL,y=Math.floor(index/puzzle.cols)*CELL;
+    ctx.strokeStyle='#ea8433';ctx.lineWidth=3.5;
+    ctx.strokeRect(x+2,y+2,CELL-4,CELL-4);
+    const mark=currentHint.placement?'✓':
+      '−'+currentHint.removed.join(',');
+    ctx.font='bold 10px sans-serif';
+    ctx.textAlign='right';ctx.textBaseline='bottom';
+    const chipWidth=Math.min(CELL-6,ctx.measureText(mark).width+6);
+    ctx.fillStyle='#fff6eb';ctx.fillRect(x+CELL-chipWidth-3,y+CELL-16,chipWidth,14);
+    ctx.fillStyle='#c3422c';ctx.fillText(mark,x+CELL-5,y+CELL-4,CELL-8);
+    ctx.restore();
+  }
   for(const index of selectedCells){
     const x=(index%puzzle.cols)*CELL,y=Math.floor(index/puzzle.cols)*CELL;
     // Highlight covered cells without exposing their contents.
@@ -775,6 +854,7 @@ function showCompletionIfNew(){
   lastCompletion=solved;
 }
 function applyChange(change) {
+  clearHint();
   const changed=Array.isArray(change.changes)?change.changes:[{index:change.index,cell:change.cell}];
   for(const entry of changed)progress.cells[entry.index]=entry.cell;
   progress.canUndo=change.canUndo;progress.canRedo=change.canRedo;
@@ -830,6 +910,7 @@ async function edit(action,symbol='') {
 }
 async function history(direction) {
   clearNumberHighlight();
+  clearHint();
   if(pending||!puzzle)return;
   const from=direction==='undo'?undoStack:redoStack;
   const to=direction==='undo'?redoStack:undoStack;
@@ -1060,6 +1141,7 @@ function snapshotForLesson(){
   };
 }
 function practiceBanner(active){
+  clearHint();
   $('lessonPracticeBar').hidden=!active;
   $('checkButton').disabled=Boolean(active);
   $('backButton').hidden=Boolean(active)||$('backButton').hidden;
@@ -1257,6 +1339,9 @@ $('eraseButton').addEventListener('click',()=>{
 });
 $('undoButton').addEventListener('click',()=>history('undo'));
 $('redoButton').addEventListener('click',()=>history('redo'));
+$('hintButton').addEventListener('click',requestHint);
+$('hintClose').addEventListener('click',clearHint);
+$('hintTier').addEventListener('change',()=>{if(!$('hintPanel').hidden)requestHint();});
 $('checkButton').addEventListener('click',async()=>{
   if(pending||!puzzle||!progress)return;
   pending=true;
@@ -1428,6 +1513,7 @@ $('importCheckpoint').addEventListener('click',async()=>{
     // cells and given-cell edits without mutating the current session.
     save();
     progress=await call('restore_progress',{cells});
+    clearHint();
     markBossCleared(puzzle,progress,localStorage);
     applyBossReveals(puzzle,progress,localStorage);
     penLines=cp.penLines;
@@ -1450,6 +1536,9 @@ document.addEventListener('keydown',event=>{
   if(active?.matches('input,textarea')||$('importDialog').open||$('rulesDialog').open||
       $('libraryDialog').open||$('completionDialog').open||$('checkDialog').open)return;
   clearNumberHighlight();
+  if(event.key==='Escape'&&!$('hintPanel').hidden){
+    event.preventDefault();clearHint();return;
+  }
   if(event.key==='Escape'&&navigationStack.length){
     event.preventDefault();goBack().catch(notify);return;
   }

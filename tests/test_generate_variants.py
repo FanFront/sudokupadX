@@ -84,6 +84,25 @@ class VariantGeneratorTests(unittest.TestCase):
             self.assertTrue(all("remaining" in step
                                 for step in detail["trace"]))
 
+    def test_creator_hint_rule_export_is_conservative(self):
+        rules = [
+            {"type":"killer","cells":[0,1],"sum":3,"motif":"innie"},
+            {"type":"kropki","kind":"white","cells":[1,2]},
+            {"type":"thermo","cells":[0,4,8]}
+        ]
+        self.assertEqual(variants.hint_solver_rules(rules),[
+            {"type":"killer","cells":[0,1],"sum":3},
+            {"type":"kropki","cells":[1,2],"dot":"white"},
+            {"type":"thermo","cells":[0,4,8]}
+        ])
+        self.assertIsNone(variants.hint_solver_rules([
+            {"type":"renban","cells":[0,1,2,3,4,5]}]))
+        self.assertIsNone(variants.hint_solver_rules([
+            {"type":"unknown","cells":[0,1]}]))
+        for puzzle, details in zip(self.puzzles,self.report["puzzles"]):
+            self.assertEqual(puzzle["metadata"]["solverRules"],
+                             variants.hint_solver_rules(details["constraints"]))
+
     def test_relation_semantics(self):
         # Valid completed classic 4x4 Sudoku.
         solution = [1, 2, 3, 4,

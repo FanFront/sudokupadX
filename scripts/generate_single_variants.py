@@ -284,6 +284,7 @@ def make_puzzle(kind, solution, constraints, givens, quality, seed, attempt):
             "msgcorrect":"完成！本题仅采用一种变体规则，且全程可以纯逻辑解决。",
             "variantFamily":FAMILY,
             "variantTypes":[kind],
+            "solverRules":workshop.hint_solver_rules(constraints),
             "generatorSeed":seed,
             "generatorAttempt":attempt,
             "givens":len(givens),

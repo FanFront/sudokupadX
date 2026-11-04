@@ -74,6 +74,8 @@ pub struct Step {
     pub cell: usize,
     pub removed: Vec<u8>,
     pub remaining: Vec<u8>,
+    pub before: Vec<u8>,
+    pub sources: Vec<usize>,
 }
 #[derive(Clone,Debug)]
 struct Proof {
@@ -111,6 +113,7 @@ struct Solver {
     steps: Vec<Step>,
     methods: BTreeMap<String,usize>,
     trace: bool,
+    reason: Vec<usize>,
 }
 impl Solver {
     fn new(n:usize,givens:&[u8],rules:&[Rule],tier:u8,trace:bool,
@@ -125,7 +128,7 @@ impl Solver {
         }
         Ok(Self{n,masks,rules:rules.to_vec(),units:units(n),tier,
             disabled:disabled.map(str::to_owned),steps:vec![],
-            methods:BTreeMap::new(),trace})
+            methods:BTreeMap::new(),trace,reason:vec![]})
     }
     fn from_masks(n:usize,masks:Vec<Mask>,rules:&[Rule],tier:u8)
         -> Result<Self,String> {
@@ -148,7 +151,8 @@ impl Solver {
         if self.trace {
             self.steps.push(Step{method:method.to_owned(),cell:i,
                 removed:values(before&!after,self.n),
-                remaining:values(after,self.n)});
+                remaining:values(after,self.n),
+                before:values(before,self.n),sources:self.reason.clone()});
         }
         Ok(true)
     }
@@ -301,6 +305,9 @@ impl Solver {
             }
             for &i in &house{
                 if count(self.masks[i])>1{
+                    self.reason=house.iter().copied().filter(|&other|
+                        count(self.masks[other])==1 &&
+                        self.masks[other]&self.masks[i]!=0).collect();
                     changed|=self.reduce(i,!seen,"peer_elimination")?;
                 }
             }
@@ -309,6 +316,7 @@ impl Solver {
                     .filter(|&i|self.masks[i]&bit(d)!=0).collect();
                 if positions.is_empty(){return Err("某个数字没有候选位置".into());}
                 if positions.len()==1{
+                    self.reason=house.clone();
                     changed|=self.reduce(positions[0],bit(d),"hidden_single")?;
                 }
             }
@@ -326,6 +334,7 @@ impl Solver {
                     if count(union)!=size as u32 {continue;}
                     for &cell in &house {
                         if !selected.contains(&cell) {
+                            self.reason=selected.clone();
                             changed|=self.reduce(cell,!union,"naked_subset")?;
                         }
                     }
@@ -338,7 +347,8 @@ impl Solver {
                     if locations.len()!=size||chosen.iter().any(|&d|
                         !locations.iter().any(|&i|self.masks[i]&bit(d as u8)!=0))
                         {continue;}
-                    for cell in locations{
+                    for &cell in &locations{
+                        self.reason=locations.clone();
                         changed|=self.reduce(cell,union,"hidden_subset")?;
                     }
                 }
@@ -357,6 +367,7 @@ impl Solver {
                            !positions.iter().all(|p|common.contains(p)){continue;}
                         for cell in self.units[dest].clone(){
                             if !common.contains(&cell){
+                                self.reason=positions.clone();
                                 changed|=self.reduce(cell,!bit(digit),"locked_candidate")?;
                             }
                         }
@@ -389,6 +400,9 @@ impl Solver {
                         if base.contains(&line){continue;}
                         for &cover in &covers{
                             let cell=if axis==0{line*9+cover}else{cover*9+line};
+                            self.reason=base.iter().flat_map(|&i|
+                                locations[i].iter().map(move |&col|
+                                    if axis==0{i*9+col}else{col*9+i})).collect();
                             changed|=self.reduce(cell,!bit(digit),method)?;
                         }
                     }
@@ -414,6 +428,7 @@ impl Solver {
                     for cell in 0..81{
                         if cell!=pivot&&cell!=a&&cell!=b &&
                            linked(9,cell,a)&&linked(9,cell,b){
+                            self.reason=vec![pivot,a,b];
                             changed|=self.reduce(cell,!z,"xy_wing")?;
                         }
                     }
@@ -445,6 +460,9 @@ impl Solver {
                     for cell in 0..81{
                         if cell!=roof_a&&cell!=roof_b&&
                             linked(9,cell,roof_a)&&linked(9,cell,roof_b){
+                            self.reason=vec![roof_a,roof_b,
+                                if axis==0{a*9+shared[0]}else{shared[0]*9+a},
+                                if axis==0{b*9+shared[0]}else{shared[0]*9+b}];
                             changed|=self.reduce(cell,!bit(digit),"skyscraper")?;
                         }
                     }
@@ -470,6 +488,7 @@ impl Solver {
                 for cell in 0..81{
                     if cell!=pivot&&cell!=a&&cell!=b&&
                         linked(9,cell,pivot)&&linked(9,cell,a)&&linked(9,cell,b){
+                        self.reason=vec![pivot,a,b];
                         changed|=self.reduce(cell,!shared,"xyz_wing")?;
                     }
                 }
@@ -485,7 +504,7 @@ impl Solver {
         let snapshot=self.masks.clone();
         let mut eliminations=Vec::new();
         fn dfs(masks:&[Mask],path:&mut Vec<usize>,link:u8,target:u8,
-               out:&mut Vec<(usize,Mask)>,max_depth:usize) {
+               out:&mut Vec<(usize,Mask,Vec<usize>)>,max_depth:usize) {
             if path.len()>=max_depth{return;}
             let current=*path.last().unwrap();
             for next in 0..81{
@@ -497,7 +516,9 @@ impl Solver {
                     for cell in 0..81{
                         if cell!=start&&cell!=next&&
                             linked(9,cell,start)&&linked(9,cell,next){
-                            out.push((cell,bit(target)));
+                            let mut witness=path.clone();
+                            witness.push(next);
+                            out.push((cell,bit(target),witness));
                         }
                     }
                 }else{
@@ -515,7 +536,8 @@ impl Solver {
             }
         }
         let mut changed=false;
-        for (cell,mask) in eliminations{
+        for (cell,mask,witness) in eliminations{
+            self.reason=witness;
             changed|=self.reduce(cell,!mask,"xy_chain")?;
         }
         Ok(changed)
@@ -523,7 +545,10 @@ impl Solver {
     fn run(mut self)->Result<Proof,String>{
         for iteration in 0..150 {
             let mut changed=self.houses()?;
-            for rule in self.rules.clone(){changed|=self.rule(&rule)?;}
+            for rule in self.rules.clone(){
+                self.reason=rule.cells.clone();
+                changed|=self.rule(&rule)?;
+            }
             if self.tier>=2{changed|=self.subsets()?;}
             if !changed && self.tier>=3{
                 changed|=self.fish(3)?;
@@ -550,6 +575,81 @@ fn solve(n:usize,givens:&[u8],rules:&[Rule],tier:u8,
          trace:bool,disabled:Option<&str>)->Result<Proof,String>{
     Solver::new(n,givens,rules,tier,trace,disabled)?.run()
 }
+/// One verified deduction from the exact same Rust candidate engine used
+/// by the generator. Player pencil marks are annotations, not solver axioms.
+#[derive(Clone,Debug,Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct HintResponse {
+    pub status: String,
+    pub step: Option<Step>,
+    pub level: u8,
+}
+
+pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
+    -> Result<HintResponse,String> {
+    if !matches!(n,4|6|9) || !(1..=5).contains(&tier) || grid.len()!=n*n {
+        return Err("仅支持 4×4 / 6×6 / 9×9 与提示等级 1–5".into());
+    }
+    if rules.len()>100 || rules.iter().any(|rule|
+        !matches!(rule.kind.as_str(),
+            "killer"|"kropki"|"thermo"|"renban"|"whisper"|
+            "arrow"|"xv"|"entropic"|"modular"|"between"|"region_sum") ||
+        rule.cells.len()<2 || rule.cells.iter().any(|&i|i>=n*n)) {
+        return Err("存在无法安全解释的变体规则".into());
+    }
+    let proof=solve(n,grid,rules,tier.min(4),true,None)?;
+    if proof.solved && proof.trace.is_empty() {
+        return Ok(HintResponse{status:"complete".into(),step:None,level:0});
+    }
+    // Prefer an actual placement when its prerequisites are only elementary
+    // eliminations. Otherwise show the earliest new reduction, so no higher
+    // tier deduction is presented without its prerequisite reasoning.
+    let preferred=proof.trace.iter().position(|step|
+        step.remaining.len()==1 && step.before.len()>1);
+    let preferred=preferred.filter(|&idx|
+        proof.trace[..idx].iter().all(|step|
+            level_of(&step.method)==1));
+    let chosen=preferred.and_then(|idx|proof.trace.get(idx))
+        .or_else(||proof.trace.first());
+    if let Some(step)=chosen {
+        return Ok(HintResponse{
+            status:"step".into(),level:level_of(&step.method),step:Some(step.clone())
+        });
+    }
+    if tier<5 {
+        return Ok(HintResponse{status:"stalled".into(),step:None,level:tier});
+    }
+    // Tier 5 is a deliberately separate, bounded proof by contradiction,
+    // NOT a fabricated human-technique deduction. We only remove a tested
+    // candidate after exhaustively proving that its branch has no solution.
+    let (solutions,answer)=match exact_count(n,grid,rules,20_000) {
+        Ok(result)=>result,
+        Err(_)=>return Ok(HintResponse{
+            status:"search_limit".into(),step:None,level:5}),
+    };
+    if solutions!=1 {
+        return Ok(HintResponse{status:"not_unique".into(),step:None,level:5});
+    }
+    let mut choices:Vec<usize>=(0..n*n)
+        .filter(|&i|count(proof.masks[i])>1).collect();
+    choices.sort_by_key(|&i|count(proof.masks[i]));
+    for &cell in choices.iter().take(4) {
+        for candidate in values(proof.masks[cell],n) {
+            if candidate==answer[cell]{continue;}
+            let mut hypothetical=grid.to_vec();
+            hypothetical[cell]=candidate;
+            if let Ok((0,_))=exact_count(n,&hypothetical,rules,20_000) {
+                let after=proof.masks[cell]&!bit(candidate);
+                return Ok(HintResponse{status:"step".into(),level:5,
+                    step:Some(Step{method:"search_contradiction".into(),cell,
+                        removed:vec![candidate],remaining:values(after,n),
+                        before:values(proof.masks[cell],n),sources:vec![cell]})});
+            }
+        }
+    }
+    Ok(HintResponse{status:"search_limit".into(),step:None,level:5})
+}
+
 /// Exact solution counting is separate from the deduction-only proof.
 fn exact_count(n:usize,givens:&[u8],rules:&[Rule],node_limit:usize)
     -> Result<(usize,Vec<u8>),String>{
@@ -964,6 +1064,7 @@ fn render_puzzle(request:&CreateRequest,seed:u64,givens:&[u8],
             "variantFamily":"personal-created",
             "variantTypes":request.variants,
             "generatorSeed":seed,"generatorAttempt":attempt,
+            "solverRules":rules,
             "logicProfile":logic
         }
     });
@@ -1070,6 +1171,19 @@ mod tests{
         assert_eq!(loaded.rows,4);
         assert_eq!(loaded.cols,4);
         assert_eq!(loaded.key,"personal-demo-1");
+        assert!(loaded.hint_rules.as_ref().is_some_and(Vec::is_empty));
+        let session=crate::Session::new(loaded);
+        let (n,grid,rules)=session.hint_input().unwrap();
+        let response=next_hint(n,&grid,&rules,1).unwrap();
+        assert_eq!(response.status,"step");
+        let step=response.step.unwrap();
+        assert_eq!(level_of(&step.method),1);
+        assert!(step.cell<n*n && !step.removed.is_empty());
+        let answer=output.puzzle["metadata"]["solution"].as_str().unwrap();
+        let digit=answer.as_bytes()[step.cell]-b'0';
+        assert!(!step.removed.contains(&digit),
+            "Hint must not eliminate the known correct digit");
+        assert!(step.sources.iter().all(|&cell|cell<n*n));
     }
     #[test]
     fn level_five_is_a_real_unique_hard_classic_not_a_mocked_label(){
