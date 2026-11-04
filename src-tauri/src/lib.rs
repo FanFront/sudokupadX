@@ -94,9 +94,9 @@ fn restore_progress(
 async fn hint_step(
     tier: u8, state: State<'_, AppState>
 ) -> Result<sudokupadx_core::creator::HintResponse, String> {
-    let (n, grid, rules)=with_session(&state, |session|session.hint_input())?;
+    let (n, grid, rules, notes)=with_session(&state, |session|session.hint_input())?;
     tauri::async_runtime::spawn_blocking(move ||
-        sudokupadx_core::creator::next_hint(n,&grid,&rules,tier)
+        sudokupadx_core::creator::next_hint_with_notes(n,&grid,&rules,tier,&notes)
     ).await.map_err(|error|format!("提示计算中断：{error}"))?
 }
 
