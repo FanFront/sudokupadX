@@ -296,6 +296,13 @@ try{
   assert.equal(await page.locator('#gameScreen').isHidden(),true);
   await page.locator('#continueButton').click();
   await page.waitForFunction(()=>document.querySelector('#puzzleTitle')?.textContent?.includes('UI Smoke Fixture'),null,{timeout:60000});
+  // The title is set during openResult(), BEFORE the awaited IndexedDB
+  // cache load and applyStoredView() finish. Wait for the actual restored
+  // camera and selection, not merely for the earlier title update.
+  await page.waitForFunction(({zoom,selection})=>
+    document.querySelector('#zoomLabel')?.textContent===zoom &&
+    document.querySelector('#selectionLabel')?.textContent===selection,
+    {zoom:zoomBefore,selection:selectedBefore},{timeout:15000});
   assert.equal(await page.locator('#zoomLabel').textContent(),zoomBefore,'Zoom should survive restart');
   assert.equal(await page.locator('#selectionLabel').textContent(),selectedBefore,'Selected cell should survive restart');
   console.log('Last imported puzzle, selection, and zoom restored after reload.');
