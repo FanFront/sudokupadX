@@ -89,6 +89,32 @@ test('fogged source cannot establish clone, inequality or X-sums evidence',()=>{
   progress.visible[a]=false;
   assert.notEqual(nextAdventureHint(puzzle,progress,4,b).step?.method,'clone');
 });
+test('long six-cell Renban uses whole-line matching, not guessing',()=>{
+  const cells=row.slice(0,6);
+  const known=Object.fromEntries(cells.slice(0,5).map((i,j)=>[i,j+2]));
+  const response=prove('renban',[{type:'renban',cells}],known,
+    {[cells[5]]:[1,7,9]},cells[5],9);
+  assert.ok(response.step.remaining.includes(1));
+  assert.ok(response.step.remaining.includes(7));
+});
+test('a long arrow circle with six shaft cells uses exact sum support',()=>{
+  const bulb=at(8,5);
+  const shaft=[at(0,3),at(1,6),at(3,0),at(4,4),at(6,1),at(7,7)];
+  const known={[bulb]:9};
+  for(const i of shaft.slice(0,5))known[i]=1;
+  const target=shaft.at(-1);
+  const hint=prove('arrow',[{type:'arrow',circle:[bulb],shaft,
+    cells:[bulb,...shaft]}],known,{[target]:[4,5]},target,5);
+  assert.ok(hint.step.sources.includes(bulb));
+});
+test('six-cell killer sum eliminates arithmetic impossibilities without brute force',()=>{
+  const cage=[at(0,3),at(1,6),at(3,0),at(4,4),at(6,1),at(7,7)];
+  const known=Object.fromEntries(cage.slice(0,5).map((i,j)=>[i,j+1]));
+  const target=cage.at(-1);
+  const hint=prove('killer_sum',[{type:'killer',cells:cage,
+    sum:21,unique:true}],known,{[target]:[6,7]},target,7);
+  assert.ok(hint.step.remaining.includes(6));
+});
 test('invalid structured clue shapes are discarded, not guessed from visuals',()=>{
   const {puzzle,progress}=game([
     {type:'indexing_rows',cells:row},
