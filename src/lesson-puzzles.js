@@ -117,7 +117,7 @@ export function createLessonPractice(id) {
       // The target has three legal candidates, but only its position in
       // row 5 can contain 6. All given digits belong to one valid solution.
       const clueRows=[
-        '.3..27..9',
+        '1.3..27.9',
         '...78916.',
         '.8..6.4..',
         '63..2.8.1',
