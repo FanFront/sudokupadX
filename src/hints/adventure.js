@@ -75,9 +75,12 @@ function ruleAvailable(puzzle,progress,kind,cells){
       const row=Math.floor(i/cols),col=i%cols;
       return row>=s.top&&row<s.top+s.height&&col>=s.left&&col<s.left+s.width;
     });
+    // A generic one-cell HINTS panel may discuss future rules without
+    // unlocking them. Only a panel explicitly *named* after this rule can
+    // make it available outside its own grid.
     const rulePanel=s.width*s.height<=8 &&
-      (/rule|规则|scan dot|whisper vine|thermo|renban|kropki|modular|entropic|between/i
-        .test(s.title||'') || s.width===1);
+      /scan dot|kropki|黑白点|白点|黑点|whisper|低语|耳语|thermo|温度计|renban|连续线|modular|模三|entropic|熵线|between|夹心|arrow|箭头|killer|杀手笼|region.sum|区域和|XV|罗马数字/i
+        .test(s.title||'');
     if(local||rulePanel)return true;
   }
   return false;
