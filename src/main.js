@@ -18,6 +18,7 @@ import {setupLessonPage} from './lesson-page.js';
 import {setupCreatorUI} from './creator/ui.js';
 import {computeBrowserHint,computeAdventureHint} from './hints/runner.js';
 import {usesTypedHintEngine} from './hints/mode.js';
+import {findPencilSubsetHint,preferPencilSubset} from './hints/pencil-subsets.js';
 import {adventureHintCoverage} from './hints/coverage.js';
 import {describeHint} from './hints/format.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
@@ -112,6 +113,8 @@ async function requestHint(){
   $('hintCandidates').textContent='';
   requestDraw();
   const tier=Number($('hintTier').value);
+  const focus=selected;
+  const visible=[...progress.visible];
   const cells=progress.cells.map(cloneCell);
   const typed=usesTypedHintEngine(puzzle);
   $('hintSupportNote').textContent=typed
@@ -129,14 +132,21 @@ async function requestHint(){
     // Legacy standalone 9×9 linked/Boss SCLs lack local-generator solverRules.
     // Route them to independently verified typed constraints on both platforms.
     const task=typed
-      ?computeAdventureHint(puzzle,{cells,visible:[...progress.visible]},tier,selected)
+      ?computeAdventureHint(puzzle,{cells,visible},tier,focus)
       :native?{promise:call('hint_step',{tier})}
         :computeBrowserHint(activeRawInput,cells,tier);
     hintTask=task;
-    const result=await task.promise;
+    const baseResult=await task.promise;
     if(serial!==hintSerial)return;
     hintTask=null;
+    // Center-note 34/35/45 triples work on Rust and adventure paths.
+    // Unverified pencil lists remain conditional, not solver axioms.
+    const pencil=findPencilSubsetHint(puzzle,{cells,visible},tier,focus);
+    const result=preferPencilSubset(baseResult,pencil,focus);
     const data=describeHint(result,puzzle.cols,cells);
+    if(result?.step?.assumptionBased)
+      $('hintSupportNote').textContent+=' 本次为条件式中心手记推理，'+
+        '请先核实紫色格候选数已列全；它不是已验证的必然排除。';
     currentHint=result.status==='step'?data:null;
     if(typed&&currentHint)focusHintTarget(data.target);
     $('hintTitle').textContent=data.title;
@@ -773,10 +783,12 @@ function draw() {
       ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
     }
     if(currentHint?.sources.includes(idx)){
-      ctx.fillStyle='#4bcc9c55';ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+      ctx.fillStyle=currentHint.assumptionBased?'#ad85da66':'#4bcc9c55';
+       ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
     }
     if(currentHint?.target===idx){
-      ctx.fillStyle='#ffad5b88';ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+      ctx.fillStyle=currentHint.assumptionBased?'#cba3ee88':'#ffad5b88';
+       ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
     }
     if(selectedCells.includes(idx)){ctx.fillStyle='#a0d5eb6d';ctx.fillRect(x,y,CELL,CELL);}
     // Highlight matching visible givens/entries beneath authored constraints.
@@ -846,12 +858,16 @@ function draw() {
     ctx.save();
     for(const source of currentHint.sources){
       const x=(source%puzzle.cols)*CELL,y=Math.floor(source/puzzle.cols)*CELL;
-      ctx.strokeStyle='#169a74';ctx.lineWidth=2.5;
+      ctx.strokeStyle=currentHint.assumptionBased?'#8c6cb6':'#169a74';
+       ctx.lineWidth=2.5;
+       if(currentHint.assumptionBased)ctx.setLineDash([4,3]);
       ctx.strokeRect(x+2,y+2,CELL-4,CELL-4);
     }
     const index=currentHint.target;
     const x=(index%puzzle.cols)*CELL,y=Math.floor(index/puzzle.cols)*CELL;
-    ctx.strokeStyle='#ea8433';ctx.lineWidth=3.5;
+    ctx.setLineDash(currentHint.assumptionBased?[4,3]:[]);
+     ctx.strokeStyle=currentHint.assumptionBased?'#945dc4':'#ea8433';
+     ctx.lineWidth=3.5;
     ctx.strokeRect(x+2,y+2,CELL-4,CELL-4);
     const mark=currentHint.placement?'✓':
       '−'+currentHint.removed.join(',');
