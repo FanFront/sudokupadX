@@ -1213,9 +1213,16 @@ mod tests{
         assert_eq!(loaded.cols,4);
         assert_eq!(loaded.key,"personal-demo-1");
         assert!(loaded.hint_rules.as_ref().is_some_and(Vec::is_empty));
-        let session=crate::Session::new(loaded);
+        let mut session=crate::Session::new(loaded);
+        let (n,initial_grid,_,_)=session.hint_input().unwrap();
+        let first_blank=initial_grid.iter().position(|&digit|digit==0).unwrap();
+        session.apply(first_blank,"center","2").unwrap();
         let (n,grid,rules,notes)=session.hint_input().unwrap();
         assert_eq!(notes.len(),n*n);
+        assert_eq!(notes[first_blank],vec![2],
+            "The live hint snapshot must carry the player's center notes");
+        assert_eq!(grid[first_blank],0,
+            "Writing center notes must never become a solver given");
         let response=next_hint_with_notes(n,&grid,&rules,1,&notes).unwrap();
         assert_eq!(response.status,"step");
         let step=response.step.unwrap();
