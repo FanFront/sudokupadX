@@ -1,10 +1,13 @@
 // GitHub Pages offline shell. Bundled index is prefetched on service worker install;
 // downloaded online puzzles themselves are stored explicitly in IndexedDB.
-const CACHE = 'sudokupadx-offline-shell-v5';
+const CACHE = 'sudokupadx-offline-shell-v6';
 const scope = self.registration.scope;
 const shell = [
   'puzzles/online-index.json',
   'puzzles/catalog.json',
+  'puzzles/generated/catalog-entries.json',
+  'puzzles/variants/catalog-entries.json',
+  'puzzles/batch9/catalog-entries.json',
   'puzzles/locale-zh.json',
   'puzzles/digits-of-despair.scl',
   'puzzles/lineage-of-logic.scl',
@@ -33,17 +36,27 @@ self.addEventListener('install', event => {
         }
       }
     } catch {}
-    // Cache every catalog-listed puzzle, including all nested side quests.
-    try {
-      const response=await fetch(local('puzzles/catalog.json'),{cache:'reload'});
-      if(response.ok){
-        const catalog=await response.json();
-        for(const entry of catalog.items||[]){
-          if(typeof entry.file==='string'&&/^puzzles\/[a-z0-9-]+\.scl$/.test(entry.file))
-            assets.push(local(entry.file));
+    // Cache every bundled puzzle, including generated 9x9 chapters and
+    // nested side quests. These three catalogs are build-time additions,
+    // so a missing optional catalog must not block the original library.
+    for(const catalogPath of [
+      'puzzles/catalog.json',
+      'puzzles/generated/catalog-entries.json',
+      'puzzles/variants/catalog-entries.json',
+      'puzzles/batch9/catalog-entries.json'
+    ]){
+      try {
+        const response=await fetch(local(catalogPath),{cache:'reload'});
+        if(response.ok){
+          const catalog=await response.json();
+          for(const entry of catalog.items||[]){
+            if(typeof entry.file==='string' &&
+               /^puzzles\/(?:[a-z0-9-]+\/)?[a-z0-9-]+\.(?:scl|json)$/.test(entry.file))
+              assets.push(local(entry.file));
+          }
         }
-      }
-    }catch {}
+      }catch {}
+    }
     await Promise.allSettled([...new Set(assets)].map(async url => {
       try {
         const response = await fetch(url, {cache:'reload'});

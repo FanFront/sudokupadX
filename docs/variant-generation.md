@@ -272,3 +272,38 @@ by this workshop.
 
 Changing the generator algorithm or seed may invalidate previous local
 saves under the same IDs. Start a regenerated workshop chapter fresh.
+
+
+## 100 independently generated 9×9 puzzles in the offline library
+
+`scripts/generate_batch9.py` uses the **same** solved-grid constructor,
+constraint authoring, logical clue digging, structural-motif quality checks,
+no-guess deduction engine and independent solution counter as the workshop.
+It rejects repeated **completed grids** (not merely identical strings of
+clues), requires a real variant dependency and a complete replayable proof,
+and records SHA-256 fingerprints in a validation summary.
+
+```sh
+python3 scripts/generate_batch9.py --seed 20261104 --count 100 --workers 4
+# Quick local smoke sample:
+python3 scripts/generate_batch9.py --seed 20261104 --count 1 --output /tmp/sudokupadx-batch9
+```
+
+For reproducibility the default seed and puzzle count are fixed. The four worker
+partitions have fixed derived seeds and deterministic ordering; 1-puzzle
+smoke tests run sequentially. `npm run dev`
+and `npm run build` export 100 offline files to `public/puzzles/batch9/`
+which Vite copies to the final web/Android assets. Since those files are
+reproducible build outputs, they are ignored by Git and regenerated rather
+than storing 100 copies in the repository. The app loads their catalog as a
+separate fragment, leaving the historical bundled catalog untouched.
+
+In **谜题库 → 内置谜题 → 生成的 9×9（100 题）**, players can filter/search
+by title or identifier. Each entry exposes the curriculum tier validated by
+the solver, and progress uses the stable `generated-9x9-001` through
+`generated-9x9-100` puzzle IDs. Puzzle metadata includes the generator
+seed, authored constraint types and a technique profile; the compact
+`validation.json` lists uniqueness/proof fingerprints and difficulty tiers.
+
+The PWA service worker also precaches every file listed in the generated catalog,
+so these puzzles remain playable offline after a successful shell install.

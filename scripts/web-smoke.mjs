@@ -17,7 +17,9 @@ const cases=[
   ['k7qc98e00u','9 × 9'],
   ['boss-6cn54q09sv','9 × 9'],
   ['generated-adventure-1','27 × 27'],
-  ['generated-adventure-1-boss-1','9 × 9']
+  ['generated-adventure-1-boss-1','9 × 9'],
+  ['generated-9x9-001','9 × 9'],
+  ['generated-9x9-100','9 × 9']
 ];
 await mkdir('artifacts/web',{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -186,6 +188,22 @@ try{
   await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('40 × 50'),null,{timeout:60000});
   assert.equal(await back.isHidden(),true);
   console.log('Direct linked-puzzle -> main-map return passed.');
+
+  // All 100 locally generated puzzles must be discoverable in the actual
+  // library and their SudokuPad-compatible files must load through Rust/WASM.
+  await page.locator('#homeButton').click();
+  await page.locator('#libraryButton').click();
+  await page.locator('#bundledCategory').selectOption('generated');
+  assert.equal(await page.locator('#libraryList .library-entry').count(),100);
+  await page.locator('#bundledSearch').fill('第 042 题');
+  assert.equal(await page.locator('#libraryList .library-entry').count(),1);
+  await page.locator('#libraryList .library-entry').first().click();
+  await page.waitForFunction(()=>
+    document.querySelector('#puzzleTitle')?.textContent?.includes('042') &&
+    document.querySelector('#boardMeta')?.textContent?.includes('9 × 9'),
+    null,{timeout:60000});
+  await page.screenshot({path:'artifacts/web/generated-9x9-library.png'});
+  console.log('100 generated 9x9 entries, search and real puzzle load passed.');
 
   // The bundled index is usable without reaching the online JSON provider.
   await page.locator('#homeButton').click();

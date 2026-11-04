@@ -56,6 +56,10 @@ jobs:
           test -s dist/puzzles/generated/generated-adventure-1.json
           test -s dist/puzzles/generated/generated-adventure-1-boss-1.json
           test -s dist/puzzles/generated/catalog-entries.json
+          test -s dist/puzzles/batch9/catalog-entries.json
+          test -s dist/puzzles/batch9/generated-9x9-001.json
+          test -s dist/puzzles/batch9/generated-9x9-100.json
+          python3 -c "import json; p=json.load(open('dist/puzzles/batch9/catalog-entries.json')); assert len(p['items']) == 100"
           grep -q '/sudokupadX/assets/' dist/index.html
       - name: Install Chromium browser checks
         run: |

@@ -214,7 +214,16 @@
         <button id="lmdLibraryTab" type="button" role="tab" aria-controls="lmdLibraryPanel" aria-selected="false">Logic Masters</button>
       </div>
       <div id="bundledLibraryPanel" role="tabpanel">
-        <p>内置四张冒险主地图、四组独立谜题及其关联关卡。新加入的四组谜题提供中文与原文对照。未探索区域的首领链接只在解锁后显示。</p>
+        <p>可离线游玩冒险地图、独立谜题，以及生成器验证的 100 道 9×9 逻辑变体数独。所有新题均有唯一解，且可不靠猜测完成。</p>
+        <div class="bundled-filters">
+          <select id="bundledCategory" aria-label="内置谜题分类">
+            <option value="all">全部可玩谜题</option>
+            <option value="generated">生成的 9×9（100 题）</option>
+            <option value="adventure">冒险地图</option>
+            <option value="other">其他独立谜题</option>
+          </select>
+          <input id="bundledSearch" type="search" placeholder="搜索谜题标题或编号" aria-label="搜索内置谜题">
+        </div>
         <div id="libraryList" class="library-list"></div>
         <label class="library-spoiler"><input id="showAllPuzzles" type="checkbox"> 显示全部首领与支线（可能剧透）</label>
       </div>
