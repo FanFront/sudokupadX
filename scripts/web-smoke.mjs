@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
+import {createLessonPractice} from '../src/lesson-puzzles.js';
 
 const root=process.env.WEB_SMOKE_URL || 'http://127.0.0.1:4173/sudokupadX/';
 const cases=[
@@ -41,6 +42,7 @@ try{
   assert.equal(await page.locator('#lessonList .lesson-entry').count(),25);
   await page.locator('#lessonFilters button[data-stage="patterns"]').click();
   assert.equal(await page.locator('#lessonList .lesson-entry').count(),6);
+  const lesson7=createLessonPractice(7);
   await page.locator('#lessonList [data-id="7"]').click();
   assert.match(await page.locator('#lessonTitle').textContent(),/X-Wing/);
   assert.match(await page.locator('#lessonReading').textContent(),/第 2 行和第 7 行/);
@@ -52,8 +54,8 @@ try{
   assert.equal(await page.locator('#gameScreen').isVisible(),true);
   assert.match(await page.locator('#puzzleTitle').textContent(),/技巧练习/);
   assert.equal(await page.locator('#modeBar [data-mode="center"]').getAttribute('aria-pressed'),'true');
-  assert.match(await page.locator('#selectionLabel').textContent(),/R5C3/);
-  await page.locator('#keypad button[data-symbol="4"]').click();
+  assert.equal(await page.locator('#selectionLabel').textContent(),lesson7.goalLabel);
+  await page.locator('#keypad button[data-symbol="'+lesson7.goal.digit+'"]').click();
   await page.waitForFunction(()=>document.querySelector('#lessonPracticeStatus')?.textContent?.includes('推理正确'));
   await page.screenshot({path:'artifacts/web/chinese-lesson-real-board.png'});
   await page.locator('#lessonPracticeReturn').click();
