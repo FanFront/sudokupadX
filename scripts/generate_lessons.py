@@ -210,7 +210,7 @@ def anchor_examples():
     # A basic peer elimination, as an *unprocessed* pencil mark. All other
     # candidates are computed from the givens; only the target's pending
     # elimination remains in the candidate state.
-    given_1 = dict(base, **{0: 5})
+    given_1 = dict(base)\n    given_1[0] = 5
     basic_masks = clue_domains(n, given_1)
     target = 3  # R1C4
     if target in given_1 or int(SOLUTION[target]) == 5:
