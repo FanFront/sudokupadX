@@ -1,0 +1,367 @@
+// Conservative, read-only hint engine for overlapping adventure Sudoku maps.
+// Every inference is derived from *visible* values and explicitly authored
+// all-different / variant marks; never from the solution or fogged givens.
+const SIZES=new Set([4,6,9]);
+const whole=n=>Array.from({length:n},(_,i)=>i+1);
+const distinct=a=>[...new Set(a)];
+const digit=(value,n=9)=>/^[1-9]$/.test(String(value??''))&&Number(value)<=n?Number(value):0;
+const isVisible=(progress,i)=>progress.visible?.[i]!==false;
+const noteDigits=(cell,n)=>distinct((cell?.center?.length?cell.center:cell?.corner||[])
+  .map(x=>digit(x,n)).filter(Boolean));
+const point=(pair,rows,cols)=>{
+  if(!Array.isArray(pair)||pair.length<2)return -1;
+  const [r,c]=pair;
+  return Number.isInteger(r)&&Number.isInteger(c)&&r>=0&&c>=0&&r<rows&&c<cols
+    ?r*cols+c:-1;
+};
+const cellPoint=(p,rows,cols)=>{
+  if(!Array.isArray(p)||p.length<2)return -1;
+  const [r,c]=p;
+  return Number.isFinite(r)&&Number.isFinite(c)&&Math.abs(r-Math.floor(r)-.5)<.025
+    &&Math.abs(c-Math.floor(c)-.5)<.025
+    ?point([Math.floor(r),Math.floor(c)],rows,cols):-1;
+};
+const phrase=(s,pattern)=>pattern.test(s||'');
+function colorRGB(text){
+  const hex=String(text||'').replace(/^#/,'');
+  if(!/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(hex))return null;
+  return [0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
+}
+function colorTag(color){
+  const rgb=colorRGB(color);
+  if(!rgb)return '';
+  const [r,g,b]=rgb;
+  if(g>r*1.3&&g>b*1.13)return 'green';
+  if(b>r*1.2&&b>g*1.05)return 'blue';
+  if(r>b*1.25&&g>b*1.1&&Math.abs(r-g)<100)return 'gold';
+  if(b>g*.9&&r>g*.9&&Math.abs(r-b)<95)return 'purple';
+  if(g>r*1.15&&b>r*1.1&&Math.abs(g-b)<65)return 'teal';
+  return '';
+}
+const keyword={
+  kropki:/kropki|黑白点|白点|黑点|scan dot|dots differ/i,
+  xv:/(?:\bXV\b|roman numeral|罗马数字|罗马数|[VX]标记)/i,
+  whisper:/whisper|低语|耳语|vine/i,
+  thermo:/thermo|温度计/i,
+  renban:/renban|连续数线|连续线|连数线/i,
+  entropic:/entropic|熵线/i,
+  modular:/modular|模三线/i,
+  between:/between line|夹心线|介于.*两端/i,
+  arrow:/arrow|箭头/i
+};
+function squareSector(s,rows,cols){
+  if(!SIZES.has(s?.width)||s.width!==s.height||
+     ![s.top,s.left].every(Number.isInteger)||s.top<0||s.left<0||
+     s.top+s.height>rows||s.left+s.width>cols)return false;
+  const rules=s.rules||'';
+  if(!/sudoku|数独|宫|box|row.*col/i.test(rules)||
+     /fillomino|数填方|not a sudoku|无数独规则/i.test(rules))return false;
+  // A 9x9 story panel describing a different-size puzzle is not proof that
+  // the 9x9 rectangle has standard 9x9 row/column restrictions.
+  const range=rules.match(/(?:填入|digits?|数字)[^。\n]{0,40}1\s*(?:至|到|–|-|~|through|to)\s*(\d+)/i);
+  if(range&&Number(range[1])!==s.width)return false;
+  return true;
+}
+function gridsAndHouses(puzzle){
+  const {rows,cols}=puzzle,total=rows*cols;
+  const domains=Array(total).fill(0),houses=[],seen=new Set();
+  const add=(indices,kind,n,description)=>{
+    const members=distinct(indices.filter(i=>Number.isInteger(i)&&i>=0&&i<total));
+    if(members.length<2)return;
+    const key=[...members].sort((a,b)=>a-b).join(',');
+    if(seen.has(key))return;
+    seen.add(key);houses.push({cells:members,kind,n,description});
+  };
+  const sectors=(puzzle.sectors||[]).filter(s=>squareSector(s,rows,cols));
+  for(const s of sectors){
+    const n=s.width;
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+      const i=(s.top+r)*cols+s.left+c;
+      domains[i]=domains[i]?Math.min(domains[i],n):n;
+    }
+    const title=s.title||n+'×'+n+' 数独';
+    for(let i=0;i<n;i++){
+      add(whole(n).map(v=>(s.top+i)*cols+s.left+v-1),'row',n,title+'第 '+(i+1)+' 行');
+      add(whole(n).map(v=>(s.top+v-1)*cols+s.left+i),'column',n,title+'第 '+(i+1)+' 列');
+    }
+    const text=s.rules||'';
+    if(!/irregular|jigsaw|不规则|无宫|no boxes|latin square/i.test(text)){
+      let h=n===9?3:n===4?2:2,w=n===9?3:n===4?2:3;
+      if(n===6){
+        const explicit=text.match(/([23])\s*[×xX*]\s*([23])\s*(?:宫|box|region)/i);
+        if(explicit&&Number(explicit[1])*Number(explicit[2])===6){
+          h=Number(explicit[1]);w=Number(explicit[2]);
+        }
+      }
+      for(let r=0;r<n;r+=h)for(let c=0;c<n;c+=w){
+        add(Array.from({length:h*w},(_,j)=>
+          (s.top+r+Math.floor(j/w))*cols+s.left+c+j%w),'box',n,
+          title+' · '+h+'×'+w+' 宫');
+      }
+    }
+  }
+  for(const region of puzzle.regions||[]){
+    if(Array.isArray(region)){
+      const cells=region.map(p=>point(p,rows,cols));
+      const n=SIZES.has(cells.length)?cells.length:0;
+      add(cells,'region',n,'题面标示的不重复区域');
+    }
+  }
+  for(const cage of puzzle.cages||[]){
+    if(cage?.unique!==true||!Array.isArray(cage.cells))continue;
+    const cells=cage.cells.map(p=>point(p,rows,cols));
+    if(cells.length<=9) add(cells,'unique',0,'题面指定的不重复组');
+  }
+  return {domains,houses,sectors};
+}
+function lineCells(line,rows,cols){
+  const marks=line?.wayPoints||line?.points;
+  if(!Array.isArray(marks)||marks.length<2||marks.length>10)return [];
+  const cells=marks.map(p=>cellPoint(p,rows,cols));
+  if(cells.some(i=>i<0)||distinct(cells).length!==cells.length)return [];
+  for(let j=1;j<cells.length;j++){
+    const a=cells[j-1],b=cells[j],dr=Math.abs(Math.floor(a/cols)-Math.floor(b/cols)),dc=Math.abs(a%cols-b%cols);
+    if(Math.max(dr,dc)!==1)return [];
+  }
+  return cells;
+}
+function runCandidates(puzzle,progress,houses,domains){
+  const total=puzzle.rows*puzzle.cols;
+  const values=Array(total).fill(0),candidates=Array(total).fill(null),peers=Array.from({length:total},()=>[]);
+  for(let i=0;i<total;i++){
+    if(isVisible(progress,i)){
+      values[i]=digit(puzzle.cells[i]?.given??progress.cells[i]?.value,9);
+    }
+    if(domains[i]&&values[i]===0)candidates[i]=whole(domains[i]);
+  }
+  for(const house of houses){
+    for(const i of house.cells){
+      if(!domains[i]||values[i])continue;
+      for(const j of house.cells){
+        if(i!==j&&values[j]&&isVisible(progress,j)){
+          peers[i].push({digit:values[j],source:j,house});
+        }
+      }
+    }
+  }
+  for(let i=0;i<total;i++)if(candidates[i]){
+    const excluded=new Set(peers[i].map(p=>p.digit));
+    candidates[i]=candidates[i].filter(d=>!excluded.has(d));
+    if(!candidates[i].length)candidates[i]=null;
+  }
+  return {values,candidates,peers};
+}
+function markedDots(puzzle,progress,sectors){
+  const {rows,cols}=puzzle,output=[];
+  for(const mark of puzzle.overlays||[]){
+    const center=mark?.center;
+    if(!Array.isArray(center)||center.length!==2)continue;
+    const [r,c]=center;
+    const halfR=Math.abs(r-Math.floor(r)-.5)<.025;
+    const halfC=Math.abs(c-Math.floor(c)-.5)<.025;
+    const intR=Math.abs(r-Math.round(r))<.025;
+    const intC=Math.abs(c-Math.round(c))<.025;
+    let a=-1,b=-1;
+    if(halfR&&intC){a=point([Math.floor(r),Math.round(c)-1],rows,cols);b=point([Math.floor(r),Math.round(c)],rows,cols);}
+    if(intR&&halfC){a=point([Math.round(r)-1,Math.floor(c)],rows,cols);b=point([Math.round(r),Math.floor(c)],rows,cols);}
+    if(a<0||b<0||!isVisible(progress,a)||!isVisible(progress,b))continue;
+    const txt=String(mark.text||'').trim().toUpperCase();
+    let kind=null;
+    if(txt==='V'||txt==='X')kind='xv';
+    else{
+      const rgb=colorRGB(mark.backgroundColor);
+      if(rgb&&rgb.every(v=>v>=240))kind='white';
+      if(rgb&&rgb.every(v=>v<=50))kind='black';
+    }
+    if(!kind)continue;
+    const family=kind==='xv'?'xv':'kropki';
+    if(!sectors.some(s=>s.rules&&keyword[family].test(s.rules)&&
+      [a,b].every(i=>Math.floor(i/cols)>=s.top&&Math.floor(i/cols)<s.top+s.height&&i%cols>=s.left&&i%cols<s.left+s.width)))continue;
+    output.push({a,b,kind});
+  }
+  return output;
+}
+function score(step,notes,focus,tier,variant=false){
+  if(step.level>tier)return -Infinity;
+  const marked=notes[step.cell]||[];
+  const usable=step.removed.filter(d=>marked.includes(d));
+  if(marked.length&&usable.length===0&&step.remaining.length!==1)return -Infinity;
+  let points=marked.length&&usable.length?1200:0;
+  if(step.remaining.length===1)points+=850;
+  if(variant)points+=160;
+  if(step.cell===focus)points+=400;
+  else if(focus>=0)points+=Math.max(0,90-Math.abs(step.cell-focus));
+  if(marked.length===0&&step.remaining.length>1)points-=200;
+  return points-step.level*7;
+}
+function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
+  const {rows,cols}=puzzle,total=rows*cols,{values,candidates,peers}=state;
+  const notes=Array.from({length:total},(_,i)=>noteDigits(progress.cells[i],domains[i]||9));
+  const options=[];
+  const add=(method,cell,removed,remaining,sources,reason,level=1,variant=false)=>{
+    if(!isVisible(progress,cell)||values[cell]||!removed.length)return;
+    const original=candidates[cell]||whole(domains[cell]||9);
+    const allowed=remaining||original.filter(d=>!removed.includes(d));
+    if(!allowed.length)return;
+    const step={method,cell,removed:distinct(removed),remaining:allowed,
+      before:original,sources:distinct(sources.filter(i=>i>=0&&isVisible(progress,i))),
+      reason,level,adventure:true};
+    const rank=score(step,notes,focus,tier,variant);
+    if(Number.isFinite(rank))options.push({step,rank});
+  };
+  // A candidate already excluded by a visible digit is not a useful hint
+  // unless the player still has that digit in their notes.
+  for(let i=0;i<total;i++)if(isVisible(progress,i)&&!values[i]){
+    const known=peers[i];
+    const initial=whole(domains[i]||9);
+    const unique=distinct(known.map(p=>p.digit));
+    for(const d of unique){
+      const witness=known.find(p=>p.digit===d);
+      if(witness) add('peer_elimination',i,[d],
+        initial.filter(v=>v!==d),[witness.source],
+        '依据'+witness.house.description+'的数字不重复规则，已填的 '+d+' 不能再次出现在目标格。');
+    }
+    if(candidates[i]?.length===1){
+      const d=candidates[i][0];
+      add('naked_single',i,initial.filter(v=>v!==d),[d],
+        known.filter(p=>p.digit!==d).map(p=>p.source),
+        '根据目标格所在各行、列和宫（或其他不重复组）内已知数字的排除，唯一剩下的候选数是 '+d+'。');
+    }
+  }
+  for(const house of houses){
+    if(!house.n||house.cells.length!==house.n)continue;
+    for(const d of whole(house.n)){
+      if(house.cells.some(i=>values[i]===d))continue;
+      const places=house.cells.filter(i=>values[i]===0&&
+        candidates[i]?.includes(d));
+      if(places.length!==1)continue;
+      const i=places[0];
+      if(!isVisible(progress,i))continue;
+      const original=candidates[i]||[];
+      if(original.length<=1)continue;
+      add('hidden_single',i,original.filter(v=>v!==d),[d],
+        house.cells.filter(j=>j!==i&&values[j]>0),
+        house.description+'中只有目标格还能填写 '+d+'。',1);
+    }
+  }
+  function relation(a,b,method,test,description){
+    if(!isVisible(progress,a)||!isVisible(progress,b))return;
+    const ca=candidates[a],cb=candidates[b];
+    if(!ca||!cb)return;
+    const keepA=ca.filter(x=>cb.some(y=>test(x,y)));
+    const keepB=cb.filter(y=>ca.some(x=>test(x,y)));
+    if(!keepA.length||!keepB.length)return;
+    add(method,a,ca.filter(v=>!keepA.includes(v)),keepA,[b],description,1,true);
+    add(method,b,cb.filter(v=>!keepB.includes(v)),keepB,[a],description,1,true);
+  }
+  for(const {a,b,kind} of markedDots(puzzle,progress,sectors)){
+    if(kind==='white')relation(a,b,'kropki',(x,y)=>Math.abs(x-y)===1,'白点两端的数字相差 1；其他数字无法与另一端的候选组成合法配对。');
+    else if(kind==='black')relation(a,b,'kropki',(x,y)=>Math.max(x,y)===2*Math.min(x,y),'黑点两端数字为 1:2；其他数字无法与另一端的候选配对。');
+    else relation(a,b,'xv',(x,y)=>x+y===(kind==='V'?5:10),'罗马数字 '+kind+' 表示两格数字之和为 '+(kind==='V'?5:10)+'。');
+  }
+  // Published numeric killer sums. Hidden cages and decorative labels are
+  // deliberately excluded, even when their raw metadata is accessible.
+  const constraints=[];
+  for(const cage of puzzle.cages||[]){
+    if(cage.hidden===true||!Array.isArray(cage.cells))continue;
+    const text=String(cage.value??'');
+    if(!/^\d{1,3}$/.test(text))continue;
+    const cells=cage.cells.map(pair=>point(pair,rows,cols));
+    if(cells.length<2||cells.length>5||cells.some(i=>i<0||!isVisible(progress,i)||!candidates[i]&&!values[i]))continue;
+    constraints.push({method:'killer_sum',cells,goal:Number(text),
+      unique:cage.unique===true,
+      check:arr=>arr.reduce((a,b)=>a+b,0)===Number(text),
+      reason:'题面杀手笼总和为 '+text+'，'+(cage.unique===true?'各格不能重复，':'')+'候选必须能够组成这一总和。'});
+  }
+  // Explicitly explained line rules only, within an unlocked Sudoku grid.
+  for(const line of puzzle.lines||[]){
+    const cells=lineCells(line,rows,cols);
+    if(cells.length<2||cells.some(i=>!isVisible(progress,i)||!candidates[i]&&!values[i]))continue;
+    const matched=sectors.find(s=>cells.every(i=>{
+      const r=Math.floor(i/cols),c=i%cols;
+      return r>=s.top&&r<s.top+s.height&&c>=s.left&&c<s.left+s.width;
+    }));
+    if(!matched)continue;
+    const text=matched.rules||'',color=colorTag(line.color);
+    if(keyword.whisper.test(text)&&color==='green'){
+      for(let k=1;k<cells.length;k++)
+        relation(cells[k-1],cells[k],'whisper',(a,b)=>Math.abs(a-b)>=5,
+          '低语线相邻两格必须相差至少 5。');
+    }
+    if(cells.length<=5&&keyword.renban.test(text)&&color==='blue'){
+      constraints.push({method:'renban',cells,unique:true,
+        check:arr=>Math.max(...arr)-Math.min(...arr)===arr.length-1,
+        reason:'连续数线必须包含一组不重复的连续整数。'});
+    }
+    if(cells.length<=5&&keyword.between.test(text)&&color==='purple'){
+      constraints.push({method:'between',cells,unique:false,
+        check:arr=>{
+          const lo=Math.min(arr[0],arr[arr.length-1]),hi=Math.max(arr[0],arr[arr.length-1]);
+          return arr.slice(1,-1).every(v=>v>lo&&v<hi);
+        },reason:'夹心线中间的数字必须严格介于两个端点之间。'});
+    }
+    if(cells.length<=9&&keyword.thermo.test(text)){
+      // A line is a thermometer only when the pictured bulb is attached to
+      // its first cell. Color alone is never enough.
+      const head=line.wayPoints?.[0];
+      const bulb=(puzzle.underlays||[]).some(mark=>
+        Array.isArray(mark.center)&&Math.abs(mark.center[0]-head?.[0])<.03&&
+        Math.abs(mark.center[1]-head?.[1])<.03&&mark.rounded===true&&
+        Number(mark.width)>0.35&&Number(mark.width)<1.1);
+      if(bulb)for(let j=1;j<cells.length;j++)
+        relation(cells[j-1],cells[j],'thermo',(a,b)=>a<b,
+          '温度计必须从圆头到尾端严格递增。');
+    }
+  }
+  // Tiny arithmetic/sequence constraints are exhaustively enumerated, but
+  // only to generate *supported candidates*, never a speculative solution.
+  for(const rule of constraints){
+    const {cells}=rule,poss=cells.map(i=>values[i]?[values[i]]:candidates[i]||[]);
+    if(poss.some(x=>!x.length))continue;
+    let budget=30000,stopped=false;
+    const supported=cells.map(()=>new Set()),assign=[];
+    const walk=k=>{
+      if(--budget<0){stopped=true;return;}
+      if(k===cells.length){
+        if(rule.check(assign))for(let j=0;j<cells.length;j++)supported[j].add(assign[j]);
+        return;
+      }
+      for(const d of poss[k]){
+        if(rule.unique&&assign.includes(d))continue;
+        if(rule.goal!==undefined&&assign.reduce((a,b)=>a+b,0)+d>rule.goal)continue;
+        assign.push(d);walk(k+1);assign.pop();
+        if(stopped)return;
+      }
+    };
+    walk(0);
+    if(stopped||supported.some(s=>s.size===0))continue;
+    for(let j=0;j<cells.length;j++){
+      const i=cells[j],original=candidates[i];
+      if(!original)continue;
+      const keep=original.filter(d=>supported[j].has(d));
+      add(rule.method,i,original.filter(d=>!keep.includes(d)),keep,
+        cells.filter(x=>x!==i),rule.reason,1,true);
+    }
+  }
+  // Select a reproducible first proof; no guess/exhaustive solution search.
+  options.sort((a,b)=>b.rank-a.rank||a.step.level-b.step.level||a.step.cell-b.step.cell);
+  return options[0]?.step||null;
+}
+export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
+  const rows=puzzle?.rows,cols=puzzle?.cols;
+  if(!Number.isInteger(rows)||!Number.isInteger(cols)||!Array.isArray(puzzle.cells)||
+     !Array.isArray(progress?.cells)||rows*cols!==puzzle.cells.length||
+     rows*cols!==progress.cells.length||rows>160||cols>160||
+     !Number.isInteger(tier)||tier<1||tier>5){
+    return {status:'unsupported',level:0,step:null};
+  }
+  const {domains,houses,sectors}=gridsAndHouses(puzzle);
+  if(!houses.length)return {status:'unsupported',level:0,step:null};
+  const state=runCandidates(puzzle,progress,houses,domains);
+  const step=chooseStep(puzzle,progress,domains,houses,sectors,state,
+    Math.min(tier,4),focus);
+  if(step)return {status:'step',level:step.level,step};
+  return {status:progress.visible?.some(flag=>flag===false)
+    ?'fog_stalled':'stalled',level:Math.min(tier,4),step:null};
+}
+export {gridsAndHouses};
