@@ -77,7 +77,8 @@ test('Super Sudokoid 2 unique-only regions support safe notes without invented 1
   assert.equal(describeHint(hint,45,progress.cells).placement,false);
 });
 test('visible numeric killer sum can prove a digit while decorative sums are ignored',()=>{
-  const {puzzle,progress}=world(40,50,[sector(21,0)],{
+  const {puzzle,progress}=world(40,50,[sector(21,0,6,
+    '数独每行每列和 2×3 宫含 1 至 6，杀手笼（Killer）数字相加必须等于角标。')],{
     cages:[{cells:[[21,0],[21,1]],value:3,unique:true}]
   });
   const known=idx(21,0),target=idx(21,1);
@@ -89,6 +90,25 @@ test('visible numeric killer sum can prove a digit while decorative sums are ign
   assert.equal(hint.step.cell,target);
   assert.ok(hint.step.remaining.includes(2));
   assert.ok(!hint.step.remaining.includes(4) || hint.step.method==='peer_elimination');
+});
+test('numeric cages are not assumed to mean a sum without an unlocked killer rule',()=>{
+  const {puzzle,progress}=world(40,50,[sector(21,0)],{
+    cages:[{cells:[[21,0],[21,1]],value:3,unique:true}]
+  });
+  const source=idx(21,0),target=idx(21,1);
+  progress.visible[source]=progress.visible[target]=true;
+  puzzle.cells[source].given='1';
+  progress.cells[target].center=['2','4'];
+  assert.notEqual(nextAdventureHint(puzzle,progress,4,target).step?.method,'killer_sum');
+});
+test('duplicate visible numbers do not become a false proof',()=>{
+  const {puzzle,progress}=world(40,50,[sector(21,0)]);
+  const [a,b,c]=[idx(21,0),idx(21,1),idx(21,2)];
+  for(const i of [a,b,c])progress.visible[i]=true;
+  puzzle.cells[a].given='2';
+  progress.cells[b].value='2';
+  progress.cells[c].center=['2','4'];
+  assert.equal(nextAdventureHint(puzzle,progress,4,c).status,'conflict');
 });
 test('kropki is considered only after the matching region rule is revealed',()=>{
   const {puzzle,progress}=world(40,50,[sector(21,0,6,
