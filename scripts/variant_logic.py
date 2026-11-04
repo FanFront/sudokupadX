@@ -70,7 +70,8 @@ def validate_constraints(n, constraints):
                 raise ValueError("XV pairs must sum to 5 or 10")
 
 
-def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None):
+def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
+           disabled_methods=()):
     """Propagate human-readable local rules; never assume a candidate.
 
     The trace lists the actual candidate removals or hidden single placements,
@@ -105,7 +106,8 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None):
     proof, counts = [], Counter()
 
     def reduce(cell, allowed, method, source):
-        if max_tier is not None and technique_tier(method, source) > max_tier:
+        if method in disabled_methods or (max_tier is not None
+                                           and technique_tier(method, source) > max_tier):
             return False
         removed = masks[cell] - allowed
         if not removed:
