@@ -16,10 +16,11 @@ from variant_lines import (LINE_VARIANTS, validate_line, propagate_line,
                            propagate_cross, propagate_region_killer,
                            propagate_between_renban)
 from classic_techniques import (hidden_subsets, basic_fish, xy_wings,
-                                xyz_wings, skyscrapers)
+                                xyz_wings, skyscrapers, finned_x_wings)
 from technique_catalog import technique_tier
 from chain_techniques import (two_string_kites, w_wings, simple_colors,
                               remote_pairs, xy_chains, x_chains)
+from als_techniques import als_xz
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
@@ -188,6 +189,8 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
             changed |= simple_colors(n, masks, units, reduce)
             changed |= xy_chains(n, masks, reduce)
             changed |= x_chains(n, masks, units, reduce)
+            changed |= finned_x_wings(n, masks, reduce)
+            changed |= als_xz(n, masks, units, reduce)
 
         # A candidate confined to a row/box intersection cannot occur
         # elsewhere in the other house (pointing / claiming).
