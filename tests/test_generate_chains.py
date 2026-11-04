@@ -12,7 +12,8 @@ from als_techniques import als_xz
 from classic_techniques import basic_fish, finned_x_wings
 from variant_logic import houses, deduce
 from generate_variants import make_solution
-from technique_catalog import METHODS, lesson_profile
+from technique_catalog import (METHODS, ADVANCED_GUIDE_URL,
+                               lesson_profile, ADVANCED_METHODS)
 
 
 def blank():
@@ -224,6 +225,11 @@ class SudopediaChainTests(unittest.TestCase):
             "remaining": [1, 5], "source": {"chain": [1, 2, 3, 4]}}]})
         self.assertEqual(profile["techniquePath"][0]["nameZh"],
                          METHODS["xy_chain"][0])
+        self.assertEqual(profile["techniquePath"][0]["guideUrl"],
+                         ADVANCED_GUIDE_URL)
+        self.assertEqual(profile["techniquePath"][0]["source"]["chain"],
+                         [1, 2, 3, 4])
+        self.assertEqual(len(ADVANCED_METHODS), 10)
 
     def test_tier_gating_prevents_advanced_method(self):
         masks = blank()
