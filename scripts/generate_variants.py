@@ -16,6 +16,7 @@ from pathlib import Path
 
 from variant_logic import BOXES, VARIANTS, count_solutions, deduce, houses
 from line_generation import add_line_motifs
+from technique_catalog import METHODS, GUIDE_URL, lesson_profile, minimum_tier
 
 FAMILY = "variant-workshop"
 SIZES = (4, 6, 9)
@@ -394,7 +395,7 @@ def dig(n, solution, constraints, rng):
     return clues
 
 
-def quality(n, clues, constraints, solution, diagnostic=None):
+def quality(n, clues, constraints, solution, diagnostic=None, focus_method=None):
     """Check a genuine variant dependency, not merely decorative constraints."""
     def reject(reason):
         if diagnostic is not None:
@@ -410,6 +411,8 @@ def quality(n, clues, constraints, solution, diagnostic=None):
         return reject("deduction contradiction")
     if not proof["solved"] or proof["values"] != solution:
         return reject("full deduction incomplete")
+    if focus_method and not proof["techniques"].get(focus_method):
+        return reject("focused technique not used: " + focus_method)
     if ordinary["solved"]:
         return reject("classic solves without variants")
     kind_for_method = {"killer_sum": "killer", "killer_innie": "killer",
@@ -492,9 +495,13 @@ def quality(n, clues, constraints, solution, diagnostic=None):
                                  "between_renban",
                                  "kropki_partition")
            and len(step["remaining"]) == 1]
+    education = lesson_profile(n, proof)
+    education["minimumTier"] = minimum_tier(n, clues, constraints, deduce)
+    if education["minimumTier"] is None:
+        return reject("curriculum cannot fully solve puzzle")
     return {"proof": proof, "used": sorted(used),
             "essential": essential, "structural": structural,
-            "aha": aha[:8]}
+            "aha": aha[:8], "education": education}
 
 
 def point(n, index):
@@ -616,6 +623,8 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
         "cells. Violet between lines have interior values strictly "
         "between their circled endpoints. Crossed lines and Killer "
         "segments are designed to create explicit deductions."
+        "\n中文解题技巧教程（含例题与候选数排除过程）："
+        + GUIDE_URL +
         "\nRelated chapters: " + ", ".join("sudokupadx:puzzle/" + x for x in other)
     )
     return {
@@ -640,13 +649,24 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
                 "necessaryVariantTypes": quality_info["essential"],
                 "techniques": quality_info["proof"]["techniques"],
                 "structuralMotifs": quality_info["structural"],
-                "ahaMoments": quality_info["aha"]
+                "ahaMoments": quality_info["aha"],
+                "education": quality_info["education"]
             }
         }
     }
 
 
-def build(seed, attempts=120):
+def build(seed, attempts=120, focus_method=None, focus_size=9):
+    """Generate a family; optionally demand a real use of one taught technique.
+
+    A focus is a *filter*, never a fake label. Some rare techniques may
+    require more attempts or different motif templates and can fail
+    explicitly rather than returning an unrelated puzzle.
+    """
+    if focus_method is not None and focus_method not in METHODS:
+        raise ValueError("Unknown focus technique: " + focus_method)
+    if focus_size not in SIZES:
+        raise ValueError("Focus size must be 4, 6 or 9")
     rng = random.Random(seed)
     puzzles, details = [], []
     for n in SIZES:
@@ -659,7 +679,8 @@ def build(seed, attempts=120):
                 # completed grid before expensive clue digging begins.
                 deduce(n, dict(enumerate(solution)), constraints, trace=False)
                 clues = dig(n, solution, constraints, rng)
-                accepted = quality(n, clues, constraints, solution, failures)
+                accepted = quality(n, clues, constraints, solution, failures,
+                                   focus_method if n == focus_size else None)
             except ValueError as exc:
                 failures[str(exc)] += 1
                 continue
@@ -678,6 +699,7 @@ def build(seed, attempts=120):
             "techniques": accepted["proof"]["techniques"],
             "structural": accepted["structural"],
             "aha": accepted["aha"],
+            "education": accepted["education"],
             "trace": accepted["proof"]["trace"]
         })
     return puzzles, {"seed": seed, "family": FAMILY, "puzzles": details}
@@ -712,6 +734,10 @@ def validate(puzzles, report):
         assert deduce(n, clues, constraints)["values"] == solution
         assert not deduce(n, clues, [])["solved"]
         assert game["metadata"]["logicProfile"]["requiresGuessing"] is False
+        assert details["education"]["guideUrl"] == GUIDE_URL
+        assert details["education"]["minimumTier"] in (1, 2, 3, 4)
+        assert details["education"]["techniquePath"]
+        assert game["metadata"]["logicProfile"]["education"] == details["education"]
         assert len(details["used"]) >= 2 and details["necessary"]
         assert len(game["cages"]) > 0 and len(game["lines"]) > 0
         assert len(game["overlays"]) > 0 and len(game["arrows"]) > 0
@@ -741,9 +767,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=20261103)
     parser.add_argument("--attempts", type=int, default=120)
+    parser.add_argument("--focus-technique", choices=sorted(METHODS))
+    parser.add_argument("--focus-size", type=int, choices=SIZES, default=9)
     parser.add_argument("--output", type=Path, default=Path("public/puzzles/variants"))
     args = parser.parse_args()
-    puzzles, report = build(args.seed, args.attempts)
+    puzzles, report = build(args.seed, args.attempts,
+                            args.focus_technique, args.focus_size)
     validate(puzzles, report)
     export(args.output, puzzles, report)
     print(json.dumps([{k: v for k, v in item.items()
