@@ -16,7 +16,8 @@ from pathlib import Path
 
 from variant_logic import BOXES, VARIANTS, count_solutions, deduce, houses
 from line_generation import add_line_motifs
-from technique_catalog import METHODS, GUIDE_URL, lesson_profile, minimum_tier
+from technique_catalog import (METHODS, GUIDE_URL, lesson_profile,
+                               minimum_tier, replay_trace)
 
 FAMILY = "variant-workshop"
 SIZES = (4, 6, 9)
@@ -395,7 +396,8 @@ def dig(n, solution, constraints, rng):
     return clues
 
 
-def quality(n, clues, constraints, solution, diagnostic=None, focus_method=None):
+def quality(n, clues, constraints, solution, diagnostic=None,
+            focus_method=None, required_min_tier=1):
     """Check a genuine variant dependency, not merely decorative constraints."""
     def reject(reason):
         if diagnostic is not None:
@@ -505,9 +507,12 @@ def quality(n, clues, constraints, solution, diagnostic=None, focus_method=None)
            and len(step["remaining"]) == 1]
     education = lesson_profile(n, proof)
     education["focusTechnique"] = focus_method
+    education["requestedMinimumTier"] = required_min_tier
     education["minimumTier"] = minimum_tier(n, clues, constraints, deduce)
     if education["minimumTier"] is None:
         return reject("curriculum cannot fully solve puzzle")
+    if education["minimumTier"] < required_min_tier:
+        return reject("curriculum is easier than requested level")
     return {"proof": proof, "used": sorted(used),
             "essential": essential, "structural": structural,
             "aha": aha[:8], "education": education}
@@ -665,7 +670,8 @@ def puzzle(n, clues, solution, constraints, quality_info, seed):
     }
 
 
-def build(seed, attempts=120, focus_method=None, focus_size=9):
+def build(seed, attempts=120, focus_method=None, focus_size=9,
+          min_tier=1):
     """Generate a family; optionally demand a real use of one taught technique.
 
     A focus is a *filter*, never a fake label. Some rare techniques may
@@ -676,6 +682,8 @@ def build(seed, attempts=120, focus_method=None, focus_size=9):
         raise ValueError("Unknown focus technique: " + focus_method)
     if focus_size not in SIZES:
         raise ValueError("Focus size must be 4, 6 or 9")
+    if min_tier not in (1, 2, 3, 4):
+        raise ValueError("Minimum tier must be 1 through 4")
     rng = random.Random(seed)
     puzzles, details = [], []
     for n in SIZES:
@@ -689,7 +697,8 @@ def build(seed, attempts=120, focus_method=None, focus_size=9):
                 deduce(n, dict(enumerate(solution)), constraints, trace=False)
                 clues = dig(n, solution, constraints, rng)
                 accepted = quality(n, clues, constraints, solution, failures,
-                                   focus_method if n == focus_size else None)
+                                   focus_method if n == focus_size else None,
+                                   min_tier if n == focus_size else 1)
             except ValueError as exc:
                 failures[str(exc)] += 1
                 continue
@@ -741,6 +750,9 @@ def validate(puzzles, report):
         for house in houses(n):
             assert sorted(solution[i] for i in house) == list(range(1, n+1))
         assert deduce(n, clues, constraints)["values"] == solution
+        replayed = replay_trace(n, clues, details["trace"])
+        assert all(len(mask) == 1 for mask in replayed)
+        assert [next(iter(mask)) for mask in replayed] == solution
         assert not deduce(n, clues, [])["solved"]
         assert game["metadata"]["logicProfile"]["requiresGuessing"] is False
         assert details["education"]["guideUrl"] == GUIDE_URL
@@ -778,10 +790,11 @@ def main():
     parser.add_argument("--attempts", type=int, default=120)
     parser.add_argument("--focus-technique", choices=sorted(METHODS))
     parser.add_argument("--focus-size", type=int, choices=SIZES, default=9)
+    parser.add_argument("--min-tier", type=int, choices=(1, 2, 3, 4), default=1)
     parser.add_argument("--output", type=Path, default=Path("public/puzzles/variants"))
     args = parser.parse_args()
     puzzles, report = build(args.seed, args.attempts,
-                            args.focus_technique, args.focus_size)
+                            args.focus_technique, args.focus_size, args.min_tier)
     validate(puzzles, report)
     export(args.output, puzzles, report)
     print(json.dumps([{k: v for k, v in item.items()
