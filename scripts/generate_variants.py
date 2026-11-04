@@ -411,8 +411,16 @@ def quality(n, clues, constraints, solution, diagnostic=None, focus_method=None)
         return reject("deduction contradiction")
     if not proof["solved"] or proof["values"] != solution:
         return reject("full deduction incomplete")
-    if focus_method and not proof["techniques"].get(focus_method):
-        return reject("focused technique not used: " + focus_method)
+    if focus_method:
+        if not proof["techniques"].get(focus_method):
+            return reject("focused technique not used: " + focus_method)
+        # A teaching-focus puzzle must *need* the demonstrated method
+        # under our implemented no-guess repertoire. Merely labelling
+        # a step in one trace would not be a meaningful lesson.
+        without = deduce(n, clues, constraints, trace=False,
+                         disabled_methods=(focus_method,))
+        if without["solved"]:
+            return reject("focused technique is redundant: " + focus_method)
     if ordinary["solved"]:
         return reject("classic solves without variants")
     kind_for_method = {"killer_sum": "killer", "killer_innie": "killer",
