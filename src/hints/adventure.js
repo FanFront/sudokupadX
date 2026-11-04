@@ -668,7 +668,10 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       let remainingBudget=500000,aborted=false,valid=false;
       const walk=(k,tallest,seenCount)=>{
         if(--remainingBudget<0){aborted=true;return;}
-        if(seenCount>rule.count||seenCount+9-k<rule.count)return;
+        // Only heights strictly above the tallest building can create
+        // another visible building, even if all remaining cells are free.
+        if(seenCount>rule.count||
+           seenCount+Math.min(9-k,9-tallest)<rule.count)return;
         if(k===9){
           if(seenCount===rule.count){
             valid=true;
