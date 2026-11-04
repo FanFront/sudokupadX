@@ -19,8 +19,10 @@ const configurations={
     legend:{
       black:{type:'kropki',dot:'black',unlock:[[4,6]]},
       whisper:{type:'whisper',unlock:[[4,1]]},
-      thermo:{type:'thermo',unlock:[[3,1]]}
+      thermo:{type:'thermo',unlock:[[3,1]]},
+      factory:{type:'anti_knight',unlock:[[9,1]]}
     },
+    scopes:[{kind:'factory',grid:3,height:9,width:9}],
     dots:[{backgroundColor:'#000000',kind:'black'}],
     lines:[
       {color:'#68876cff',thickness:7.68,kind:'whisper'},
@@ -36,8 +38,18 @@ const configurations={
       scan:{type:'kropki',dot:'white',unlock:[[2,34],[17,25]]},
       night:{type:'kropki',dot:'black',unlock:[[2,38],[33,39]]},
       whisper:{type:'whisper',unlock:[[3,34],[11,11]]},
-      killer:{type:'killer',unlock:[[3,38],[23,35]]}
+      killer:{type:'killer',unlock:[[3,38],[23,35]]},
+      fortressKing:{type:'anti_king',unlock:[[8,34],[17,7]]},
+      fortressKnight:{type:'anti_knight',unlock:[[8,34],[17,7]]},
+      hiddenKnight:{type:'anti_knight',unlock:[[17,7]]},
+      shrine:{type:'magic_square',unlock:[[8,38]]}
     },
+    scopes:[
+      {kind:'fortressKing',grid:5,height:9,width:9},
+      {kind:'fortressKnight',grid:5,height:9,width:9},
+      {kind:'hiddenKnight',grid:16,height:6,width:6},
+      {kind:'shrine',grid:15,height:3,width:3}
+    ],
     dots:[
       {backgroundColor:'#FFFFFF',kind:'scan'},
       {backgroundColor:'#000000',kind:'night'}
@@ -49,8 +61,10 @@ const configurations={
     legend:{
       scan:{type:'kropki',dot:'white',unlock:[[13,37]]},
       whisper:{type:'whisper',unlock:[[13,41],[14,41]]},
-      vent:{type:'reverse_thermo',unlock:[[20,41]]}
+      vent:{type:'reverse_thermo',unlock:[[20,41]]},
+      crystal:{type:'crystal_cage',unlock:[[18,37]]}
     },
+    crystalCages:[0,1,2],
     dots:[{backgroundColor:'#FFFFFF',kind:'scan'}],
     lines:[
       {color:'#67f067ff',thickness:9.6,kind:'whisper'},
@@ -123,6 +137,31 @@ function solutionSupports(rule,solution){
   if(type==='reverse_thermo')return numbers.slice(1).every((n,i)=>n<numbers[i]);
   if(type==='killer')return numbers.reduce((a,b)=>a+b,0)===rule.sum &&
     new Set(numbers).size===numbers.length;
+  if(type==='crystal_cage')return rule.groups.every(group=>
+    group.reduce((sum,i)=>sum+Number(solution[i]),0)===rule.sum);
+  if(type==='magic_square'){
+    if(numbers.length!==9||new Set(numbers).size!==9)return false;
+    const groups=[];
+    for(let i=0;i<3;i++){
+      groups.push([numbers[i*3],numbers[i*3+1],numbers[i*3+2]]);
+      groups.push([numbers[i],numbers[i+3],numbers[i+6]]);
+    }
+    groups.push([numbers[0],numbers[4],numbers[8]],
+      [numbers[2],numbers[4],numbers[6]]);
+    return groups.every(row=>row.reduce((a,b)=>a+b,0)===15);
+  }
+  if(type==='anti_knight'||type==='anti_king'){
+    const cols=rule.boardCols;
+    for(let i=0;i<rule.cells.length;i++)for(let j=i+1;j<rule.cells.length;j++){
+      const a=rule.cells[i],b=rule.cells[j];
+      const dr=Math.abs(Math.floor(a/cols)-Math.floor(b/cols));
+      const dc=Math.abs(a%cols-b%cols);
+      const touches=type==='anti_king'?dr===1&&dc===1
+        :(dr===1&&dc===2)||(dr===2&&dc===1);
+      if(touches&&numbers[i]===numbers[j])return false;
+    }
+    return true;
+  }
   return false;
 }
 function extract(name){
@@ -169,10 +208,31 @@ function extract(name){
         {sum:Number(cage.value),unique:true});
     });
   }
+  for(const scope of cfg.scopes||[]){
+    const grid=puzzle.metadata.grids[scope.grid];
+    if(!grid||scope.width>grid.width||scope.height>grid.height||
+       grid.left<0||grid.top<0)throw Error(name+': invalid scope '+scope.kind);
+    const cells=Array.from({length:scope.height*scope.width},(_,i)=>
+      asCell([grid.top+Math.floor(i/scope.width),grid.left+i%scope.width],
+        rows,cols));
+    consider(scope.kind,cells.every(i=>i>=0)?cells:null,
+      'metadata.grids',scope.grid,{boardCols:cols});
+  }
+  for(const index of cfg.crystalCages||[]){
+    const cage=puzzle.cages[index];
+    if(!cage||!/^\d+$/.test(String(cage.value))||cage.cells.length<2)
+      throw Error(name+': incorrect crystal cage index '+index);
+    const cells=cage.cells.map(p=>asCell(p,rows,cols));
+    const groupBy=fn=>[...new Set(cage.cells.map(fn))].map(v=>
+      cage.cells.filter(p=>fn(p)===v).map(p=>asCell(p,rows,cols)));
+    const groups=[...groupBy(([r])=>r),...groupBy(([,c])=>c)];
+    consider('crystal',cells,'cages',index,
+      {sum:Number(cage.value),groups});
+  }
   if(accepted.length===0)throw Error(name+': no verified structural variants');
   const unique=new Set();
   for(const rule of accepted){
-    const key=rule.sourceKind+'#'+rule.sourceIndex;
+    const key=rule.sourceKind+'#'+rule.sourceIndex+'#'+rule.type;
     if(unique.has(key))throw Error(name+': duplicate source '+key);
     unique.add(key);
   }
