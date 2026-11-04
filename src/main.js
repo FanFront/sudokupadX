@@ -786,6 +786,10 @@ function draw() {
       ctx.fillStyle=currentHint.assumptionBased?'#ad85da66':'#4bcc9c55';
        ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
     }
+    if(currentHint?.affectedCells?.includes(idx)&&currentHint.target!==idx){
+      ctx.fillStyle='#ffad5b66';
+      ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+    }
     if(currentHint?.target===idx){
       ctx.fillStyle=currentHint.assumptionBased?'#cba3ee88':'#ffad5b88';
        ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
@@ -862,6 +866,13 @@ function draw() {
        ctx.lineWidth=2.5;
        if(currentHint.assumptionBased)ctx.setLineDash([4,3]);
       ctx.strokeRect(x+2,y+2,CELL-4,CELL-4);
+    }
+    for(const other of currentHint.affectedCells||[]){
+      if(other===currentHint.target||other<0||other>=puzzle.rows*puzzle.cols)
+        continue;
+      const x=(other%puzzle.cols)*CELL,y=Math.floor(other/puzzle.cols)*CELL;
+      ctx.setLineDash([3,3]);ctx.strokeStyle='#ea8433';ctx.lineWidth=2;
+      ctx.strokeRect(x+3,y+3,CELL-6,CELL-6);
     }
     const index=currentHint.target;
     const x=(index%puzzle.cols)*CELL,y=Math.floor(index/puzzle.cols)*CELL;
