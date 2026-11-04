@@ -74,6 +74,8 @@ pub struct Step {
     pub cell: usize,
     pub removed: Vec<u8>,
     pub remaining: Vec<u8>,
+    pub before: Vec<u8>,
+    pub sources: Vec<usize>,
 }
 #[derive(Clone,Debug)]
 struct Proof {
@@ -111,6 +113,7 @@ struct Solver {
     steps: Vec<Step>,
     methods: BTreeMap<String,usize>,
     trace: bool,
+    reason: Vec<usize>,
 }
 impl Solver {
     fn new(n:usize,givens:&[u8],rules:&[Rule],tier:u8,trace:bool,
@@ -125,7 +128,7 @@ impl Solver {
         }
         Ok(Self{n,masks,rules:rules.to_vec(),units:units(n),tier,
             disabled:disabled.map(str::to_owned),steps:vec![],
-            methods:BTreeMap::new(),trace})
+            methods:BTreeMap::new(),trace,reason:vec![]})
     }
     fn from_masks(n:usize,masks:Vec<Mask>,rules:&[Rule],tier:u8)
         -> Result<Self,String> {
@@ -148,7 +151,8 @@ impl Solver {
         if self.trace {
             self.steps.push(Step{method:method.to_owned(),cell:i,
                 removed:values(before&!after,self.n),
-                remaining:values(after,self.n)});
+                remaining:values(after,self.n),
+                before:values(before,self.n),sources:self.reason.clone()});
         }
         Ok(true)
     }
@@ -301,6 +305,9 @@ impl Solver {
             }
             for &i in &house{
                 if count(self.masks[i])>1{
+                    self.reason=house.iter().copied().filter(|&other|
+                        count(self.masks[other])==1 &&
+                        self.masks[other]&self.masks[i]!=0).collect();
                     changed|=self.reduce(i,!seen,"peer_elimination")?;
                 }
             }
@@ -309,6 +316,7 @@ impl Solver {
                     .filter(|&i|self.masks[i]&bit(d)!=0).collect();
                 if positions.is_empty(){return Err("某个数字没有候选位置".into());}
                 if positions.len()==1{
+                    self.reason=house.clone();
                     changed|=self.reduce(positions[0],bit(d),"hidden_single")?;
                 }
             }
@@ -326,6 +334,7 @@ impl Solver {
                     if count(union)!=size as u32 {continue;}
                     for &cell in &house {
                         if !selected.contains(&cell) {
+                            self.reason=selected.clone();
                             changed|=self.reduce(cell,!union,"naked_subset")?;
                         }
                     }
@@ -338,7 +347,8 @@ impl Solver {
                     if locations.len()!=size||chosen.iter().any(|&d|
                         !locations.iter().any(|&i|self.masks[i]&bit(d as u8)!=0))
                         {continue;}
-                    for cell in locations{
+                    for &cell in &locations{
+                        self.reason=locations.clone();
                         changed|=self.reduce(cell,union,"hidden_subset")?;
                     }
                 }
@@ -357,6 +367,7 @@ impl Solver {
                            !positions.iter().all(|p|common.contains(p)){continue;}
                         for cell in self.units[dest].clone(){
                             if !common.contains(&cell){
+                                self.reason=positions.clone();
                                 changed|=self.reduce(cell,!bit(digit),"locked_candidate")?;
                             }
                         }
@@ -389,6 +400,9 @@ impl Solver {
                         if base.contains(&line){continue;}
                         for &cover in &covers{
                             let cell=if axis==0{line*9+cover}else{cover*9+line};
+                            self.reason=base.iter().flat_map(|&i|
+                                locations[i].iter().map(move |&col|
+                                    if axis==0{i*9+col}else{col*9+i})).collect();
                             changed|=self.reduce(cell,!bit(digit),method)?;
                         }
                     }
@@ -414,6 +428,7 @@ impl Solver {
                     for cell in 0..81{
                         if cell!=pivot&&cell!=a&&cell!=b &&
                            linked(9,cell,a)&&linked(9,cell,b){
+                            self.reason=vec![pivot,a,b];
                             changed|=self.reduce(cell,!z,"xy_wing")?;
                         }
                     }
@@ -445,6 +460,9 @@ impl Solver {
                     for cell in 0..81{
                         if cell!=roof_a&&cell!=roof_b&&
                             linked(9,cell,roof_a)&&linked(9,cell,roof_b){
+                            self.reason=vec![roof_a,roof_b,
+                                if axis==0{a*9+shared[0]}else{shared[0]*9+a},
+                                if axis==0{b*9+shared[0]}else{shared[0]*9+b}];
                             changed|=self.reduce(cell,!bit(digit),"skyscraper")?;
                         }
                     }
@@ -470,6 +488,7 @@ impl Solver {
                 for cell in 0..81{
                     if cell!=pivot&&cell!=a&&cell!=b&&
                         linked(9,cell,pivot)&&linked(9,cell,a)&&linked(9,cell,b){
+                        self.reason=vec![pivot,a,b];
                         changed|=self.reduce(cell,!shared,"xyz_wing")?;
                     }
                 }
@@ -485,7 +504,7 @@ impl Solver {
         let snapshot=self.masks.clone();
         let mut eliminations=Vec::new();
         fn dfs(masks:&[Mask],path:&mut Vec<usize>,link:u8,target:u8,
-               out:&mut Vec<(usize,Mask)>,max_depth:usize) {
+               out:&mut Vec<(usize,Mask,Vec<usize>)>,max_depth:usize) {
             if path.len()>=max_depth{return;}
             let current=*path.last().unwrap();
             for next in 0..81{
@@ -497,7 +516,9 @@ impl Solver {
                     for cell in 0..81{
                         if cell!=start&&cell!=next&&
                             linked(9,cell,start)&&linked(9,cell,next){
-                            out.push((cell,bit(target)));
+                            let mut witness=path.clone();
+                            witness.push(next);
+                            out.push((cell,bit(target),witness));
                         }
                     }
                 }else{
@@ -515,7 +536,8 @@ impl Solver {
             }
         }
         let mut changed=false;
-        for (cell,mask) in eliminations{
+        for (cell,mask,witness) in eliminations{
+            self.reason=witness;
             changed|=self.reduce(cell,!mask,"xy_chain")?;
         }
         Ok(changed)
@@ -523,7 +545,10 @@ impl Solver {
     fn run(mut self)->Result<Proof,String>{
         for iteration in 0..150 {
             let mut changed=self.houses()?;
-            for rule in self.rules.clone(){changed|=self.rule(&rule)?;}
+            for rule in self.rules.clone(){
+                self.reason=rule.cells.clone();
+                changed|=self.rule(&rule)?;
+            }
             if self.tier>=2{changed|=self.subsets()?;}
             if !changed && self.tier>=3{
                 changed|=self.fish(3)?;
@@ -964,6 +989,7 @@ fn render_puzzle(request:&CreateRequest,seed:u64,givens:&[u8],
             "variantFamily":"personal-created",
             "variantTypes":request.variants,
             "generatorSeed":seed,"generatorAttempt":attempt,
+            "solverRules":rules,
             "logicProfile":logic
         }
     });
