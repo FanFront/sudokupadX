@@ -8,7 +8,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import generate_variants as variants
 from variant_logic import deduce
-from technique_catalog import METHODS, GUIDE_URL, lesson_profile, minimum_tier
+from technique_catalog import (METHODS, GUIDE_URL, lesson_profile,
+                               minimum_tier, replay_trace)
 
 
 def blank():
@@ -129,6 +130,44 @@ class ClassicCurriculumTests(unittest.TestCase):
                  "remaining": [2], "source": {}}]})
         with self.assertRaises(ValueError):
             variants.build(20261103, focus_method="invented_method")
+
+    def test_proof_replay_and_rejected_tier_targets(self):
+        puzzle_set, report = variants.build(20261103)
+        for game, detail in zip(puzzle_set, report["puzzles"]):
+            n = detail["size"]
+            givens = {r*n+c: int(cell["value"])
+                      for r, row in enumerate(game["cells"])
+                      for c, cell in enumerate(row) if cell}
+            replayed = replay_trace(n, givens, detail["trace"])
+            self.assertEqual(
+                [next(iter(domain)) for domain in replayed],
+                list(map(int, game["metadata"]["solution"])))
+            tier = detail["education"]["minimumTier"]
+            self.assertTrue(deduce(n, givens, detail["constraints"],
+                                   trace=False, max_tier=tier)["solved"])
+            if tier > 1:
+                self.assertFalse(deduce(
+                    n, givens, detail["constraints"], trace=False,
+                    max_tier=tier-1)["solved"])
+        with self.assertRaises(ValueError):
+            replay_trace(4, {0: 1}, [
+                {"method": "hidden_single", "cell": 0,
+                 "removed": [2], "remaining": [1], "source": {}}])
+        with self.assertRaises(ValueError):
+            variants.build(20261103, min_tier=5)
+        # The 9x9 default chapter has a valid proof but a low
+        # curriculum threshold. It must not be relabeled as tier 4.
+        game, detail = puzzle_set[2], report["puzzles"][2]
+        n = 9
+        givens = {r*n+c: int(cell["value"])
+                  for r, row in enumerate(game["cells"])
+                  for c, cell in enumerate(row) if cell}
+        current = detail["education"]["minimumTier"]
+        if current < 4:
+            self.assertIsNone(variants.quality(
+                n, givens, detail["constraints"],
+                list(map(int, game["metadata"]["solution"])),
+                required_min_tier=current+1))
 
     def test_generator_has_a_complete_chinese_curriculum(self):
         puzzles, report = variants.build(20261103)
