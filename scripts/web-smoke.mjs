@@ -247,6 +247,47 @@ try{
   console.log('Four independently certified tier-3 puzzles and library filtering passed.');
 
 
+  // The same Rust generator runs in a Web Worker in the browser.
+  // Create a classical 4x4 puzzle, verify it is playable, automatically saved,
+  // marked, persisted across reload, and permanently deleted on request.
+  await page.locator('#homeButton').click();
+  await page.locator('#creatorButton').click();
+  await page.locator('#creatorSize').selectOption('4');
+  await page.locator('#creatorTier').selectOption('1');
+  await page.locator('#creatorClearVariants').click();
+  await page.locator('#creatorSeed').fill('102938');
+  await page.locator('#creatorAttempts').fill('4');
+  await page.locator('#creatorGenerate').click();
+  await page.waitForFunction(()=>
+    document.querySelector('#creatorDialog')?.open === false &&
+    document.querySelector('#puzzleTitle')?.textContent?.includes('本机创作') &&
+    document.querySelector('#boardMeta')?.textContent?.includes('4 × 4'),
+    null,{timeout:90000});
+  await page.screenshot({path:'artifacts/web/creator-rust-generated-board.png'});
+  await page.locator('#homeButton').click();
+  await page.locator('#creatorButton').click();
+  assert.equal(await page.locator('#creatorSaved .creator-saved-item').count(),1);
+  await page.locator('#creatorSaved .creator-saved-item button').filter({hasText:'收藏'}).click();
+  await page.locator('#creatorSaved .creator-saved-item button').filter({hasText:'标记完成'}).click();
+  assert.ok((await page.locator('#creatorSaved').textContent()).includes('已完成'));
+  assert.ok((await page.locator('#creatorSaved').textContent()).includes('已收藏'));
+  await page.reload();
+  await page.locator('#creatorButton').click();
+  assert.equal(await page.locator('#creatorSaved .creator-saved-item').count(),1);
+  assert.ok((await page.locator('#creatorSaved').textContent()).includes('已完成'));
+  await page.locator('#creatorClose').click();
+  await page.locator('#libraryButton').click();
+  await page.locator('#bundledSearch').fill('');
+  await page.locator('#bundledCategory').selectOption('personal');
+  assert.equal(await page.locator('#libraryList .library-entry').count(),1);
+  await page.locator('#closeLibrary').click();
+  await page.locator('#creatorButton').click();
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('#creatorSaved .creator-saved-item .creator-delete').click();
+  assert.equal(await page.locator('#creatorSaved .creator-saved-item').count(),0);
+  await page.locator('#creatorClose').click();
+  console.log('On-device Rust/WASM creator, automatic IndexedDB save, marking, reload and deletion passed.');
+
   // The bundled index is usable without reaching the online JSON provider.
   await page.locator('#homeButton').click();
   await page.locator('#libraryButton').click();
