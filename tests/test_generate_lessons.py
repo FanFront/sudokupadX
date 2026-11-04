@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from generate_lessons import (LESSON_METHODS, anchor_examples,
-                              collect_report_examples, make_fixture)
+                              anchored_line_examples, collect_report_examples,
+                              make_fixture)
 from variant_logic import houses
 
 
@@ -19,6 +20,7 @@ class VerifiedLessonsTests(unittest.TestCase):
     def test_every_exported_technique_matches_real_trace(self):
         all_examples = collect_report_examples()
         all_examples.update(anchor_examples())
+        all_examples.update(anchored_line_examples())
         self.assertEqual(set(LESSON_METHODS), set(range(1, 26)))
         self.assertIn(1, all_examples)
         self.assertIn(2, all_examples)
@@ -51,6 +53,17 @@ class VerifiedLessonsTests(unittest.TestCase):
                           if 6 in lesson["masks"][i]], [target])
         self.assertEqual(set().union(*(set(lesson["masks"][i]) for i in row)),
                          set(range(1,10)))
+
+    def test_concrete_variant_lines_are_deduced_from_their_actual_rules(self):
+        for lesson_id, fixture in anchored_line_examples().items():
+            self.assertIn(lesson_id, (20, 21, 22))
+            self.assertEqual(fixture["method"], LESSON_METHODS[lesson_id])
+            self.assertEqual(len(fixture["puzzle"]["lines"]), 1)
+            self.assertEqual(len(fixture["puzzle"]["cages"]), 0)
+            self.assertIn(fixture["goal"]["index"], fixture["focus"])
+            self.assertIn(fixture["goal"]["digit"], [
+                str(value) for value in fixture["masks"][fixture["goal"]["index"]]])
+        self.assertEqual(len(anchored_line_examples()), 3)
 
     def test_impossible_eight_cell_128_row_cannot_be_exported(self):
         lesson = anchor_examples()[2]
