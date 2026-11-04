@@ -12,7 +12,7 @@ A SudokuPad-compatible puzzle player for **Android and the web**, built with Rus
 - **Puzzle library:** search the bundled [Sudoku Index](https://stefanlobbenmeier.github.io/sudoku-index/index.json) or Logic Masters Deutschland, open supported SudokuPad-format puzzles, and download them for offline play.
 - **Gameplay:** large-board pan and zoom, fog of war, region rules, linked-puzzle navigation, notes, colors, undo/redo, and automatic progress saving.
 - **Chinese support:** translated rules and descriptions alongside original text where available.
-- **Sudoku lessons:** a built-in, offline Chinese learning page with 25 searchable technique lessons, interactive candidate exercises, and locally saved completion progress. Open it from Home or any puzzle's rules.
+- **Sudoku lessons:** a built-in, offline Chinese learning page with 25 searchable techniques and **real SudokuPadX engine practice boards**. Each tutorial stages matching candidate notes and variant geometry so players perform an actual pencilmark elimination or digit placement using the regular game controls. Progress is saved locally; returning to the lesson restores the original game (Rust undo/redo history resets).
 - **Checkpoint transfer:** export/import a puzzle's progress as JSON between Android, web, and the updated `sodokupadAndroid` app.
 
 An offline index lets you **browse** puzzle entries without a connection; external puzzles must be downloaded first to **play** offline.
