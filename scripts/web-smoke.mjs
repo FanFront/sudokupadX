@@ -19,7 +19,13 @@ const cases=[
   ['generated-adventure-1','27 × 27'],
   ['generated-adventure-1-boss-1','9 × 9'],
   ['generated-9x9-001','9 × 9'],
-  ['generated-9x9-100','9 × 9']
+  ['generated-9x9-100','9 × 9'],
+  ['single-rule-lab-killer','9 × 9'],
+  ['single-rule-lab-kropki','9 × 9'],
+  ['single-rule-lab-thermo','9 × 9'],
+  ['single-rule-lab-renban','9 × 9'],
+  ['single-rule-lab-arrow','9 × 9'],
+  ['single-rule-lab-whisper','9 × 9']
 ];
 await mkdir('artifacts/web',{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -204,6 +210,23 @@ try{
     null,{timeout:60000});
   await page.screenshot({path:'artifacts/web/generated-9x9-library.png'});
   console.log('100 generated 9x9 entries, search and real puzzle load passed.');
+  // The sparse one-rule collection is selectable with a clue-count subtitle.
+  await page.locator('#homeButton').click();
+  await page.locator('#libraryButton').click();
+  await page.locator('#bundledSearch').fill('');
+  await page.locator('#bundledCategory').selectOption('single');
+  assert.equal(await page.locator('#libraryList .library-entry').count(),6);
+  assert.ok((await page.locator('#libraryList').textContent()).includes('个提示数'));
+  await page.locator('#bundledSearch').fill('kropki');
+  assert.equal(await page.locator('#libraryList .library-entry').count(),1);
+  await page.locator('#libraryList .library-entry').first().click();
+  await page.waitForFunction(()=>
+    document.querySelector('#puzzleTitle')?.textContent?.includes('黑白连锁') &&
+    document.querySelector('#boardMeta')?.textContent?.includes('9 × 9'),
+    null,{timeout:60000});
+  await page.screenshot({path:'artifacts/web/sparse-single-rule-kropki.png'});
+  console.log('Six sparse single-rule puzzles open from their own library category.');
+
 
   // The bundled index is usable without reaching the online JSON provider.
   await page.locator('#homeButton').click();

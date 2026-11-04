@@ -307,3 +307,41 @@ seed, authored constraint types and a technique profile; the compact
 
 The PWA service worker also precaches every file listed in the generated catalog,
 so these puzzles remain playable offline after a successful shell install.
+
+
+## 少提示单规则挑战：六种独立 9×9 变体
+
+`scripts/generate_single_variants.py` creates six **single-family** puzzles:
+Killer cages, Kropki dots, thermometers, Renban, arrows and German Whispers.
+Each puzzle uses only the named extra rule (with several printed instances),
+plus ordinary row/column/box Sudoku. No overlapping *different* variant rule
+families are necessary. The geometry is intentionally spread across the board;
+Kropki includes rows of three disjoint white-dot chains, while Killer cages
+include genuine house innie/outie sum structures.
+
+- The full completed grid is used only to author a consistent rule layout.
+- Given digits are deleted one at a time. The separate **tier ≤3 no-guess
+  deduction solver** must still complete every cell after each deletion.
+- A finished board must have exactly one solution **with** its rule, but at
+  least two solutions **without** the variant rule. Decoration-only rules are
+  rejected.
+- Every remaining given must be individually irremovable while preserving
+  that bounded human-style solve. This is **local clue irreducibility for the
+  fixed board**, not a proof of a global mathematical minimum over all boards
+  and constraint layouts.
+- The exact, replayable elimination trace, all visible constraints, number of
+  clues, constraint-mark count and technique tier are in
+  `public/puzzles/single-rule/validation.json`.
+- Candidate construction is repeatable under the fixed seed and independent
+  of the 100-puzzle mixed-variant library, preserving existing puzzle IDs.
+
+```sh
+python3 scripts/generate_single_variants.py --seed 20261105 --workers 3
+python3 scripts/generate_single_variants.py --rule killer --attempts 1 --output /tmp/single-killer
+```
+
+Open **谜题库 → 内置谜题 → 少提示 · 单规则（6 题）** to compare rule
+families, clue counts and logic profiles on real playable puzzles. Generated
+assets are automatically regenerated for dev/build/test and are included in
+the Android and web packages. The service worker preloads their catalog
+and all six puzzle definitions for offline play.
