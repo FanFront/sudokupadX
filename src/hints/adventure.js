@@ -947,10 +947,10 @@ export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
   const basic=['peer_elimination','locked_candidate',
     'hidden_single','naked_subset'].includes(step?.method);
   const relevant=combined?.sources.includes(focus)||combined?.cell===focus;
-  const preferCombined=combined&&(!step||
-    combined.method==='constraint_locked_digit'
+  const preferCombined=Boolean(combined)&&
+    (!step||(combined.method==='constraint_locked_digit'
       ? (relevant||basic)
-      : (basic&&relevant));
+      : (basic&&relevant)));
   if(preferCombined){
     return {status:'step',level:combined.level,step:combined};
   }
