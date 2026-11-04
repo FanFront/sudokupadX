@@ -176,22 +176,6 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
         changed |= xyz_wings(n, masks, reduce)
         changed |= skyscrapers(n, masks, reduce)
 
-        # Short connected patterns from Sudopedia. Run these only at a
-        # genuine stall after elementary deductions: their proof steps
-        # should be the player's breakthrough, not redundant decorations.
-        # Tier-3 kite/W-Wing/remote-pair steps are inspected first; tier-4
-        # coloring and chains need more careful candidate-link reading.
-        if not changed and (max_tier is None or max_tier >= 3):
-            changed |= two_string_kites(n, masks, units, reduce)
-            changed |= w_wings(n, masks, units, reduce)
-            changed |= remote_pairs(n, masks, reduce)
-        if not changed and (max_tier is None or max_tier >= 4):
-            changed |= simple_colors(n, masks, units, reduce)
-            changed |= xy_chains(n, masks, reduce)
-            changed |= x_chains(n, masks, units, reduce)
-            changed |= finned_x_wings(n, masks, reduce)
-            changed |= als_xz(n, masks, units, reduce)
-
         # A candidate confined to a row/box intersection cannot occur
         # elsewhere in the other house (pointing / claiming).
         for first_id, second_id, common in intersections:
@@ -250,6 +234,22 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
                 changed |= propagate_extra(n, masks, clue, index, reduce)
 
         changed |= kropki_triple_partitions(n, units, masks, constraints, reduce)
+        # Short connected patterns from Sudopedia. Run these only at a
+        # genuine stall after elementary deductions: their proof steps
+        # should be the player's breakthrough, not redundant decorations.
+        # Tier-3 kite/W-Wing/remote-pair steps are inspected first; tier-4
+        # coloring and chains need more careful candidate-link reading.
+        if not changed and (max_tier is None or max_tier >= 3):
+            changed |= two_string_kites(n, masks, units, reduce)
+            changed |= w_wings(n, masks, units, reduce)
+            changed |= remote_pairs(n, masks, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= simple_colors(n, masks, units, reduce)
+            changed |= xy_chains(n, masks, reduce)
+            changed |= x_chains(n, masks, units, reduce)
+            changed |= finned_x_wings(n, masks, reduce)
+            changed |= als_xz(n, masks, units, reduce)
+
         if not changed:
             break
     return {"solved": all(len(s) == 1 for s in masks),
