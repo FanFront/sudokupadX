@@ -2,6 +2,7 @@
 // Every inference is derived from *visible* values and explicitly authored
 // all-different sets and explicitly typed variants, not colors or fogged givens.
 import {typedConstraints} from './constraint-data.js';
+import {findCombinedConstraintHint} from './constraint-propagation.js';
 
 const SIZES=new Set([4,6,9]);
 const whole=n=>Array.from({length:n},(_,i)=>i+1);
@@ -243,7 +244,7 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
     // admissible digits, not from untrusted handwritten notes.
     for(const house of completeHouses){
       const open=house.cells.filter(i=>!values[i]&&candidates[i]?.length>1);
-      for(const count of [2,3]){
+      for(let count=2;count<Math.min(9,open.length);count++){
         for(const subset of combinations(open.filter(i=>isVisible(progress,i)),count)){
           const union=distinct(subset.flatMap(i=>candidates[i]));
           if(union.length!==count)continue;
@@ -935,6 +936,16 @@ export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
   }
   const step=chooseStep(puzzle,progress,domains,houses,sectors,state,
     Math.min(tier,4),focus);
+  // Join independently proven variant arithmetic with Sudoku all-different
+  // reasoning. A sum group can guarantee a digit within a house without
+  // fixing which of its arrow-shaft cells contains it.
+  const combined=findCombinedConstraintHint(puzzle,progress,
+    {domains,houses},state,activeRules,Math.min(tier,4),focus);
+  if(combined&&(!step||['peer_elimination','locked_candidate',
+      'hidden_single','naked_subset'].includes(step.method)||
+      combined.sources.includes(focus)||combined.cell===focus)){
+    return {status:'step',level:combined.level,step:combined};
+  }
   if(step)return {status:'step',level:step.level,step};
   return {status:progress.visible?.some(flag=>flag===false)
     ?'fog_stalled':'stalled',level:Math.min(tier,4),step:null};
