@@ -70,7 +70,7 @@ def focus_cells(n, cell, source, method, constraints=()):
                   and 0 <= value < n*n and
                   ("cell" in key or key in
                    ("pivot", "pincer", "wing", "a", "b", "tip", "base",
-                    "groups", "group"))):
+                    "groups", "group", "segments"))):
                 found.add(value)
         visit(source)
     return sorted(found)
@@ -230,9 +230,98 @@ def anchor_examples():
     return {1: basic, 2: hidden}
 
 
+
+def anchored_line_examples():
+    """Build genuine one-rule deductions on a known unique 9x9 Sudoku.
+
+    The three short paths are checked against the completed grid. Every
+    deduction is performed by the very same variant propagator used by
+    the actual no-guess solver; no answer is taken from solution metadata.
+    """
+    from generate_variants import render
+    from variant_lines import (propagate_group, propagate_region,
+                               region_segments, line_class)
+
+    n = 9
+    solution = list(map(int, SOLUTION))
+    base = {i: int(digit) for i, digit in enumerate(GIVENS) if digit != "0"}
+    regions = [[[(r+dr), (c+dc)] for dr in range(3) for dc in range(3)]
+               for r in (0, 3, 6) for c in (0, 3, 6)]
+    specifications = [
+        # R7C2..C5: 7+1=5+3, with the last cell still unfilled.
+        (20, "region_sum", [55, 56, 57, 58], [55, 56, 57], 58),
+        # R9C3..C5: 5 is mid, 2 low, 8 high.
+        (21, "entropic", [74, 75, 76], [74, 76], 75),
+        # R8C2..C4: 8/6/4 occupy three different mod-three classes.
+        (22, "modular", [64, 65, 66], [64, 66], 65),
+    ]
+    result = {}
+    for number, method, path, anchors, target in specifications:
+        constraint = {"type": method, "cells": path}
+        constraints = [constraint]
+        if method == "region_sum":
+            segments = region_segments(n, path)
+            totals = [sum(solution[i] for i in piece) for piece in segments]
+            if len(segments) != 2 or len(set(totals)) != 1:
+                raise ValueError("Invalid anchored region-sum line")
+        elif len({line_class(n, solution[i], method) for i in path}) != 3:
+            raise ValueError("Anchored category line contradicts the solution")
+
+        givens = dict(base)
+        for i in anchors:
+            givens[i] = solution[i]
+        if target in givens:
+            raise ValueError("The lesson goal must remain editable")
+        if count_solutions(n, givens, constraints) != 1:
+            raise ValueError("Anchored line practice is not uniquely solvable")
+        masks = clue_domains(n, givens)
+        snapshots = []
+        def reduce(cell, allowed, name, source):
+            allowed = set(allowed)
+            removed = masks[cell] - allowed
+            if not removed:
+                return False
+            if not allowed & masks[cell]:
+                raise ValueError("Variant proof emptied a candidate set")
+            snapshot = [set(domain) for domain in masks]
+            masks[cell].intersection_update(allowed)
+            snapshots.append((snapshot, {"method": name, "cell": cell,
+                "removed": sorted(removed), "remaining": sorted(masks[cell]),
+                "source": source}))
+            return True
+
+        if method == "region_sum":
+            propagate_region(n, masks, constraint, 0, reduce)
+        else:
+            propagate_group(n, masks, constraint, 0, reduce)
+
+        witness = next(((snapshot, step) for snapshot, step in snapshots
+                        if step["cell"] == target
+                        and step["method"] == method), None)
+        if witness is None:
+            raise ValueError(f"Anchored lesson {number} lacks its stated proof")
+        cages, lines, underlays, overlays, arrows = render(n, constraints)
+        puzzle = {
+            "cells": [[{"value": str(givens[r*n+c])} if r*n+c in givens
+                      else {} for c in range(n)] for r in range(n)],
+            "regions": regions, "cages": cages, "lines": lines,
+            "arrows": arrows, "overlays": overlays, "underlays": underlays,
+            "metadata": {"solution": SOLUTION, "rules":
+                         "标准数独：每行、每列及每个 3×3 宫包含 1 至 9；" +
+                         {"region_sum": "区域和线各宫线段之和相等。",
+                          "entropic": "熵线连续三格各占低中高一组。",
+                          "modular": "模三线连续三格各占一种余数。"}[method]}
+        }
+        snapshot, step = witness
+        result[number] = make_fixture(
+            number, puzzle, snapshot, step, constraints=constraints)
+    return result
+
+
 def generate():
     examples = collect_report_examples()
     examples.update(anchor_examples())
+    examples.update(anchored_line_examples())
     for id_, fixture in examples.items():
         if fixture["method"] != LESSON_METHODS[id_]:
             raise ValueError("Mismatched lesson technique")
