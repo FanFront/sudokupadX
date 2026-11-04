@@ -182,7 +182,9 @@ export function setupCreatorUI({openPuzzle,onCatalogChanged,handleDelete,notify}
       const seed=customSeed?Number(customSeed):crypto.getRandomValues(new Uint32Array(1))[0];
       if(!Number.isSafeInteger(seed)||seed<0||seed>Number.MAX_SAFE_INTEGER)
         throw Error('随机种子必须是非负安全整数');
-      const id='personal-'+crypto.randomUUID().replaceAll('-','');
+      // getRandomValues also works in Android WebViews without randomUUID().
+      const words=crypto.getRandomValues(new Uint32Array(4));
+      const id='personal-'+[...words].map(value=>value.toString(16).padStart(8,'0')).join('');
       request={...options,id,seed};
     }catch(error){setStatus(errorMessage(error));return;}
     setBusy(true);
