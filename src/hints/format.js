@@ -50,7 +50,8 @@ export function describeHint(response,size,cells=[]){
       not_unique:'根据当前棋盘和已知规则无法证明唯一解，因此不会猜一个数字。',
       notes_current:'已标记的候选数没有新排除项，且暂时找不到确定填数。玩家手记仅用于避免重复提示，可能需要补充其他格的候选。',
       fog_stalled:'当前已揭开的格子与可验证规则中暂时找不到新的无猜测步骤。请检查相邻已解锁区域和关联首领谜题；不能利用迷雾下的提示数字或未解锁规则偷看答案。',
-      unsupported:'当前大型地图缺乏可证实的数独行列宫或不重复约束，暂时不能安全生成提示。'
+      unsupported:'当前大型地图缺乏可证实的数独行列宫或不重复约束，暂时不能安全生成提示。',
+      conflict:'当前可见棋盘在某个行、列、宫或不重复组中出现相同的大数字，不能在矛盾的盘面上继续证明下一步。请先检查已填数字。'
     };
     return {title:'暂无可验证步骤',description:status[response?.status]||'无法计算下一步。',
       candidates:'',sources:[],target:-1,level:response?.level??0};
