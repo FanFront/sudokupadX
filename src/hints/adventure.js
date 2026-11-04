@@ -4,6 +4,15 @@
 const SIZES=new Set([4,6,9]);
 const whole=n=>Array.from({length:n},(_,i)=>i+1);
 const distinct=a=>[...new Set(a)];
+function combinations(items,k){
+  if(k===0)return [[]];
+  if(items.length<k)return [];
+  const out=[];
+  for(let i=0;i<=items.length-k;i++){
+    for(const tail of combinations(items.slice(i+1),k-1))out.push([items[i],...tail]);
+  }
+  return out;
+}
 const digit=(value,n=9)=>/^[1-9]$/.test(String(value??''))&&Number(value)<=n?Number(value):0;
 const isVisible=(progress,i)=>progress.visible?.[i]!==false;
 const noteDigits=(cell,n)=>distinct((cell?.center?.length?cell.center:cell?.corner||[])
@@ -250,8 +259,8 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
         '根据目标格所在各行、列和宫（或其他不重复组）内已知数字的排除，唯一剩下的候选数是 '+d+'。');
     }
   }
-  for(const house of houses){
-    if(!house.n||house.cells.length!==house.n)continue;
+  const completeHouses=houses.filter(h=>h.n&&h.cells.length===h.n);
+  for(const house of completeHouses){
     for(const d of whole(house.n)){
       if(house.cells.some(i=>values[i]===d))continue;
       const places=house.cells.filter(i=>values[i]===0&&
@@ -264,6 +273,103 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       add('hidden_single',i,original.filter(v=>v!==d),[d],
         house.cells.filter(j=>j!==i&&values[j]>0),
         house.description+'中只有目标格还能填写 '+d+'。',1);
+    }
+  }
+  if(tier>=2){
+    // Level 2: candidate-set arguments are computed from the full set of
+    // admissible digits, not from untrusted handwritten notes.
+    for(const house of completeHouses){
+      const open=house.cells.filter(i=>!values[i]&&candidates[i]?.length>1);
+      for(const count of [2,3]){
+        for(const subset of combinations(open.filter(i=>isVisible(progress,i)),count)){
+          const union=distinct(subset.flatMap(i=>candidates[i]));
+          if(union.length!==count)continue;
+          for(const target of open){
+            if(subset.includes(target)||!isVisible(progress,target))continue;
+            const before=candidates[target],remaining=before.filter(d=>!union.includes(d));
+            if(remaining.length===before.length)continue;
+            add('naked_subset',target,before.filter(d=>union.includes(d)),
+              remaining,subset,house.description+'中这 '+count+' 格的候选数恰好只有 '+
+              union.join('、')+'，这些数不能再出现在该组其他格。',2,true);
+          }
+        }
+        // Hidden pairs/triples: precisely count where the selected digits
+        // can appear within one complete row, column or box.
+        const available=whole(house.n).filter(d=>
+          !house.cells.some(i=>values[i]===d));
+        for(const ds of combinations(available,count)){
+          const places=house.cells.filter(i=>!values[i]&&
+            candidates[i]?.some(v=>ds.includes(v)));
+          if(places.length!==count||
+             ds.some(d=>!places.some(i=>candidates[i]?.includes(d)))||
+             places.some(i=>!isVisible(progress,i)))continue;
+          for(const target of places){
+            const before=candidates[target],remaining=before.filter(d=>ds.includes(d));
+            if(remaining.length===before.length)continue;
+            add('hidden_subset',target,before.filter(d=>!ds.includes(d)),
+              remaining,places.filter(i=>i!==target),
+              house.description+'中数字 '+ds.join('、')+' 只会出现在这些格，因此可排除其他候选。',2,true);
+          }
+        }
+      }
+    }
+    // Locked candidates across intersecting complete houses. The covered
+    // region must contain ALL positions of a digit in the source house.
+    for(let a=0;a<completeHouses.length;a++){
+      const from=completeHouses[a];
+      for(let b=0;b<completeHouses.length;b++){
+        if(a===b)continue;
+        const dest=completeHouses[b],shared=from.cells.filter(i=>dest.cells.includes(i));
+        if(shared.length<2||shared.length===from.cells.length)continue;
+        for(const d of whole(Math.min(from.n,dest.n))){
+          if(from.cells.some(i=>values[i]===d))continue;
+          const sources=from.cells.filter(i=>candidates[i]?.includes(d));
+          if(sources.length<2||sources.some(i=>!shared.includes(i)||!isVisible(progress,i)))
+            continue;
+          for(const target of dest.cells){
+            if(shared.includes(target)||!candidates[target]?.includes(d)||
+               !isVisible(progress,target))continue;
+            add('locked_candidate',target,[d],
+              candidates[target].filter(x=>x!==d),sources,
+              from.description+'中的 '+d+' 只在与'+dest.description+
+              '的交集中出现，因而可从交集外排除 '+d+'。',2,true);
+          }
+        }
+      }
+    }
+  }
+  if(tier>=3){
+    // Fish are scoped to one explicit 9×9 Sudoku grid. Never form a fish
+    // across physically separate grids that merely share global coordinates.
+    for(const s of sectors){
+      if(s.width!==9)continue;
+      for(let axis=0;axis<2;axis++)for(let d=1;d<=9;d++){
+        const lines=Array.from({length:9},(_,r)=>Array.from({length:9},(_,c)=>
+          axis===0?(s.top+r)*cols+s.left+c:(s.top+c)*cols+s.left+r));
+        const locations=lines.map(line=>line.filter(i=>candidates[i]?.includes(d)));
+        for(let size=2;size<=Math.min(tier>=4?4:3,4);size++){
+          const eligible=whole(9).map(x=>x-1).filter(i=>
+            locations[i].length>=2&&locations[i].length<=size&&
+            locations[i].every(j=>isVisible(progress,j)));
+          for(const base of combinations(eligible,size)){
+            const cover=distinct(base.flatMap(i=>locations[i].map(j=>axis===0?
+              j%cols-s.left:Math.floor(j/cols)-s.top)));
+            if(cover.length!==size)continue;
+            const method=['','', 'x_wing','swordfish','jellyfish'][size];
+            const level=size===4?4:3,sources=base.flatMap(i=>locations[i]);
+            for(let line=0;line<9;line++){
+              if(base.includes(line))continue;
+              for(const c of cover){
+                const target=lines[line][c];
+                if(!candidates[target]?.includes(d)||!isVisible(progress,target))continue;
+                add(method,target,[d],candidates[target].filter(x=>x!==d),
+                  sources,'在此 9×9 数独内，'+size+' 条行或列把 '+d+
+                  ' 限制在相同的 '+size+' 条交叉单位中，其他位置不能再填 '+d+'。',level,true);
+              }
+            }
+          }
+        }
+      }
     }
   }
   function relation(a,b,method,test,description){
