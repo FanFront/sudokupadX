@@ -5,6 +5,7 @@
 > 以下都是根据规则**必然成立的推理**，不使用猜数、穷举试错，也不要求玩家提前知道答案。
 
 [返回数独规则工坊说明](variant-generation.md) ·
+[继续学习：Sudopedia 完整分类、中文进阶例题与实现状态](sudopedia-catalog.zh-CN.md) ·
 [Sudopedia 技巧总目录（英文）](https://sudopedia.sudocue.net/index.php?title=Solving_technique)
 
 ## 如何读例题
@@ -338,8 +339,8 @@ R8：C1、C9
    翻译成中文名称，附上第一个例子的格号与候选变化；不需要凭空猜本关“应该用什么技巧”。
 5. 想专门练一种技巧时，可以使用生成器参数
    `--focus-size 9 --focus-technique x_wing`；
-   不仅要求推理记录出现 X-Wing，还要在**禁用 X-Wing 后无法通过其余现有技巧解完**，
-   避免给无关装饰贴上技巧标签。也可以加 `--min-tier 3`，要求同一关至少达到
+   不仅要求推理记录出现 X-Wing，还要在**三级及以下技巧中，禁用 X-Wing 后无法完成**，
+   避免给无关装饰贴上技巧标签；四级方法可以更复杂地得到同一结论，不影响三级教学。也可以加 `--min-tier 3`，要求同一关至少达到
    三级技巧水平。设置过高或找不到合适布局时，生成器会明确报错，而不会编造难度。
 
 **例题来自真实关卡与候选证明，攻略说明来自规律本身。**
@@ -347,9 +348,12 @@ R8：C1、C9
 
 ## 哪些 Sudopedia 技巧暂不用于自动证明？
 
-Sudopedia 收录了更高级的 ALS、Finned Fish、AIC、各类链、着色、
-唯一矩形（Unique Rectangle）、试错（Trial & Error）、模板法和回溯等技术。
-**不能把目录里列出的全部技巧都当成已经实现**。
+Sudopedia 还收录了 ALS、鳍形鱼、各种链、染色、AIC、唯一矩形、
+试错、模板法和回溯等技术。**其中部分有了有界、可解释的实现**：
+ALS-XZ、Finned X-Wing、W-Wing、2-String Kite、远程数对、
+XY-Chain、X-Chain、简单双染色和五行鱼。其余高级技巧不应被冒充为已实现。
+逐项说明、中文例题和限制见
+[进阶技巧覆盖目录](sudopedia-catalog.zh-CN.md)。
 
 我们优先支持：
 - 无需预先假设解唯一的直接逻辑；

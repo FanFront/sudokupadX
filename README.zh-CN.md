@@ -26,7 +26,13 @@ Android 用户可通过上方链接下载并安装 **APK 文件**（支持 Andro
 
 在应用首页点击 **「解题技巧课堂」**，即可离线学习 25 节中文课程：支持按类别浏览、搜索、候选数互动练习、答案解析及「已掌握」进度记录。从谜题规则页也能直接进入课堂，返回时继续原有谜题。
 
-文字版参考资料：[数独解题技巧中文指南（含候选数实例）](docs/techniques.zh-CN.md)。
+文字版参考资料：[基础／变体 25 课](docs/techniques.zh-CN.md) ·
+[Sudopedia 数独技巧总目录、实现状态与进阶中文例题](docs/sudopedia-catalog.zh-CN.md)。
+
+当前 Python 无猜测求解器还支持双线风筝、W-Wing、远程数对、
+简单双色陷阱／包围、有限长度的 X-Chain 和 XY-Chain、ALS-XZ、
+鳍形 X-Wing、Squirmbag 五行鱼。高阶技巧只在基础逻辑无法推进时使用；
+候选数穷举、回溯和依赖「唯一解」的假设不作为玩家必需解法。
 
 内置「规则工坊」会生成 4×4、6×6、9×9 的多规则数独，并用不猜测的逻辑求解器验证所有题目。教程结合 [Sudopedia 解题技巧目录](https://sudopedia.sudocue.net/index.php?title=Solving_technique)，讲解唯一候选、数对／数组、锁定候选、X-Wing、剑鱼、水母、XY-Wing／XYZ-Wing、摩天楼、杀手笼 45 法则，以及连续线、熵线、模三线、夹心线等变体联动。
 

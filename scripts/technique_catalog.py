@@ -7,6 +7,13 @@ larger fish/XYZ-Wing. This is a curriculum, not an objective rating.
 """
 GUIDE_URL = ("https://github.com/FanFront/sudokupadX/"
              "blob/main/docs/techniques.zh-CN.md")
+ADVANCED_GUIDE_URL = ("https://github.com/FanFront/sudokupadX/"
+                      "blob/main/docs/sudopedia-catalog.zh-CN.md")
+ADVANCED_METHODS = frozenset({
+    "two_string_kite", "w_wing", "remote_pairs", "color_trap",
+    "color_wrap", "xy_chain", "x_chain", "als_xz",
+    "finned_x_wing", "squirmbag",
+})
 
 # (Chinese name, curriculum tier). Every solver method is accounted for.
 METHODS = {
@@ -40,6 +47,16 @@ METHODS = {
     "skyscraper": ("摩天楼", 3),
     "jellyfish": ("Jellyfish 四行列鱼", 4),
     "xyz_wing": ("XYZ-Wing 三格翼", 4),
+    "two_string_kite": ("双线风筝 2-String Kite", 3),
+    "w_wing": ("W-Wing 双数对翼", 3),
+    "remote_pairs": ("远程数对 Remote Pairs", 3),
+    "color_trap": ("双色标记：颜色陷阱", 4),
+    "color_wrap": ("双色标记：颜色包围", 4),
+    "xy_chain": ("XY-Chain 双候选链", 4),
+    "x_chain": ("X-Chain 单数字链", 4),
+    "als_xz": ("ALS-XZ 准锁定数组联动", 4),
+    "finned_x_wing": ("鳍形 X-Wing", 4),
+    "squirmbag": ("Squirmbag 五行列鱼", 4),
 }
 
 
@@ -69,8 +86,12 @@ def lesson_profile(n, proof):
             "cell": f"R{row+1}C{col+1}",
             "removed": step["removed"],
             "remaining": step["remaining"],
+            "source": step["source"],
+            "guideUrl": ADVANCED_GUIDE_URL if method in ADVANCED_METHODS
+                        else GUIDE_URL,
         })
     return {"guideUrl": GUIDE_URL,
+            "advancedGuideUrl": ADVANCED_GUIDE_URL,
             "maxUsedTier": max((item["tier"] for item in path), default=1),
             "techniquePath": path}
 

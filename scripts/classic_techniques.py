@@ -46,14 +46,15 @@ def hidden_subsets(n, units, masks, reduce):
     return changed
 
 
-def basic_fish(n, masks, reduce, maximum=4):
+def basic_fish(n, masks, reduce, maximum=5):
     """X-Wing, Swordfish and Jellyfish as 2/3/4-line basic fish.
 
     In k defining rows (or columns), all positions for digit d
     belong to exactly k covering columns (or rows). Every cover must
     place d inside the defining set, so outside cover candidates die.
     """
-    names = {2: "x_wing", 3: "swordfish", 4: "jellyfish"}
+    names = {2: "x_wing", 3: "swordfish", 4: "jellyfish",
+             5: "squirmbag"}
     changed = False
     for digit in range(1, n+1):
         for vertical in (False, True):
@@ -159,4 +160,57 @@ def skyscrapers(n, masks, reduce):
                     if cell not in (a, b):
                         changed |= reduce(cell, masks[cell] - {digit},
                                           "skyscraper", source)
+    return changed
+
+
+def finned_x_wings(n, masks, reduce):
+    """A two-line fish with one clustered fin group.
+
+    Base line A has digit d only in columns u,v. On line B the same
+    columns plus fins all lie in the *same box* as the B-u candidate.
+    A candidate outside line B in column u within the fin box can
+    be excluded: either A-u is true (column removal), or A-v is
+    true and the B placement occupies that box.
+    """
+    changed = False
+    h, w = BOXES[n]
+
+    def box(cell):
+        r, c = divmod(cell, n)
+        return (r//h, c//w)
+
+    for digit in range(1, n+1):
+        for vertical in (False, True):
+            def cell(base, cover):
+                return cover*n+base if vertical else base*n+cover
+
+            positions = {
+                base: {col for col in range(n)
+                       if digit in masks[cell(base, col)]}
+                for base in range(n)
+            }
+            bases = [base for base, cols in positions.items() if len(cols) == 2]
+            for a in bases:
+                covers = positions[a]
+                for b in range(n):
+                    if a == b or len(positions[b]) <= 2 or not covers <= positions[b]:
+                        continue
+                    fins = positions[b] - covers
+                    if len(fins) > 3:
+                        continue
+                    for cover in sorted(covers):
+                        anchor = cell(b, cover)
+                        if not all(box(cell(b, fin)) == box(anchor) for fin in fins):
+                            continue
+                        source = {"digit": digit, "baseLines": [a,b],
+                                  "covers": sorted(covers),
+                                  "finCells": [cell(b, fin) for fin in sorted(fins)],
+                                  "cover": cover, "vertical": vertical}
+                        for other in range(n):
+                            if other in (a,b):
+                                continue
+                            target = cell(other,cover)
+                            if box(target) == box(anchor):
+                                changed |= reduce(target, masks[target]-{digit},
+                                                  "finned_x_wing", source)
     return changed
