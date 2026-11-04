@@ -43,8 +43,12 @@ function squareSector(s,rows,cols){
 function explicitlyClassicalNine(puzzle){
   if(puzzle.rows!==9||puzzle.cols!==9)return false;
   const description=String(puzzle.rules||'');
-  if(/not a sudoku|no sudoku rules|不是数独|无数独规则|非数独/i.test(description))
+  if(/not a sudoku|no sudoku rules|不是.*数独|无数独规则|非数独|not standard sudoku/i.test(description))
     return false;
+  // The authored phrase "ordinary/standard Sudoku" explicitly includes
+  // classic row/column/box rules, even when it does not spell them out.
+  if(/标准数独|普通数独|standard sudoku|classic sudoku|regular sudoku/i
+      .test(description))return true;
   // SudokuMaker commonly writes "each row, column and box", with
   // "each" appearing only once. The second word is still an explicit
   // column constraint, not an inference from any drawing/color.
