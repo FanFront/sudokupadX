@@ -587,8 +587,20 @@ pub struct HintResponse {
 
 pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
     -> Result<HintResponse,String> {
+    next_hint_with_notes(n,grid,rules,tier,&[])
+}
+
+/// Use center (or fallback corner) notes to avoid re-teaching eliminations
+/// already recorded on the board. Notes are NEVER passed into the deduction
+/// solver as assumed facts: incomplete notes must not create false proofs.
+pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
+    notes:&[Vec<u8>]) -> Result<HintResponse,String> {
     if !matches!(n,4|6|9) || !(1..=5).contains(&tier) || grid.len()!=n*n {
         return Err("仅支持 4×4 / 6×6 / 9×9 与提示等级 1–5".into());
+    }
+    if (!notes.is_empty() && notes.len()!=n*n) ||
+       notes.iter().flatten().any(|&digit|digit==0||digit>n as u8) {
+        return Err("玩家候选标记格式错误".into());
     }
     if rules.len()>100 || rules.iter().any(|rule|
         !matches!(rule.kind.as_str(),
@@ -601,16 +613,30 @@ pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
     if proof.solved && proof.trace.is_empty() {
         return Ok(HintResponse{status:"complete".into(),step:None,level:0});
     }
-    // Prefer an actual placement when its prerequisites are only elementary
-    // eliminations. Otherwise show the earliest new reduction, so no higher
-    // tier deduction is presented without its prerequisite reasoning.
-    let preferred=proof.trace.iter().position(|step|
-        step.remaining.len()==1 && step.before.len()>1);
-    let preferred=preferred.filter(|&idx|
-        proof.trace[..idx].iter().all(|step|
-            level_of(&step.method)==1));
-    let chosen=preferred.and_then(|idx|proof.trace.get(idx))
-        .or_else(||proof.trace.first());
+    // The solver trace begins from all possible digits, while the player may
+    // have already crossed out many of them in center notes. The earliest raw
+    // elimination is often redundant (e.g. remove 1 from annotated {2,7}).
+    // Prefer a proven removal that still appears in a player's notes.
+    let noted_progress=proof.trace.iter().find(|step|
+        notes.get(step.cell).is_some_and(|candidates|
+            !candidates.is_empty() && step.removed.iter().any(|digit|
+                candidates.contains(digit))));
+    // When no written candidate can be removed, a genuine determined digit
+    // is more useful than another elementary reduction of a blank cell.
+    let placement=proof.trace.iter().enumerate().find(|(idx,step)|
+        step.remaining.len()==1 && step.before.len()>1 &&
+        proof.trace[..*idx].iter().all(|prior|
+            level_of(&prior.method)==1)).map(|(_,step)|step);
+    // When there are annotations, do not fall back to eliminating candidates
+    // that were *already absent* from the marked cell. Instead pick another
+    // cell for which the player has not recorded candidates.
+    let unannotated=proof.trace.iter().find(|step|
+        notes.get(step.cell).is_none_or(|candidates|candidates.is_empty()));
+    let chosen=noted_progress.or(placement)
+        .or_else(||proof.trace.iter().find(|step|
+            step.remaining.len()==1 && step.before.len()>1))
+        .or(unannotated)
+        .or_else(||if notes.is_empty(){proof.trace.first()}else{None});
     if let Some(step)=chosen {
         return Ok(HintResponse{
             status:"step".into(),level:level_of(&step.method),step:Some(step.clone())
@@ -632,10 +658,18 @@ pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
     }
     let mut choices:Vec<usize>=(0..n*n)
         .filter(|&i|count(proof.masks[i])>1).collect();
-    choices.sort_by_key(|&i|count(proof.masks[i]));
+    choices.sort_by_key(|&i|(
+        notes.get(i).is_none_or(|marked|marked.is_empty()),
+        count(proof.masks[i])
+    ));
     for &cell in choices.iter().take(4) {
-        for candidate in values(proof.masks[cell],n) {
-            if candidate==answer[cell]{continue;}
+        let candidates=values(proof.masks[cell],n);
+        let prioritized=notes.get(cell).filter(|marked|!marked.is_empty());
+        for candidate in candidates {
+            if candidate==answer[cell] ||
+                prioritized.is_some_and(|marked|!marked.contains(&candidate)) {
+                continue;
+            }
             let mut hypothetical=grid.to_vec();
             hypothetical[cell]=candidate;
             if let Ok((0,_))=exact_count(n,&hypothetical,rules,20_000) {
