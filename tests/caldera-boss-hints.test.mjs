@@ -140,6 +140,17 @@ test('classical reasoning is available on other linked Sudokus without fake solv
   assert.deepEqual(hint.step.removed,[1]);
 });
 
+test('ordinary Sudoku Boss descriptions establish houses without all row words',()=>{
+  const p=puzzle(),state=progress();
+  p.hintConstraints=[];
+  p.rules='遵循普通数独规则……大概？';
+  solved(state,[0]);
+  state.cells[3].center=['1','4'];
+  const hint=nextAdventureHint(p,state,4,3);
+  assert.equal(hint.status,'step');
+  assert.equal(hint.step.cell,3);
+  assert.ok(hint.step.removed.includes(1));
+});
 test('without a typed manifest decorative artwork cannot assert Boss variants',()=>{
   const p=puzzle(),state=progress();
   p.hintConstraints=[];
