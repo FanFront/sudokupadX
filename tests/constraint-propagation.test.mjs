@@ -129,16 +129,17 @@ test('generalized N-subsets recognize a provable naked quadruple and eliminate 1
 });
 test('an unsupported arrow combination is never turned into a forced candidate',()=>{
   const {puzzle,progress}=setup();
-  // Both shafts can be 1 or 2; circle can be 2,3 or 4, so no
-  // particular shaft digit is universally required.
+  // The two shaft cells each allow 1,2,3. For each candidate digit
+  // there remains a distinct-pair sum omitting that digit; no single
+  // digit is locked into the shaft.
   puzzle.hintConstraints.push({
     type:'arrow',cells:[at(8,6),at(8,4),at(8,5)],
     circle:[at(8,6)],shaft:[at(8,4),at(8,5)]
   });
   const {layout,rules,state}=directCandidateSets(puzzle,progress);
-  state.candidates[at(8,4)]=[1,2];
-  state.candidates[at(8,5)]=[1,2];
-  state.candidates[at(8,6)]=[2,3,4];
+  state.candidates[at(8,4)]=[1,2,3];
+  state.candidates[at(8,5)]=[1,2,3];
+  state.candidates[at(8,6)]=[3,4,5,6];
   const step=findCombinedConstraintHint(puzzle,progress,layout,state,rules,4,at(8,5));
   assert.notEqual(step?.method,'constraint_locked_digit');
 });
