@@ -234,6 +234,8 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/boss-6cn54q09sv.json"),
         "fnv1a-28e181ec2a25805c" =>
             include_str!("../../../public/puzzles/hint-constraints/boss-frudzw3n73.json"),
+        "fnv1a-38bc290f58fba96b" =>
+            include_str!("../../../public/puzzles/hint-constraints/boss-ny34cxleh8.json"),
         _ => return Vec::new(),
     };
     let Ok(manifest) = serde_json::from_str::<Value>(json) else {
@@ -1015,6 +1017,19 @@ mod tests {
         session.apply_many(&[1,2], "corner", "5").unwrap();
         assert!(session.snapshot().cells[1].corner.is_empty());
         assert!(session.snapshot().cells[2].corner.is_empty());
+    }
+
+    #[test]
+    fn dismantling_factory_boss_combines_verified_lines_with_authored_antiknight() {
+        let src=include_str!("../../../public/puzzles/boss-ny34cxleh8.scl");
+        let puzzle=load(src).unwrap();
+        let count=|kind:&str|puzzle.hint_constraints.iter()
+            .filter(|rule|rule.get("type").and_then(Value::as_str)==Some(kind)).count();
+        assert_eq!(count("classic_sudoku"),1);
+        assert_eq!(count("thermo"),6);
+        assert_eq!(count("whisper"),4);
+        assert_eq!(count("anti_knight"),1);
+        assert_eq!(puzzle.hint_constraints.len(),12);
     }
 
     #[test]
