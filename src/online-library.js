@@ -191,3 +191,16 @@ export function readResumePuzzle(key) {
       done(e.target.result?.key === key ? e.target.result.input : null);
   });
 }
+
+
+/** Remove an orphaned imported-puzzle resume payload when its personal
+ * generated puzzle is explicitly deleted. Other resume sources are retained. */
+export function deleteResumePuzzle(key) {
+  if (typeof key !== 'string' || !key) return Promise.resolve();
+  return transaction(['resume'], 'readwrite', tx => {
+    const store=tx.objectStore('resume');
+    store.get('current').onsuccess=event=>{
+      if (event.target.result?.key===key) store.delete('current');
+    };
+  });
+}

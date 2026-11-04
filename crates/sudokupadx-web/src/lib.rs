@@ -46,6 +46,15 @@ impl WasmPuzzleEngine {
         Ok(response)
     }
 
+    /// Runs inside an isolated browser Worker. It never mutates the
+    /// currently opened game session.
+    pub fn generate_puzzle(&self, request_json: &str) -> Result<String, JsValue> {
+        let request: core::creator::CreateRequest =
+            serde_json::from_str(request_json).map_err(js_error)?;
+        let output = core::creator::generate_puzzle(request).map_err(js_error)?;
+        to_json(&output)
+    }
+
     pub fn update_cell(&mut self, index: usize, mode: &str, symbol: &str) -> Result<String, JsValue> {
         let session = self.session.as_mut().ok_or_else(|| js_error("No puzzle is open."))?;
         to_json(&session.apply(index, mode, symbol).map_err(js_error)?)

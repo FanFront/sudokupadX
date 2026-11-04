@@ -30,6 +30,9 @@
           <button id="lessonButton" class="home-action" type="button" aria-label="打开数独解题技巧课堂">
             <span class="home-action-icon" aria-hidden="true">◇</span><span><strong>解题技巧课堂</strong><small>25 节中文课程 · 真实棋盘训练 · 离线学习</small></span><span class="home-chevron" aria-hidden="true">›</span>
           </button>
+          <button id="creatorButton" class="home-action" type="button" aria-label="本机生成数独">
+            <span class="home-action-icon" aria-hidden="true">✦</span><span><strong>本机数独创作</strong><small>Rust 生成 · 自选规则与技巧 · 我的题库</small></span><span class="home-chevron" aria-hidden="true">›</span>
+          </button>
           <button id="importButton" class="home-action" type="button" aria-label="导入谜题">
             <span class="home-action-icon" aria-hidden="true">＋</span><span><strong>导入谜题</strong><small>SudokuPad SCL / JSON · Penpa+</small></span><span class="home-chevron" aria-hidden="true">›</span>
           </button>
@@ -214,19 +217,21 @@
         <button id="lmdLibraryTab" type="button" role="tab" aria-controls="lmdLibraryPanel" aria-selected="false">Logic Masters</button>
       </div>
       <div id="bundledLibraryPanel" role="tabpanel">
-        <p>可离线游玩冒险地图、独立谜题，以及生成器验证的 100 道 9×9 混合变体题与六道少提示单规则挑战，以及四道严格认证的三级高阶逻辑题。所有新题均有唯一解，且可不靠猜测完成。</p>
+        <p>可离线游玩冒险地图、独立谜题，以及生成器验证的 100 道 9×9 混合变体题与六道少提示单规则挑战，以及四道严格认证的三级高阶逻辑题。内置新题均有唯一解且可不靠猜测完成；自己的等级 5 谜题可能需要试探。</p>
         <div class="bundled-filters">
           <select id="bundledCategory" aria-label="内置谜题分类">
             <option value="all">全部可玩谜题</option>
             <option value="generated">生成的 9×9（100 题）</option>
             <option value="single">少提示 · 单规则（6 题）</option>
             <option value="advanced">高阶逻辑 · 三级（4 题）</option>
+            <option value="personal">我的本机生成谜题</option>
             <option value="adventure">冒险地图</option>
             <option value="other">其他独立谜题</option>
           </select>
           <input id="bundledSearch" type="search" placeholder="搜索谜题标题或编号" aria-label="搜索内置谜题">
         </div>
         <div id="libraryList" class="library-list"></div>
+        <button id="creatorOpenFromLibrary" class="primary-btn creator-library-action" type="button">✦ 自己生成新谜题 · 收藏与管理</button>
         <label class="library-spoiler"><input id="showAllPuzzles" type="checkbox"> 显示全部首领与支线（可能剧透）</label>
       </div>
       <section id="onlineLibraryPanel" role="tabpanel" hidden>
@@ -331,6 +336,58 @@
         <p id="lmdImageError" class="lmd-image-error" role="alert" hidden></p>
       </div>
       <p class="lmd-image-hint">双指缩放 · 拖动查看 · 关闭后返回谜题详情</p>
+    </div>
+  </dialog>
+  <dialog id="creatorDialog" class="modal" aria-labelledby="creatorTitle">
+    <div class="modal-content creator-content">
+      <div class="modal-top"><h2 id="creatorTitle">✦ 我的数独创作工坊</h2><button id="creatorClose" class="modal-close" type="button" aria-label="关闭数独生成器">✕</button></div>
+      <p class="creator-description">由本机 Rust 引擎生成，不上传数据。选择经典或组合变体及逻辑技巧等级；生成的唯一解题目自动保存在手机／浏览器，可继续游玩、收藏、标记完成或删除。</p>
+      <section id="creatorOptions" class="creator-options" aria-label="数独生成条件">
+        <div class="creator-settings">
+          <label>棋盘大小
+            <select id="creatorSize"><option value="9" selected>9 × 9</option><option value="6">6 × 6</option><option value="4">4 × 4</option></select>
+          </label>
+          <label>目标技巧等级
+            <select id="creatorTier">
+              <option value="1">1 · 基础逻辑</option>
+              <option value="2" selected>2 · 数对与锁定</option>
+              <option value="3">3 · 鱼与翼</option>
+              <option value="4">4 · 复杂链</option>
+              <option value="5">5 · 可能需要穷举</option>
+            </select>
+          </label>
+          <label>重点技巧（可选）
+            <select id="creatorTechnique"><option value="">任意技巧</option></select>
+          </label>
+          <label>额外规则密度
+            <select id="creatorDensity"><option value="light">少</option><option value="medium" selected>中</option><option value="heavy">多</option></select>
+          </label>
+          <label>随机种子（可留空）
+            <input id="creatorSeed" type="number" inputmode="numeric" min="0" step="1" placeholder="自动生成">
+          </label>
+          <label>最多尝试次数
+            <input id="creatorAttempts" type="number" inputmode="numeric" min="1" max="80" step="1" value="24">
+          </label>
+        </div>
+        <p id="creatorTierHint" class="creator-hint"></p>
+        <div class="creator-variant-heading">
+          <strong>额外规则（可多选，全部取消即经典数独）</strong>
+          <div><button id="creatorAllVariants" type="button">全选</button><button id="creatorClearVariants" type="button">全不选</button></div>
+        </div>
+        <div id="creatorVariants" class="creator-variants" aria-label="选择数独变体规则"></div>
+        <div class="creator-generate-bar">
+          <button id="creatorGenerate" type="button" class="primary-btn">生成并自动保存 · 开始游戏</button>
+          <button id="creatorCancel" type="button" hidden>取消生成</button>
+        </div>
+        <p id="creatorStatus" class="creator-status" role="status" aria-live="polite">本机生成不会修改现有谜题和存档。</p>
+      </section>
+      <section class="creator-library" aria-label="我的本机生成谜题">
+        <div class="creator-library-heading">
+          <strong>我的生成谜题</strong><span id="creatorCount">本机保存 0 题</span>
+        </div>
+        <input id="creatorSearch" type="search" placeholder="搜索标题、规则或技巧等级" aria-label="搜索我的生成谜题">
+        <div id="creatorSaved" class="creator-saved-list"></div>
+      </section>
     </div>
   </dialog>
   <dialog id="checkDialog" class="modal" aria-labelledby="checkTitle">

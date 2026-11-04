@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 mod adventure;
+pub mod creator;
 pub use adventure::{FogTrigger, Sector};
 use adventure::{read_foglight,read_sectors,read_solution,read_triggers};
 
