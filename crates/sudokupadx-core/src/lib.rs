@@ -232,6 +232,8 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/super-linked-hfyjv8jqr5.json"),
         "fnv1a-5dfb43927e90e7d6" =>
             include_str!("../../../public/puzzles/hint-constraints/boss-6cn54q09sv.json"),
+        "fnv1a-28e181ec2a25805c" =>
+            include_str!("../../../public/puzzles/hint-constraints/boss-frudzw3n73.json"),
         _ => return Vec::new(),
     };
     let Ok(manifest) = serde_json::from_str::<Value>(json) else {
@@ -1013,6 +1015,16 @@ mod tests {
         session.apply_many(&[1,2], "corner", "5").unwrap();
         assert!(session.snapshot().cells[1].corner.is_empty());
         assert!(session.snapshot().cells[2].corner.is_empty());
+    }
+
+    #[test]
+    fn thermometer_monster_boss_loads_nine_bulb_directed_paths() {
+        let src=include_str!("../../../public/puzzles/boss-frudzw3n73.scl");
+        let puzzle=load(src).unwrap();
+        let thermos=puzzle.hint_constraints.iter().filter(|rule|
+            rule.get("type").and_then(Value::as_str)==Some("thermo")).count();
+        assert_eq!(thermos,9);
+        assert_eq!(puzzle.hint_constraints.len(),10);
     }
 
     #[test]
