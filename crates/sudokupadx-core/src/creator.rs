@@ -328,7 +328,10 @@ impl Solver {
         for house in self.units.clone(){
             let unsolved:Vec<_>=house.iter().copied()
                 .filter(|&i|count(self.masks[i])>1).collect();
-            for size in 2..=3 {
+            // All 9×9 naked/hidden N-subsets, not only pairs and triples.
+            // N=8 is meaningful as the dual of a hidden single; on 4×4
+            // and 6×6 boards the maximum follows their actual domain.
+            for size in 2..self.n {
                 for selected in combinations(&unsolved,size){
                     let union=selected.iter().fold(0,|a,&i|a|self.masks[i]);
                     if count(union)!=size as u32 {continue;}
@@ -1263,6 +1266,32 @@ mod tests{
         assert_eq!(step.removed,vec![2]);
         assert!(step.remaining.contains(&7));
     }
+    #[test]
+    fn general_naked_and_hidden_quadruples_are_real_tier_two_deductions(){
+        let mut masks=vec![full(9);81];
+        masks[0]=bit(1)|bit(2);
+        masks[1]=bit(1)|bit(3);
+        masks[2]=bit(2)|bit(4);
+        masks[3]=bit(3)|bit(4);
+        masks[4]=bit(1)|bit(2)|bit(3)|bit(4)|bit(5);
+        let mut solver=Solver::from_masks(9,masks,&[],2).unwrap();
+        assert!(solver.subsets().unwrap());
+        assert_eq!(solver.masks[4],bit(5),
+            "Four cells restricted to 1,2,3,4 reserve all four digits");
+
+        let mut other=vec![full(9);81];
+        let allowed=bit(1)|bit(2)|bit(3)|bit(4);
+        for cell in 0..4 {other[cell]=allowed|bit(6);}
+        let outside=bit(5)|bit(6)|bit(7)|bit(8)|bit(9);
+        for cell in 4..9 {other[cell]=outside;}
+        let mut hidden=Solver::from_masks(9,other,&[],2).unwrap();
+        assert!(hidden.subsets().unwrap());
+        for cell in 0..4 {
+            assert_eq!(hidden.masks[cell]&!allowed,0,
+                "Four digits restricted to four cells remove outside digits");
+        }
+    }
+
     #[test]
     fn incomplete_handwritten_candidates_cannot_force_a_false_single(){
         let n=9;
