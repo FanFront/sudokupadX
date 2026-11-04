@@ -7,6 +7,13 @@ larger fish/XYZ-Wing. This is a curriculum, not an objective rating.
 """
 GUIDE_URL = ("https://github.com/FanFront/sudokupadX/"
              "blob/main/docs/techniques.zh-CN.md")
+ADVANCED_GUIDE_URL = ("https://github.com/FanFront/sudokupadX/"
+                      "blob/main/docs/sudopedia-catalog.zh-CN.md")
+ADVANCED_METHODS = frozenset({
+    "two_string_kite", "w_wing", "remote_pairs", "color_trap",
+    "color_wrap", "xy_chain", "x_chain", "als_xz",
+    "finned_x_wing", "squirmbag",
+})
 
 # (Chinese name, curriculum tier). Every solver method is accounted for.
 METHODS = {
@@ -79,8 +86,12 @@ def lesson_profile(n, proof):
             "cell": f"R{row+1}C{col+1}",
             "removed": step["removed"],
             "remaining": step["remaining"],
+            "source": step["source"],
+            "guideUrl": ADVANCED_GUIDE_URL if method in ADVANCED_METHODS
+                        else GUIDE_URL,
         })
     return {"guideUrl": GUIDE_URL,
+            "advancedGuideUrl": ADVANCED_GUIDE_URL,
             "maxUsedTier": max((item["tier"] for item in path), default=1),
             "techniquePath": path}
 
