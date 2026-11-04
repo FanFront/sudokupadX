@@ -40,21 +40,34 @@ const ruleText={
 export function cellName(index,size){
   return 'R'+(Math.floor(index/size)+1)+'C'+(index%size+1);
 }
-export function describeHint(response,size){
+export function describeHint(response,size,cells=[]){
   if(response?.status!=='step'||!response.step){
     const status={
       complete:'当前盘面已经解完，没有下一步。',
       stalled:'当前设定等级没有找到可继续的逻辑步骤；可提高提示等级或自行推理。',
       search_limit:'前四级逻辑已停滞；第五级搜索在安全计算上限内未能给出可证明的排除。',
-      not_unique:'根据当前棋盘和已知规则无法证明唯一解，因此不会猜一个数字。'
+      not_unique:'根据当前棋盘和已知规则无法证明唯一解，因此不会猜一个数字。',
+      notes_current:'已标记的候选数没有新排除项，且暂时找不到确定填数。玩家手记仅用于避免重复提示，可能需要补充其他格的候选。'
     };
     return {title:'暂无可验证步骤',description:status[response?.status]||'无法计算下一步。',
       candidates:'',sources:[],target:-1,level:response?.level??0};
   }
   const {step,level}=response;
   const before=(step.before||[]).join('、');
-  const removed=(step.removed||[]).join('、');
   const remaining=(step.remaining||[]).join('、');
+  const entry=cells?.[step.cell]||{};
+  // These are display-only notes; Rust has already independently proved the
+  // step from the puzzle and large digits, not from handwritten candidates.
+  const marks=(Array.isArray(entry.center)&&entry.center.length
+    ?entry.center:entry.corner)||[];
+  const noted=[...new Set(marks.map(Number).filter(d=>
+    Number.isInteger(d)&&d>=1&&d<=size))].sort((a,b)=>a-b);
+  const annotated=noted.length>0;
+  const effectiveRemoved=annotated
+    ?step.removed.filter(d=>noted.includes(d)):step.removed||[];
+  const removed=effectiveRemoved.join('、');
+  const notedAfter=noted.filter(d=>!effectiveRemoved.includes(d));
+
   const sourceCells=[...new Set((step.sources||[]).filter(i=>
     Number.isInteger(i)&&i>=0&&i<size*size&&i!==step.cell))];
   const entropicGroups=size===6?'1–2、3–4、5–6':'1–3、4–6、7–9';
@@ -65,14 +78,23 @@ export function describeHint(response,size){
   const action=step.method==='search_contradiction'
     ?'经反证，可排除 '+removed
     :placement?'确定填入 '+remaining:'排除候选数 '+removed;
+  const notesSummary=annotated
+    ?'已标候选：'+noted.join('、')+' ｜ 本步可删：'+
+      (removed||'无')+' ｜ 手记剩余：'+(notedAfter.join('、')||'无')+
+      (notedAfter.length===1 && !placement
+        ?'（仅表示手记只剩一个，尚未证明唯一）':'')+
+      (notedAfter.length===0 && !placement
+        ?'（请检查是否漏标了可能数字）':'')
+    :'求解器此步候选：'+before+' ｜ 排除：'+
+      (step.removed||[]).join('、')+' ｜ 余下：'+remaining;
   return {
     title:(TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
     description:cellName(step.cell,size)+'：'+rationale+
       ' 由此'+action+'。'+(sourceCells.length?
         ' 参考格：'+sourceCells.slice(0,12).map(i=>cellName(i,size)).join('、')+
         (sourceCells.length>12?' 等':'')+'。':''),
-    candidates:'此前候选：'+before+' ｜ 排除：'+removed+' ｜ 余下：'+remaining,
-    target:step.cell,sources:sourceCells,removed:step.removed||[],
+    candidates:notesSummary,
+    target:step.cell,sources:sourceCells,removed:effectiveRemoved,
     placement:placement&&step.method!=='search_contradiction',level
   };
 }
