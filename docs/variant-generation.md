@@ -345,3 +345,36 @@ families, clue counts and logic profiles on real playable puzzles. Generated
 assets are automatically regenerated for dev/build/test and are included in
 the Android and web packages. The service worker preloads their catalog
 and all six puzzle definitions for offline play.
+
+
+## Verified higher-tier puzzle generation (not fake labels)
+
+The *difficulty tier* field is **not the number of visible clues** or an
+invented rating. It is the minimum curriculum tier whose full deduction-only
+solver can complete the entire puzzle. A puzzle is accepted at tier 3 only
+when tier 2 **provably stalls**, tier 3 finishes, a real technique of tier 3
+has a candidate-removing step in the recorded proof, and the proof replays
+from the actual givens and visible constraints. An independent exact solver
+checks that the answer is unique with the variant, and the classic givens
+alone are ambiguous. No solving branch is used to rate difficulty.
+
+The first verified hard collection retains the old 100+6 puzzles unchanged
+(including their IDs and existing saves), and adds four new single-variant
+9×9 puzzles under **内置谜题 → 高阶逻辑 · 三级（4 题）**:
+Kropki, Thermometer, Killer and Renban. These have genuinely different
+candidate structure from the heavily constrained tier-1 mixed collection.
+
+```sh
+python3 scripts/generate_advanced.py --seed 20261106 --attempts 16 --workers 4
+python3 scripts/generate_advanced.py --kind killer --tier 3 --attempts 16 --probe
+python3 -m unittest tests/test_generate_advanced.py
+```
+
+Generated files live in `public/puzzles/advanced` as reproducible build
+assets, alongside `validation.json` with a complete replayable proof. The
+same puzzle IDs and seeds are used on every build. The program *refuses* to
+claim a target tier when the lower-tier solver can solve, or the target-tier
+solver cannot. This supports future tier-4 puzzle search without fabricated
+labels. A numeric minimum technique tier does **not** imply all humans will
+find the puzzle subjectively difficult; accessibility also depends on the
+clarity and frequency of deductions.
