@@ -90,3 +90,30 @@ def minimum_tier(n, clues, constraints, deduce):
         if result["solved"]:
             return level
     return None
+
+
+
+def replay_trace(n, givens, trace):
+    """Independently reconstruct every state shown in a player's lesson.
+
+    This validates *trace fidelity*, not the mathematical soundness of a
+    technique. Soundness is separately established by solver rules/tests
+    and independent puzzle uniqueness.
+    """
+    masks = [set(range(1, n+1)) for _ in range(n*n)]
+    for cell, digit in givens.items():
+        if cell not in range(n*n) or digit not in range(1, n+1):
+            raise ValueError("Invalid given in learning trace")
+        masks[cell] = {digit}
+    for number, step in enumerate(trace):
+        cell = step["cell"]
+        method = step["method"]
+        if cell not in range(n*n) or method not in METHODS:
+            raise ValueError(f"Invalid technique step {number}")
+        removed = set(step["removed"])
+        if not removed or not removed <= masks[cell]:
+            raise ValueError(f"Impossible removal at step {number}")
+        masks[cell].difference_update(removed)
+        if not masks[cell] or sorted(masks[cell]) != step["remaining"]:
+            raise ValueError(f"Candidate state mismatch at step {number}")
+    return masks
