@@ -1,7 +1,10 @@
 // GitHub Pages offline shell. Bundled index is prefetched on service worker install;
 // downloaded online puzzles themselves are stored explicitly in IndexedDB.
-const CACHE = 'sudokupadx-offline-shell-v8';
+const CACHE = 'sudokupadx-offline-shell-v9';
 const scope = self.registration.scope;
+// Build output replaces this marker with every Vite asset (including the
+// isolated Rust/WASM creator Worker) for first-launch offline support.
+const BUILT_ASSETS = []; // __VITE_WORKER_PRECACHE__
 const shell = [
   'puzzles/online-index.json',
   'puzzles/catalog.json',
@@ -23,7 +26,7 @@ const local = path => new URL(path, scope).href;
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    let assets = shell.map(local);
+    let assets = [...shell, ...BUILT_ASSETS].map(local);
     try {
       const response = await fetch(scope, {cache:'reload'});
       if (response.ok) {
