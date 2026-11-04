@@ -165,7 +165,9 @@ test('visible German-whisper and thermometer rules give proven eliminations',()=
     progress.cells[target].center=['1','4','6'];
     const hint=nextAdventureHint(puzzle,progress,4,target);
     assert.equal(hint.step?.method,variant,variant);
-    assert.ok(hint.step.removed.includes(1),variant);
+    // The already-entered 1 is excluded from its row before whisper logic;
+    // the useful new whisper exclusion is 4. Thermo additionally excludes 1.
+    assert.ok(hint.step.removed.includes(variant==='whisper'?4:1),variant);
   }
 });
 test('renban and between lines require their geometric evidence and rule text',()=>{
