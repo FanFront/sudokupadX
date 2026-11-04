@@ -21,7 +21,8 @@ function load(name){
   const manifest=JSON.parse(readFileSync(resolve(root,
     'public/puzzles/hint-constraints',name+'.json'),'utf8'));
   const puzzle={rows:9,cols:9,rules:source.metadata.rules,
-    cells:source.cells.flat().map(v=>({given:v?.value??null})),
+    cells:Array.from({length:81},()=>({given:null})),
+    // Leave unrelated original givens out of targeted rule-specific proof tests.
     regions:source.regions||[],sectors:[],cages:source.cages||[],
     hintConstraints:manifest.constraints};
   const progress={visible:Array(81).fill(true),
