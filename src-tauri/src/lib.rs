@@ -88,6 +88,16 @@ fn restore_progress(
     with_session(&state, |session| session.restore(cells))
 }
 
+// The CPU-heavy creator runs on a worker thread, not Android's UI thread.
+#[tauri::command]
+async fn generate_puzzle(
+    request: sudokupadx_core::creator::CreateRequest
+) -> Result<sudokupadx_core::creator::CreateResponse, String> {
+    tauri::async_runtime::spawn_blocking(move ||
+        sudokupadx_core::creator::generate_puzzle(request)
+    ).await.map_err(|error| format!("生成任务中断：{error}"))?
+}
+
 // Read only the public Logic Masters puzzle HTML, not arbitrary user-provided
 // addresses. Native requests are necessary because the portal may not permit
 // cross-origin browser fetches. Do not send session cookies or credentials.
@@ -181,7 +191,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress, fetch_logic_masters_page, search_logic_masters
+            open_puzzle, update_cell, update_cells, check_progress, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");
