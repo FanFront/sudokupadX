@@ -199,6 +199,32 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
         if(invalid)break;
       }
       if(invalid)break;
+      // Hidden N-subsets are the dual of naked N-subsets: if N digit
+      // symbols can appear only in N cells of a complete house, every
+      // other candidate can be removed from those cells. N=1 is a
+      // hidden single, and N can grow to the whole 9×9 house.
+      if(house.n===house.cells.length&&house.n<=9&&
+         house.cells.every(i=>bound[i]?.length)){
+        const fixed=new Set(house.cells.filter(i=>bound[i].length===1)
+          .map(i=>bound[i][0]));
+        const free=digits(house.n).filter(d=>!fixed.has(d));
+        const openCells=house.cells.filter(i=>bound[i].length>1);
+        if(free.length<=9){
+          for(let mask=1;mask<(1<<free.length);mask++){
+            const selected=free.filter((_,k)=>mask&(1<<k));
+            const group=new Set(selected);
+            const positions=openCells.filter(i=>
+              bound[i].some(d=>group.has(d)));
+            if(positions.length!==selected.length||
+               selected.some(d=>!positions.some(i=>bound[i].includes(d))))
+              continue;
+            for(const i of positions)
+              restrict(i,group);
+            if(invalid)break;
+          }
+        }
+      }
+      if(invalid)break;
     }
     if(invalid||!changed)break;
   }
