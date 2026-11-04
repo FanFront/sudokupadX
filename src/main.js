@@ -14,6 +14,7 @@ import {editableCellIndices} from './fog-editing.js';
 import {variantKeypadSymbols} from './variant-keypad.js';
 import {setupOnlineLibrary} from './online-ui.js';
 import {setupLessonPage} from './lesson-page.js';
+import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
 import {readResumePuzzle,saveResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
 import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
@@ -58,6 +59,8 @@ let activeLinkedPuzzles = [];
 let lastCompletion = false;
 let showGridLines = true;
 let activeSource = null;
+let activeRawInput = null;
+let lessonPractice = null;
 let resumeRecord = null;
 let frameSize = {width:0,height:0};
 const board = $('boardCanvas');
@@ -71,7 +74,11 @@ function cloneCell(v) {
 }
 function clearCell() { return {value:null,corner:[],center:[],color:null}; }
 function refreshConflicts() {
-  conflicts=detectConflicts(puzzle,progress,conflictHouses);
+  // Tutorial candidates deliberately include the one to eliminate.
+  // Treat them as a staged logical state rather than flashing red hints.
+  conflicts=lessonPractice
+    ?{valueCells:new Set(),noteSymbols:[]}
+    :detectConflicts(puzzle,progress,conflictHouses);
 }
 // Draw individual marks rather than a single string so only the conflicting
 // candidate is red (not every corner/center note in the cell).
@@ -146,7 +153,9 @@ function showHome() {
   updateHomeCard();
 }
 function save() {
-  if (!puzzle || !progress) return;
+  // Practice exercises never overwrite the last played puzzle, session
+  // resume pointer, checkpoints, or normal puzzle save namespace.
+  if (lessonPractice || !puzzle || !progress) return;
   clearTimeout(saveTimer);
   try {
     localStorage.setItem(saveKey(),JSON.stringify({version:1,cells:progress.cells,penLines,penMarks}));
@@ -346,6 +355,7 @@ async function openBundled(id,push=false,backState=null){
       for(const mark of result.puzzle[kind]||[])
         if(mark&&typeof mark.text==='string')mark.text=translateDisplay(mark.text);
     await openResult(result);
+    activeRawInput=input;
     activeSource=bundledSource(id);
     if(backState?.view) applyStoredView(backState.view);
     updateBack();
@@ -450,6 +460,7 @@ async function openInput(input, restoredView = null, resuming = false) {
     const result=await call('open_puzzle',{input,localization:null});
     currentEntry=null;navigationStack=[];mainDictionary={};
     await openResult(result);
+    activeRawInput=input;
     await cacheActivePuzzle(input);
     if(restoredView)applyStoredView(restoredView);
     updateBack();
@@ -477,6 +488,7 @@ async function openIndexedPuzzle(entry,input,offline,restoredView = null,resumin
       group:entry.sourceName,url:entry.puzzleUrl,sourceUrl:entry.sourceUrl || null};
     navigationStack=[];mainDictionary={};
     await openResult(result);
+    activeRawInput=input;
     await cacheActivePuzzle(input,entry);
     if(restoredView)applyStoredView(restoredView);
     updateBack();
@@ -633,6 +645,14 @@ function draw() {
     const idx=r*puzzle.cols+c,entry=progress.cells[idx]||clearCell();
     const x=c*CELL,y=r*CELL;
     if(entry.color){ctx.fillStyle=entry.color;ctx.fillRect(x+1,y+1,CELL-2,CELL-2);}
+    if(lessonPractice?.focus.includes(idx)){
+      ctx.fillStyle='#90d5e754';
+      ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+    }
+    if(lessonPractice?.goal.index===idx){
+      ctx.fillStyle='#ffca7366';
+      ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+    }
     if(selectedCells.includes(idx)){ctx.fillStyle='#a0d5eb6d';ctx.fillRect(x,y,CELL,CELL);}
     // Highlight matching visible givens/entries beneath authored constraints.
     if(highlightedNumber!==null && isVisible(progress,idx) &&
@@ -711,6 +731,7 @@ function draw() {
 }
 
 function showCompletionIfNew(){
+  if(lessonPractice)return;
   const solved=Boolean(progress?.solved);
   if(solved&&!lastCompletion){
     markBossCleared(puzzle,progress,localStorage);
@@ -752,12 +773,23 @@ async function edit(action,symbol='') {
   pending=true;
   try {
     const before=indices.map(index=>JSON.stringify(progress.cells[index]));
+    const practiceBefore=lessonPractice?progress.cells.map(cell=>({
+      value:cell.value,center:[...(cell.center||[])]
+    })):null;
     const change=indices.length===1
       ?await call('update_cell',{index:indices[0],mode:action,symbol})
       :await call('update_cells',{indices,mode:action,symbol});
     applyChange(change);
     if(indices.some((index,i)=>JSON.stringify(progress.cells[index])!==before[i])){
       undoStack.push({kind:'cell'});redoStack=[];
+    }
+    if(lessonPractice&&!lessonPractice.completed &&
+       checkLessonMove(lessonPractice,practiceBefore,progress.cells,
+                       action,symbol,indices)){
+      lessonPractice.completed=true;
+      $('lessonPracticeStatus').textContent='✓ 推理正确！'+lessonPractice.explanation;
+      $('lessonPracticeStatus').classList.add('complete');
+      lessonPage.markPracticed(lessonPractice.id);
     }
     updateControls();scheduleSave();requestDraw();
     showCompletionIfNew();
@@ -981,14 +1013,21 @@ board.addEventListener('wheel',event=>{
 
 // Lessons are a separate page; opening them never unloads the puzzle or
 // resets the camera/progress. The rules shortcut saves before hiding play.
-const lessonPage=setupLessonPage({showHome,showGame});
+const lessonPage=setupLessonPage({
+  showHome,showGame,
+  launchPractice:lesson=>beginLessonPractice(lesson.id)
+});
 $('lessonButton').addEventListener('click',()=>lessonPage.open());
 $('lessonFromRulesButton').addEventListener('click',()=>{
-  save();
   if($('rulesDialog').open)$('rulesDialog').close();
+  if(lessonPractice){endLessonPractice().catch(notify);return;}
+  save();
   lessonPage.open();
 });
-$('homeButton').addEventListener('click',showHome);
+$('homeButton').addEventListener('click',()=>{
+  if(lessonPractice)endLessonPractice().catch(notify);
+  else showHome();
+});
 $('continueButton').addEventListener('click',async()=>{
   if(puzzle){showGame();return;}
   const record=resumeRecord;
