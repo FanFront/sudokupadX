@@ -40,6 +40,13 @@ METHODS = {
     "skyscraper": ("摩天楼", 3),
     "jellyfish": ("Jellyfish 四行列鱼", 4),
     "xyz_wing": ("XYZ-Wing 三格翼", 4),
+    "two_string_kite": ("双线风筝 2-String Kite", 3),
+    "w_wing": ("W-Wing 双数对翼", 3),
+    "remote_pairs": ("远程数对 Remote Pairs", 3),
+    "color_trap": ("双色标记：颜色陷阱", 4),
+    "color_wrap": ("双色标记：颜色包围", 4),
+    "xy_chain": ("XY-Chain 双候选链", 4),
+    "x_chain": ("X-Chain 单数字链", 4),
 }
 
 
