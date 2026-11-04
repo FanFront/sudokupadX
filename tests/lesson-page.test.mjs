@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {parseLessonGuide,filterLessons,STAGES,EXERCISES} from '../src/lesson-data.js';
+import {parseLessonGuide,filterLessons,STAGES,LESSON_IDS} from '../src/lesson-data.js';
 import {createLessonPractice,checkLessonMove,availableLessonPracticeIds,hasVerifiedLessonPractice} from '../src/lesson-puzzles.js';
 
 const guide=readFileSync(new URL('../docs/techniques.zh-CN.md',import.meta.url),'utf8');
