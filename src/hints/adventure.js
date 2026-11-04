@@ -1,6 +1,6 @@
 // Conservative, read-only hint engine for overlapping adventure Sudoku maps.
 // Every inference is derived from *visible* values and explicitly authored
-// all-different / variant marks; never from the solution or fogged givens.
+// all-different sets and explicitly typed variants, not colors or fogged givens.
 import {typedConstraints} from './constraint-data.js';
 
 const SIZES=new Set([4,6,9]);
@@ -91,17 +91,6 @@ function gridsAndHouses(puzzle){
     if(cells.length<=9) add(cells,'unique',0,'题面指定的不重复组');
   }
   return {domains,houses,sectors};
-}
-function lineCells(line,rows,cols){
-  const marks=line?.wayPoints||line?.points;
-  if(!Array.isArray(marks)||marks.length<2||marks.length>10)return [];
-  const cells=marks.map(p=>cellPoint(p,rows,cols));
-  if(cells.some(i=>i<0)||distinct(cells).length!==cells.length)return [];
-  for(let j=1;j<cells.length;j++){
-    const a=cells[j-1],b=cells[j],dr=Math.abs(Math.floor(a/cols)-Math.floor(b/cols)),dc=Math.abs(a%cols-b%cols);
-    if(Math.max(dr,dc)!==1)return [];
-  }
-  return cells;
 }
 function runCandidates(puzzle,progress,houses,domains){
   const total=puzzle.rows*puzzle.cols;
