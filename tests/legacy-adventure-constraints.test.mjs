@@ -75,6 +75,32 @@ test('legacy rules remain unavailable while their unlock or target cells are fog
   }
 });
 
+test('Super Sudokoid hidden anti-knight scope excludes the decorative heading row',()=>{
+  const {source,manifest}=load('super-sudokoid-1');
+  const grid=source.metadata.grids[16];
+  const cols=source.cells[0].length;
+  assert.equal(grid.width,6);
+  assert.equal(grid.height,7);
+  const rule=manifest.constraints.find(item=>item.type==='anti_knight'&&
+    item.sourceKind==='metadata.grids'&&item.sourceIndex===16);
+  assert.ok(rule);
+  assert.equal(rule.cells.length,36);
+  const expected=Array.from({length:36},(_,i)=>
+    (grid.top+1+Math.floor(i/6))*cols+grid.left+i%6);
+  assert.deepEqual(rule.cells,expected);
+  assert.ok(rule.cells.every(i=>/^[1-9]$/.test(source.metadata.solution[i])),
+    'Every scoped cell must have a genuine solved digit');
+  for(let i=0;i<rule.cells.length;i++){
+    const a=rule.cells[i];
+    for(let j=i+1;j<rule.cells.length;j++){
+      const b=rule.cells[j];
+      const dr=Math.abs(Math.floor(a/cols)-Math.floor(b/cols));
+      const dc=Math.abs(a%cols-b%cols);
+      if((dr===1&&dc===2)||(dr===2&&dc===1))
+        assert.notEqual(source.metadata.solution[a],source.metadata.solution[b]);
+    }
+  }
+});
 test('every rule records its exact original artwork index for review',()=>{
   for(const [name] of names){
     const {source,manifest}=load(name);
