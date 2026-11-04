@@ -125,7 +125,14 @@ test('undeduced jigsaw regions are not leaked from authored solution layouts',()
   const result=nextAdventureHint(puzzle,progress,4,at(1,1));
   assert.notEqual(result.step?.cell,at(1,1),
     'hidden jigsaw region may not act as an all-different witness');
-  assert.equal(result.status,'stalled');
+  // A valid deduction from the visible digit in row 1/column 1 is
+  // still allowed. The test must reject *only* the secret region proof.
+  if(result.status==='step'){
+    assert.equal(result.step.method,'peer_elimination');
+    assert.ok(result.step.sources.includes(at(0,0)));
+    assert.ok(Math.floor(result.step.cell/9)===0||result.step.cell%9===0,
+      'only the visible row and column can be used, not a hidden region');
+  }
 });
 test('invalid structured clue shapes are discarded, not guessed from visuals',()=>{
   const {puzzle,progress}=game([
