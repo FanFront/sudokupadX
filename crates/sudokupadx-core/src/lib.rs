@@ -236,6 +236,16 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/boss-frudzw3n73.json"),
         "fnv1a-38bc290f58fba96b" =>
             include_str!("../../../public/puzzles/hint-constraints/boss-ny34cxleh8.json"),
+        "fnv1a-d1df3d38b8c72135" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-1hh6q5xl6l.json"),
+        "fnv1a-d4147a53480d6305" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-qfnpbofkiq.json"),
+        "fnv1a-8136a622130a7bb6" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-70qpd43i45.json"),
+        "fnv1a-eb69e130736ace1b" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-f4c9vuptqj.json"),
+        "fnv1a-ada1b832691b6c20" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-gnp7aga2sx.json"),
         _ => return Vec::new(),
     };
     let Ok(manifest) = serde_json::from_str::<Value>(json) else {
@@ -1017,6 +1027,23 @@ mod tests {
         session.apply_many(&[1,2], "corner", "5").unwrap();
         assert!(session.snapshot().cells[1].corner.is_empty());
         assert!(session.snapshot().cells[2].corner.is_empty());
+    }
+
+    #[test]
+    fn five_linked_adventure_challenges_load_exact_structured_rules() {
+        for (scl,expected) in [
+            (include_str!("../../../public/puzzles/super-linked-1hh6q5xl6l.scl"),2usize),
+            (include_str!("../../../public/puzzles/super-linked-qfnpbofkiq.scl"),2),
+            (include_str!("../../../public/puzzles/super-linked-70qpd43i45.scl"),18),
+            (include_str!("../../../public/puzzles/super-linked-f4c9vuptqj.scl"),34),
+            (include_str!("../../../public/puzzles/super-linked-gnp7aga2sx.scl"),11),
+        ] {
+            let puzzle=load(scl).unwrap();
+            assert_eq!(puzzle.hint_constraints.len(),expected,
+                "linked original's fingerprint-pinned rules must all load");
+            assert!(puzzle.hint_constraints.iter().any(|rule|
+                rule.get("type").and_then(Value::as_str)==Some("classic_sudoku")));
+        }
     }
 
     #[test]
