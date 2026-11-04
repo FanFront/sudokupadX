@@ -1237,7 +1237,7 @@ mod tests{
         let hint=next_hint_with_notes(n,&grid,&[],1,&notes).unwrap();
         let step=hint.step.unwrap();
         assert_ne!(step.cell,0,
-            "Removing 1 from R1C1 is redundant once its notes say {2,7}");
+            "Removing 1 from R1C1 is redundant once its notes say 2 and 7");
         assert_eq!(hint.level,1);
     }
     #[test]
