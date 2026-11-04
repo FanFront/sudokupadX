@@ -43,7 +43,7 @@ try{
   assert.equal(await page.locator('#lessonList .lesson-entry').count(),6);
   await page.locator('#lessonList [data-id="7"]').click();
   assert.match(await page.locator('#lessonTitle').textContent(),/X-Wing/);
-  assert.match(await page.locator('#lessonReading').textContent(),/X-Wing/);
+  assert.match(await page.locator('#lessonReading').textContent(),/第 2 行和第 7 行/);
   await page.locator('#lessonExercise button[data-choice="4"]').click();
   assert.match(await page.locator('#lessonExercise .lesson-answer.correct').textContent(),/推理正确/);
   await page.locator('#lessonComplete').click();
