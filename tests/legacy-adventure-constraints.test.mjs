@@ -11,7 +11,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const names=[
   ['digits-of-despair',57],
   ['lineage-of-logic',10],
-  ['super-sudokoid-1',125],
+  ['super-sudokoid-1',124],
   ['super-sudokoid-2',172]
 ];
 const load=name=>{
