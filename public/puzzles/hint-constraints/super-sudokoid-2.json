@@ -1,0 +1,2865 @@
+{
+  "schemaVersion": 1,
+  "sourcePuzzleId": "sxsm_TheM_8832e975540124087658ec99d5b6ca17",
+  "sourceFingerprint": "fnv1a-20d4c9b9de5cbb80",
+  "sourceDimensions": [
+    36,
+    45
+  ],
+  "audit": {
+    "basis": "Author rule legend + original drawing identity; each accepted constraint checked against the solution OFFLINE",
+    "accepted": 169,
+    "rejectedCandidates": 0,
+    "byType": {
+      "kropki": 126,
+      "whisper": 25,
+      "reverse_thermo": 18
+    }
+  },
+  "constraints": [
+    {
+      "type": "kropki",
+      "cells": [
+        1454,
+        1455
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 25
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1361,
+        1406
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 26
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1362,
+        1407
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 27
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1275,
+        1320
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 28
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1277,
+        1278
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 29
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1322,
+        1323
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 30
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1320,
+        1321
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 31
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1321,
+        1322
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 32
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1146,
+        1191
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 33
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1191,
+        1236
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 34
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1146,
+        1147
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 35
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1147,
+        1148
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 36
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1148,
+        1149
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 37
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1106,
+        1151
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 38
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1055,
+        1056
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 39
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1060,
+        1061
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 40
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        963,
+        964
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 41
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        919,
+        964
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 42
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        916,
+        917
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 43
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        929,
+        930
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 44
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        884,
+        929
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 45
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        933,
+        934
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 46
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        934,
+        935
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 47
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1024,
+        1025
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 48
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1025,
+        1070
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 49
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        845,
+        890
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 50
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1048,
+        1049
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 51
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1049,
+        1050
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 52
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        867,
+        868
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 53
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        777,
+        778
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 54
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        816,
+        817
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 55
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        556,
+        557
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 56
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        693,
+        694
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 57
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        694,
+        695
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 58
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        813,
+        858
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 59
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        946,
+        991
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 60
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        952,
+        997
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 61
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        814,
+        859
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 62
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1036,
+        1081
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 63
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1088,
+        1133
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 64
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        526,
+        527
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 65
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        747,
+        792
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 66
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        747,
+        748
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 67
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        618,
+        619
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 68
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        573,
+        618
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 69
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        610,
+        655
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 70
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        654,
+        655
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 71
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        654,
+        699
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 72
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1452,
+        1453
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 73
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1228,
+        1229
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 74
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1276,
+        1277
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 75
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1496,
+        1541
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 76
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1496,
+        1497
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 77
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1541,
+        1542
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 78
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        452,
+        497
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 79
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        588,
+        589
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 80
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        678,
+        679
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 81
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        317,
+        362
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 82
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        767,
+        812
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 83
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        510,
+        511
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 84
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        929,
+        974
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 85
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        652,
+        697
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 86
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1000,
+        1045
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 87
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1003,
+        1048
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 88
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1508,
+        1509
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 89
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1553,
+        1554
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 90
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        632,
+        633
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 91
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        633,
+        634
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 92
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        413,
+        414
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 93
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        414,
+        415
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 94
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        821,
+        822
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 95
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1356,
+        1401
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 96
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1534,
+        1535
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 97
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1264,
+        1265
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 98
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1402,
+        1447
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 99
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        333,
+        334
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 100
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        245,
+        290
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 101
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        244,
+        289
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 102
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        251,
+        296
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 103
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        250,
+        295
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 104
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        247,
+        248
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 105
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        202,
+        247
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 106
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        251,
+        252
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 107
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        296,
+        297
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 108
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        341,
+        342
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 109
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        25,
+        26
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 110
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        104,
+        105
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 111
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        236,
+        237
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 112
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        106,
+        107
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 113
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        416,
+        417
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 114
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        594,
+        639
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 115
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        242,
+        287
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 116
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        685,
+        730
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 117
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        688,
+        733
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 118
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        732,
+        733
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 119
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        461,
+        462
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 120
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        297,
+        298
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 121
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        208,
+        209
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 122
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        78,
+        123
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 123
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        119,
+        164
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 124
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        212,
+        257
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 125
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        838,
+        839
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 126
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        645,
+        690
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 127
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        798,
+        843
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 128
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        615,
+        616
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 129
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        706,
+        707
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 130
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1235,
+        1236
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 131
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1452,
+        1497
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 132
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        636,
+        637
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 133
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1510,
+        1555
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 134
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        622,
+        623
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 135
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        624,
+        625
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 136
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        368,
+        413
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 137
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        1,
+        2
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 138
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        187,
+        232
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 139
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        232,
+        233
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 140
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        275,
+        276
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 141
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        276,
+        277
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 142
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        277,
+        278
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 143
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        365,
+        366
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 144
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        322,
+        367
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 145
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        150,
+        195
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 146
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        790,
+        835
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 147
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        782,
+        783
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 148
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        456,
+        457
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 149
+    },
+    {
+      "type": "kropki",
+      "cells": [
+        320,
+        321
+      ],
+      "dot": "white",
+      "unlockCells": [
+        [
+          13,
+          37
+        ]
+      ],
+      "sourceKind": "overlays",
+      "sourceIndex": 150
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        1543,
+        1498,
+        1454
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 0
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        1361,
+        1317,
+        1273,
+        1274,
+        1320
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 1
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        1455,
+        1409,
+        1363,
+        1362,
+        1406
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 2
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        1324,
+        1278,
+        1279,
+        1280,
+        1234,
+        1190,
+        1191
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 3
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        918,
+        964,
+        1010,
+        1054
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 4
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        916,
+        961,
+        1006,
+        1051,
+        1005
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 5
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        593,
+        594,
+        549,
+        550
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 6
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        1130,
+        1086,
+        1040,
+        996,
+        950,
+        906
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 7
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        1128,
+        1082,
+        1038,
+        992,
+        948,
+        902
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 8
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        691,
+        647,
+        693
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 9
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        525,
+        524,
+        568,
+        614,
+        658,
+        702
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 10
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        1494,
+        1539
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 11
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        814,
+        769,
+        770,
+        725
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 12
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        771,
+        772
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 13
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        545,
+        546,
+        591
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 14
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        139,
+        94,
+        48,
+        2,
+        46,
+        90,
+        135
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 15
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        333,
+        288,
+        243,
+        198,
+        153
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 16
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        294,
+        339
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 17
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        338,
+        293,
+        248
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 18
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        292,
+        337
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 19
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        296,
+        341
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 20
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        343,
+        298,
+        253,
+        208,
+        163
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 21
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        349,
+        304,
+        259,
+        214,
+        169
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 22
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        671,
+        626,
+        627,
+        628
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 23
+    },
+    {
+      "type": "whisper",
+      "cells": [
+        798,
+        844
+      ],
+      "unlockCells": [
+        [
+          13,
+          41
+        ],
+        [
+          14,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 24
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1604,
+        1559,
+        1514,
+        1469,
+        1424
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 96
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1518,
+        1473,
+        1428,
+        1383
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 97
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1289,
+        1290,
+        1291,
+        1292
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 98
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1245,
+        1201,
+        1156
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 99
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1203,
+        1157,
+        1112
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 100
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1155,
+        1111,
+        1066
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 101
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1064,
+        1019,
+        974,
+        929
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 102
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1069,
+        1024,
+        979,
+        934
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 103
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        710,
+        709,
+        708,
+        707
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 104
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        480,
+        525,
+        570,
+        615
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 105
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        478,
+        523,
+        568
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 106
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        428,
+        473,
+        518,
+        563
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 107
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        737,
+        692,
+        647,
+        602,
+        557
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 108
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        910,
+        865,
+        820,
+        775
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 109
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1340,
+        1339,
+        1338,
+        1337
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 110
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1152,
+        1107,
+        1062
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 111
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        1108,
+        1063,
+        1018
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 112
+    },
+    {
+      "type": "reverse_thermo",
+      "cells": [
+        944,
+        943,
+        942
+      ],
+      "unlockCells": [
+        [
+          20,
+          41
+        ]
+      ],
+      "sourceKind": "lines",
+      "sourceIndex": 113
+    }
+  ]
+}
