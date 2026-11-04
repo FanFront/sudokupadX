@@ -575,6 +575,81 @@ fn solve(n:usize,givens:&[u8],rules:&[Rule],tier:u8,
          trace:bool,disabled:Option<&str>)->Result<Proof,String>{
     Solver::new(n,givens,rules,tier,trace,disabled)?.run()
 }
+/// One verified deduction from the exact same Rust candidate engine used
+/// by the generator. Player pencil marks are annotations, not solver axioms.
+#[derive(Clone,Debug,Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct HintResponse {
+    pub status: String,
+    pub step: Option<Step>,
+    pub level: u8,
+}
+
+pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
+    -> Result<HintResponse,String> {
+    if !matches!(n,4|6|9) || !(1..=5).contains(&tier) || grid.len()!=n*n {
+        return Err("仅支持 4×4 / 6×6 / 9×9 与提示等级 1–5".into());
+    }
+    if rules.len()>100 || rules.iter().any(|rule|
+        !matches!(rule.kind.as_str(),
+            "killer"|"kropki"|"thermo"|"renban"|"whisper"|
+            "arrow"|"xv"|"entropic"|"modular"|"between"|"region_sum") ||
+        rule.cells.len()<2 || rule.cells.iter().any(|&i|i>=n*n)) {
+        return Err("存在无法安全解释的变体规则".into());
+    }
+    let proof=solve(n,grid,rules,tier.min(4),true,None)?;
+    if proof.solved && proof.trace.is_empty() {
+        return Ok(HintResponse{status:"complete".into(),step:None,level:0});
+    }
+    // Prefer an actual placement when its prerequisites are only elementary
+    // eliminations. Otherwise show the earliest new reduction, so no higher
+    // tier deduction is presented without its prerequisite reasoning.
+    let preferred=proof.trace.iter().position(|step|
+        step.remaining.len()==1 && step.before.len()>1);
+    let preferred=preferred.filter(|&idx|
+        proof.trace[..idx].iter().all(|step|
+            level_of(&step.method)==1));
+    let chosen=preferred.and_then(|idx|proof.trace.get(idx))
+        .or_else(||proof.trace.first());
+    if let Some(step)=chosen {
+        return Ok(HintResponse{
+            status:"step".into(),level:level_of(&step.method),step:Some(step.clone())
+        });
+    }
+    if tier<5 {
+        return Ok(HintResponse{status:"stalled".into(),step:None,level:tier});
+    }
+    // Tier 5 is a deliberately separate, bounded proof by contradiction,
+    // NOT a fabricated human-technique deduction. We only remove a tested
+    // candidate after exhaustively proving that its branch has no solution.
+    let (solutions,answer)=match exact_count(n,grid,rules,20_000) {
+        Ok(result)=>result,
+        Err(_)=>return Ok(HintResponse{
+            status:"search_limit".into(),step:None,level:5}),
+    };
+    if solutions!=1 {
+        return Ok(HintResponse{status:"not_unique".into(),step:None,level:5});
+    }
+    let mut choices:Vec<usize>=(0..n*n)
+        .filter(|&i|count(proof.masks[i])>1).collect();
+    choices.sort_by_key(|&i|count(proof.masks[i]));
+    for &cell in choices.iter().take(4) {
+        for candidate in values(proof.masks[cell],n) {
+            if candidate==answer[cell]{continue;}
+            let mut hypothetical=grid.to_vec();
+            hypothetical[cell]=candidate;
+            if let Ok((0,_))=exact_count(n,&hypothetical,rules,20_000) {
+                let after=proof.masks[cell]&!bit(candidate);
+                return Ok(HintResponse{status:"step".into(),level:5,
+                    step:Some(Step{method:"search_contradiction".into(),cell,
+                        removed:vec![candidate],remaining:values(after,n),
+                        before:values(proof.masks[cell],n),sources:vec![cell]})});
+            }
+        }
+    }
+    Ok(HintResponse{status:"search_limit".into(),step:None,level:5})
+}
+
 /// Exact solution counting is separate from the deduction-only proof.
 fn exact_count(n:usize,givens:&[u8],rules:&[Rule],node_limit:usize)
     -> Result<(usize,Vec<u8>),String>{
