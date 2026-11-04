@@ -213,6 +213,7 @@ try{
   // The sparse one-rule collection is selectable with a clue-count subtitle.
   await page.locator('#homeButton').click();
   await page.locator('#libraryButton').click();
+  await page.locator('#bundledSearch').fill('');
   await page.locator('#bundledCategory').selectOption('single');
   assert.equal(await page.locator('#libraryList .library-entry').count(),6);
   assert.ok((await page.locator('#libraryList').textContent()).includes('个提示数'));
