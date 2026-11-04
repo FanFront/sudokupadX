@@ -324,7 +324,12 @@ async function loadCatalog(){
     const response=await fetch('puzzles/batch9/catalog-entries.json');
     if(response.ok)batch9=await response.json();
   } catch {}
-  catalog=[...(items.items||[]),...(generated.items||[]),...(variants.items||[]),...(batch9.items||[])];
+  let singleRules={items:[]};
+  try {
+    const response=await fetch('puzzles/single-rule/catalog-entries.json');
+    if(response.ok)singleRules=await response.json();
+  } catch {}
+  catalog=[...(items.items||[]),...(generated.items||[]),...(variants.items||[]),...(batch9.items||[]),...(singleRules.items||[])];
   localeZh=translations;renderLibrary();
 }
 async function openBundled(id,push=false,backState=null){
