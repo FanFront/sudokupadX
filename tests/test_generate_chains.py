@@ -8,6 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from chain_techniques import (two_string_kites, w_wings, simple_colors,
                               remote_pairs, xy_chains, x_chains)
+from als_techniques import als_xz
+from classic_techniques import basic_fish, finned_x_wings
 from variant_logic import houses, deduce
 from generate_variants import make_solution
 from technique_catalog import METHODS, lesson_profile
@@ -34,7 +36,8 @@ def run_method(method, masks):
             raise AssertionError("Technique removed every possible digit")
         steps.append((name, cell, sorted(removed), source))
         return True
-    if method in (two_string_kites, w_wings, simple_colors, x_chains):
+    if method in (two_string_kites, w_wings, simple_colors, x_chains,
+                  als_xz):
         method(9, masks, houses(9), reduce)
     else:
         method(9, masks, reduce)
@@ -148,11 +151,51 @@ class SudopediaChainTests(unittest.TestCase):
         self.assertTrue(any(s[0] == "x_chain" and s[1] == 17
                             and len(s[3]["chain"]) == 6 for s in steps))
 
+    def test_als_xz(self):
+        masks = blank()
+        # A = R2C2 {1,3} + R2C3 {3,5}: ALS 2 cells / 3 digits.
+        # B = R4C2 {1,5}: ALS 1 cell / 2 digits.
+        # Restricted X=1 occurs in the same column; target R4C3
+        # sees every possible 5 from A and B.
+        masks[10], masks[11], masks[28] = {1, 3}, {3, 5}, {1, 5}
+        masks[29] = {4, 5, 7}
+        steps = run_method(als_xz, masks)
+        self.assertNotIn(5, masks[29])
+        self.assertTrue(any(s[0] == "als_xz" and s[1] == 29 for s in steps))
+
+    def test_finned_x_wing(self):
+        masks = blank()
+        # Row 1: 6 only in C4/C8.
+        # Row 5: 6 in C4/C5(fin)/C8.
+        # R4C4 belongs to the fin box and cover column C4.
+        for col in range(9):
+            if col not in (3, 7):
+                masks[col].discard(6)
+            if col not in (3, 4, 7):
+                masks[4*9+col].discard(6)
+        steps = run_method(finned_x_wings, masks)
+        self.assertNotIn(6, masks[30])  # R4C4
+        self.assertTrue(any(s[0] == "finned_x_wing" and s[1] == 30
+                            for s in steps))
+
+    def test_five_line_squirmbag(self):
+        masks = blank()
+        for row, cols in ((0, (0, 2)), (2, (2, 4)), (4, (4, 6)),
+                          (6, (6, 8)), (8, (0, 8))):
+            for col in range(9):
+                if col not in cols:
+                    masks[row*9+col].discard(8)
+        steps = run_method(basic_fish, masks)
+        self.assertNotIn(8, masks[9])  # R2C1
+        self.assertTrue(any(s[0] == "squirmbag" and s[1] == 9
+                            for s in steps))
+
     def test_randomized_solution_safety_for_every_new_technique(self):
         # Every random pencilmark superset contains one known valid complete
         # Sudoku solution. A sound technique cannot erase that digit.
         methods = (two_string_kites, w_wings, simple_colors,
-                   remote_pairs, xy_chains, x_chains)
+                   remote_pairs, xy_chains, x_chains,
+                   als_xz, finned_x_wings, basic_fish)
         rng = random.Random(20261104)
         for seed in range(5):
             solution = make_solution(9, rng)
@@ -172,7 +215,8 @@ class SudopediaChainTests(unittest.TestCase):
 
     def test_all_method_names_are_taught_in_chinese(self):
         for name in ("two_string_kite", "w_wing", "color_trap",
-                     "color_wrap", "xy_chain", "x_chain", "remote_pairs"):
+                     "color_wrap", "xy_chain", "x_chain", "remote_pairs",
+                     "als_xz", "finned_x_wing", "squirmbag"):
             self.assertIn(name, METHODS)
             self.assertTrue(METHODS[name][0])
         profile = lesson_profile(9, {"trace":[{
