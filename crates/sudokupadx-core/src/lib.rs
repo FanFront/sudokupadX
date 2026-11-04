@@ -252,6 +252,10 @@ fn bundled_legacy_hint_constraints(input: &str, root: &Value,
             include_str!("../../../public/puzzles/hint-constraints/super-linked-kt6bb0wm0k.json"),
         "fnv1a-ed89cd7b91270cb2" =>
             include_str!("../../../public/puzzles/hint-constraints/super-linked-lzer9x4edb.json"),
+        "fnv1a-dd3495d2df50012c" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-jo12qmyc5v.json"),
+        "fnv1a-39b08d6fbcbaaf76" =>
+            include_str!("../../../public/puzzles/hint-constraints/super-linked-80kqa7jo0h.json"),
         _ => return Vec::new(),
     };
     let Ok(manifest) = serde_json::from_str::<Value>(json) else {
@@ -1046,6 +1050,8 @@ mod tests {
             (include_str!("../../../public/puzzles/super-linked-swxudk82v1.scl"),14),
             (include_str!("../../../public/puzzles/super-linked-kt6bb0wm0k.scl"),10),
             (include_str!("../../../public/puzzles/super-linked-lzer9x4edb.scl"),9),
+            (include_str!("../../../public/puzzles/super-linked-jo12qmyc5v.scl"),12),
+            (include_str!("../../../public/puzzles/super-linked-80kqa7jo0h.scl"),18),
         ] {
             let puzzle=load(scl).unwrap();
             assert_eq!(puzzle.hint_constraints.len(),expected,
