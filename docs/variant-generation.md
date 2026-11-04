@@ -122,8 +122,12 @@ human-readable proof step and a source-labelled motif can be generated.
 
 ## Chinese learning curriculum and Sudopedia techniques
 
-The player-facing reference is in **Chinese**:
-[数独解题技巧中文指南（含局部候选数例题）](techniques.zh-CN.md).
+The player-facing references are in **Chinese**:
+[基础与变体 25 课（含局部候选数例题）](techniques.zh-CN.md) and
+[完整 Sudopedia 技巧分类、覆盖状态与新增进阶例题](sudopedia-catalog.zh-CN.md).
+The extended catalogue explicitly distinguishes implemented methods,
+shared aliases, future methods and uniqueness/guessing-based methods
+that are excluded from required player solves.
 It covers 25 worked mini-lessons: singles, naked/hidden subsets of size
 2–4, locked candidates, X-Wing/Swordfish/Jellyfish, XY-Wing/XYZ-Wing,
 Skyscraper, and all authored variant deductions. The examples are
@@ -143,8 +147,12 @@ using guess-and-reject or unique-solution assumptions:
 | Jellyfish / XYZ-Wing | `jellyfish`, `xyz_wing` | 4 |
 
 Tier 1 also includes **direct** variant-constraint propagation; tier 2
-includes constructed Killer and line interactions. These are pedagogical
-tiers, **not** calibrated difficulty ratings.
+includes constructed Killer and line interactions. Tier 3 adds
+2-String Kite, W-Wing and Remote Pairs; tier 4 adds
+Color Trap/Wrap, Finned X-Wing, XY/X-Chains, ALS-XZ and Squirmbag.
+All advanced searches are bounded and invoked only when simpler
+techniques stall. These are pedagogical tiers, **not** calibrated
+difficulty ratings.
 
 Every published chapter supplies `logicProfile.education`:
 
@@ -232,7 +240,13 @@ especially when cage, line and dot marks converge.
 - `scripts/technique_catalog.py`: stable Chinese technique names,
   curriculum tiers, actual learning-path exports and tiered solve checks.
 - `scripts/classic_techniques.py`: classical subsets, X-Wing/Swordfish/
-  Jellyfish fish, XY-Wing/XYZ-Wing and Skyscraper.
+  Jellyfish/Squirmbag fish, Finned X-Wing, XY/XYZ-Wing and Skyscraper.
+- `scripts/chain_techniques.py`: two-string kite, W-Wing, remote pairs,
+  simple two-color trap/wrap, bounded XY-Chain and X-Chain.
+- `scripts/als_techniques.py`: short ALS-XZ with restricted common digit,
+  a local exact deduction that does not test an assumed solution.
+- `tests/test_generate_chains.py`: crafted candidate patterns for every
+  new method and randomized complete-solution preservation checks.
 - `scripts/variant_techniques.py`: local Renban, whisper, arrow and
   XV propagation, plus 9×9 white-dot triple partition.
 - `scripts/variant_lines.py`: region-sum, entropic, modular and Between
