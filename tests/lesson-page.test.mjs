@@ -28,7 +28,7 @@ test('search and category filtering return the right lessons',()=>{
 });
 
 test('only genuinely verified lesson boards are playable and every state remains satisfiable',()=>{
-  assert.equal(Object.keys(EXERCISES).length,25);
+  assert.equal(LESSON_IDS.length,25);
   const available=availableLessonPracticeIds();
   assert.ok(available.includes(1),'peer elimination must be playable');
   assert.ok(available.includes(2),'hidden single must be playable');
