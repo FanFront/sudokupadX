@@ -70,7 +70,7 @@ def focus_cells(n, cell, source, method, constraints=()):
                   and 0 <= value < n*n and
                   ("cell" in key or key in
                    ("pivot", "pincer", "wing", "a", "b", "tip", "base",
-                    "groups", "group", "segments"))):
+                    "groups", "group", "segments", "roof", "pincers"))):
                 found.add(value)
         visit(source)
     return sorted(found)
@@ -318,10 +318,119 @@ def anchored_line_examples():
     return result
 
 
+
+def anchored_classic_examples():
+    """Unique full Sudoku givens with genuinely provable classic deductions.
+
+    Every candidate comes from row/column/box givens and every removal is
+    produced by the same classic technique procedure as the generator.
+    The concrete givens were selected for technique geometry, never their
+    supposed answer; acceptance independently counts the full solutions.
+    """
+    from itertools import combinations
+    from classic_techniques import (basic_fish, xy_wings, xyz_wings,
+                                    skyscrapers)
+
+    examples = {
+        # Naked triple in row five, candidate 2 eliminated at R5C6.
+        4: ("naked_subset",
+            "530008910002090000108300500800671400000850690013904057000006004006400035005280000", 41),
+        # Swordfish of digit 3 on three rows and columns.
+        8: ("swordfish",
+            "030008912700005040098300000059071000400803691000004807000506000000019000340200060", 52),
+        # XY-Wing on three two-candidate cells.
+        10: ("xy_wing",
+             "500700010002090048008040570059071403007803001600904057000506000280010700305000109", 71),
+        # XYZ-Wing pivot and pincers do not all share a house, so the
+        # pattern cannot be replaced by a trivial naked triple.
+        11: ("xyz_wing",
+             "500060910762195040008340000000671020427850690600000000001506004080009035300200000", 80),
+        # Skyscraper of digit 1 with a shared strong-link base.
+        12: ("skyscraper",
+             "530008910002090000108300500800671400000850690013904057000006004006400035005280000", 69),
+    }
+    n = 9
+    regions = [[[(r+dr), (c+dc)] for dr in range(3) for dc in range(3)]
+               for r in (0, 3, 6) for c in (0, 3, 6)]
+    expected_solution = list(map(int, SOLUTION))
+    result = {}
+    for number, (method, clues, target) in examples.items():
+        if len(clues) != 81:
+            raise ValueError("Classic lesson clue string has wrong length")
+        givens = {i: int(digit) for i, digit in enumerate(clues)
+                  if digit != "0"}
+        if any(expected_solution[i] != digit for i, digit in givens.items()):
+            raise ValueError("Classic lesson clue disagrees with solution")
+        if count_solutions(n, givens, []) != 1:
+            raise ValueError("Classic lesson has non-unique answer")
+        masks = clue_domains(n, givens)
+        snapshots = []
+        def reduce(cell, allowed, name, source):
+            allowed = set(allowed)
+            removed = masks[cell] - allowed
+            if not removed:
+                return False
+            if not allowed & masks[cell]:
+                raise ValueError("Classic proof emptied a candidate set")
+            snapshot = [set(domain) for domain in masks]
+            masks[cell].intersection_update(allowed)
+            snapshots.append((snapshot, {"method": name, "cell": cell,
+                "removed": sorted(removed), "remaining": sorted(masks[cell]),
+                "source": source}))
+            return True
+
+        if method == "naked_subset":
+            for house_id, unit in enumerate(houses(n)):
+                unsolved = [i for i in unit if len(masks[i]) > 1]
+                for selected in combinations(unsolved, 3):
+                    digits = set().union(*(masks[i] for i in selected))
+                    if len(digits) != 3:
+                        continue
+                    for cell in unit:
+                        if cell not in selected:
+                            reduce(cell, masks[cell] - digits, "naked_subset",
+                                   {"house": house_id, "size": 3,
+                                    "cells": list(selected),
+                                    "digits": sorted(digits)})
+        elif method == "swordfish":
+            basic_fish(n, masks, reduce, maximum=3)
+        elif method == "xy_wing":
+            xy_wings(n, masks, reduce)
+        elif method == "xyz_wing":
+            xyz_wings(n, masks, reduce)
+        elif method == "skyscraper":
+            skyscrapers(n, masks, reduce)
+
+        witness = next(((before, step) for before, step in snapshots
+                        if step["cell"] == target
+                        and step["method"] == method), None)
+        if witness is None:
+            raise ValueError(f"No real {method} deduction in lesson {number}")
+        # Validate every recorded elimination against the completed grid,
+        # including deductions earlier than the selected demonstration.
+        if any(expected_solution[step["cell"]] in step["removed"]
+               for _, step in snapshots):
+            raise ValueError("Classic technique removed an actual solution")
+        puzzle = {
+            "cells": [[{"value": str(givens[r*n+c])} if r*n+c in givens
+                      else {} for c in range(n)] for r in range(n)],
+            "regions": regions, "cages": [], "lines": [],
+            "arrows": [], "overlays": [], "underlays": [],
+            "metadata": {"solution": SOLUTION, "rules":
+                         "标准数独：每行、每列及每个 3×3 宫包含 1 至 9。"}
+        }
+        before, step = witness
+        result[number] = make_fixture(
+            number, puzzle, before, step, constraints=[])
+    return result
+
+
+
 def generate():
     examples = collect_report_examples()
     examples.update(anchor_examples())
     examples.update(anchored_line_examples())
+    examples.update(anchored_classic_examples())
     for id_, fixture in examples.items():
         if fixture["method"] != LESSON_METHODS[id_]:
             raise ValueError("Mismatched lesson technique")
