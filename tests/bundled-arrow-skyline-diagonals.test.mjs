@@ -18,7 +18,8 @@ function loaded(name){
   const original=JSON.parse(LZString.decompressFromBase64(src.trim().slice(3)));
   const sidecar=JSON.parse(readFileSync(resolve(root,
     'public/puzzles/hint-constraints',name+'.json'),'utf8'));
-  const puzzle={rows:9,cols:9,cells:original.cells.flat().map(c=>({given:c?.value??null})),
+  const puzzle={rows:9,cols:9,cells:Array.from({length:81},()=>({given:null})),
+    // Test authored constraint geometry independently of incidental givens.
     rules:original.metadata.rules,regions:original.regions||[],
     hintConstraints:sidecar.constraints,sectors:[]};
   const progress={cells:Array.from({length:81},()=>({value:null,center:[],corner:[]})),
