@@ -79,7 +79,7 @@ export function describeHint(response,size,cells=[]){
     step.method==='entropic'
       ?'每组三连格必须分别取自三个数字区间（'+entropicGroups+'），不符合分组的候选数可排除。'
       :ruleText[step.method]||'遵循已知数独规则。');
-  const placement=step.remaining?.length===1&&step.before?.length>1;
+  const placement=!step.forceElimination&&step.remaining?.length===1&&step.before?.length>1;
   const action=step.method==='search_contradiction'
     ?'经反证，可排除 '+removed
     :placement?'确定填入 '+remaining:'排除候选数 '+removed;
