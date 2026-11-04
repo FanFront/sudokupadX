@@ -10,6 +10,11 @@ export const TECHNIQUES=Object.freeze({
   thermo:'温度计',renban:'连续数线',whisper:'低语线',
   arrow:'箭头求和',xv:'XV 和',entropic:'熵线',reverse_thermo:'逆温度计',
   modular:'模三线',between:'夹心线',region_sum:'区域等和线',
+  palindrome:'回文线',parity_line:'奇偶交替线',zipline:'拉链线',
+  prime_sum:'相邻质数和线',anti_king:'反王',anti_knight:'反马',
+  anti_xv:'反 XV',lava:'岩浆格',reverse_whisper:'反低语线',
+  shadow_lower:'暗格较小',greater_neighbors:'大于邻格',
+  magic_square:'三阶魔方阵',crystal_cage:'晶体笼等和',
   search_contradiction:'穷举反证'
 });
 const ruleText={
