@@ -58,9 +58,19 @@ function explicitlyClassicalNine(puzzle){
     /\brows?\s*[,，、]\s*(?:and\s+)?(?:columns?|cols?)\b/i.test(description);
   return rows&&columns;
 }
+function hiddenRegionLayout(puzzle){
+  // A number grid whose jigsaw regions are part of the *puzzle* must not
+  // acquire those regions from a solved/author-private layout. Until the
+  // player actually establishes the partition, only shown row/column rules
+  // and separately typed clues may support a hint.
+  const text=String(puzzle.rules||'');
+  return /(?:区域|宫|星系)[^。\n]{0,28}(?:自行推导|待推断|未知|自行构建|自行划分)|(?:deduce|construct|unknown|hidden)[^.!\n]{0,45}(?:regions?|region boundaries|jigsaw)/i
+    .test(text);
+}
 function gridsAndHouses(puzzle,typedRules=[]){
   const {rows,cols}=puzzle,total=rows*cols;
   const domains=Array(total).fill(0),houses=[],seen=new Set();
+  const authoredRegions=hiddenRegionLayout(puzzle)?[]:puzzle.regions||[];
   const add=(indices,kind,n,description)=>{
     const members=distinct(indices.filter(i=>Number.isInteger(i)&&i>=0&&i<total));
     if(members.length<2)return;
@@ -81,7 +91,7 @@ function gridsAndHouses(puzzle,typedRules=[]){
       add(whole(9).map(c=>(c-1)*9+r),'column',9,
         '标准数独第 '+(r+1)+' 列');
     }
-    const regions=(puzzle.regions||[]).filter(group=>
+    const regions=authoredRegions.filter(group=>
       Array.isArray(group)&&group.length===9);
     const listed=regions.map(group=>group.map(pair=>point(pair,rows,cols)));
     const valid=listed.length===9&&listed.flat().length===81&&
@@ -124,7 +134,7 @@ function gridsAndHouses(puzzle,typedRules=[]){
       }
     }
   }
-  for(const region of puzzle.regions||[]){
+  for(const region of authoredRegions){
     if(Array.isArray(region)){
       const cells=region.map(p=>point(p,rows,cols));
       const n=SIZES.has(cells.length)?cells.length:0;
