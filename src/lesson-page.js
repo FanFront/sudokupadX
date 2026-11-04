@@ -1,5 +1,6 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
-import {STAGES, parseLessonGuide, filterLessons, EXERCISES} from './lesson-data.js';
+import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS} from './lesson-data.js';
+import {hasVerifiedLessonPractice} from './lesson-puzzles.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
 const LAST_KEY='sudokupadx:lesson-last:v1';
@@ -180,25 +181,32 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   function renderExercise(){
     const root=$('lessonExercise');
     root.replaceChildren();
-    const exercise=EXERCISES[selected.id];
-    if(!exercise)return;
+    if(!LESSON_IDS.includes(selected.id))return;
+    const verified=hasVerifiedLessonPractice(selected.id);
     const heading=element('div','lesson-exercise-heading');
-    heading.append(element('strong','','进入真实棋盘练习'));
-    heading.append(element('span','','SudokuPadX 原生数字／候选数输入'));
+    heading.append(element('strong','',
+      verified?'进入真实棋盘练习':'练习验证中'));
+    heading.append(element('span','',
+      verified?'来自求解器实际推理步骤':'未发布不可靠的候选数示例'));
     const body=element('div','lesson-exercise-body');
-    body.append(element('p','lesson-exercise-context',
-      '本课将打开一个已准备好候选数的训练棋盘。相关格子会用蓝色标记，黄色格子是你的操作目标。'));
-    body.append(element('p','lesson-exercise-context',exercise.context));
-    const prompt=element('p','lesson-exercise-context',
-      '观察候选数与规则的关系，在棋盘中完成一次真实的填数或候选删除。遇到困难时可在棋盘上查看讲解。');
-    body.append(prompt);
-    const start=element('button','lesson-start-practice',
-      practiceLoading?'正在准备训练棋盘…':'进入练习棋盘');
-    start.id='lessonStartPractice';
-    start.type='button';
-    start.disabled=practiceLoading;
-    body.append(start);
-    const status=element('p','lesson-practice-message','不会覆盖正在游玩的谜题；返回课程时恢复原来的棋盘。');
+    if(verified){
+      body.append(element('p','lesson-exercise-context',
+        '本课使用经过唯一解与无猜测推理验证的棋盘。候选数来自真实的求解中间状态，蓝色标记提示关联格，黄色格是操作目标。'));
+      body.append(element('p','lesson-exercise-context',
+        '请在棋盘中完成一次真实的填数或候选删除；遇到困难时可查看推理讲解。'));
+      const start=element('button','lesson-start-practice',
+        practiceLoading?'正在准备训练棋盘…':'进入练习棋盘');
+      start.id='lessonStartPractice';
+      start.type='button';
+      start.disabled=practiceLoading;
+      body.append(start);
+    }else{
+      body.append(element('p','lesson-exercise-context',
+        '此技巧目前还没有通过完整盘面、唯一解及指定推理步骤三重验证的练习。为避免误导，暂不展示原先手工编造的候选数棋盘。理论讲解仍可阅读。'));
+    }
+    const status=element('p','lesson-practice-message',
+      verified?'不会覆盖正在游玩的谜题；返回课程时恢复原来的棋盘。':
+        '需要有可复现的求解器推理证明，才能开放这一节的实战练习。');
     status.id='lessonPracticeFeedback';
     status.setAttribute('role','status');
     body.append(status);
