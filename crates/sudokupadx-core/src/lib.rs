@@ -993,6 +993,35 @@ mod tests {
     }
 
     #[test]
+    fn four_bundled_original_scls_receive_only_fingerprint_pinned_constraints() {
+        let originals = [
+            (include_str!("../../../public/puzzles/digits-of-despair.scl"),56usize),
+            (include_str!("../../../public/puzzles/lineage-of-logic.scl"),10usize),
+            (include_str!("../../../public/puzzles/super-sudokoid-1.scl"),121usize),
+            (include_str!("../../../public/puzzles/super-sudokoid-2.scl"),169usize),
+        ];
+        for (scl,expected) in originals {
+            let puzzle=load(scl).unwrap();
+            assert_eq!(puzzle.hint_constraints.len(),expected,
+                "legacy SCL should inherit precisely its reviewed typed manifest");
+            assert!(puzzle.hint_constraints.iter().all(|rule|
+                rule.get("type").and_then(Value::as_str).is_some() &&
+                rule.get("cells").and_then(Value::as_array).is_some() &&
+                rule.get("unlockCells").and_then(Value::as_array).is_some()));
+        }
+    }
+
+    #[test]
+    fn forged_or_modified_imports_never_inherit_bundled_legacy_rules() {
+        let fake = r#"{
+            "id":"sxsm_TheM_8832e975540124087658ec99d5b6ca17",
+            "metadata":{"title":"Modified copy"},
+            "cells":[[{},{}],[{},{}]]
+        }"#;
+        assert!(load(fake).unwrap().hint_constraints.is_empty());
+    }
+
+    #[test]
     fn explicit_adventure_hint_constraints_survive_parse_and_serialization() {
         let raw = r#"{
           "metadata":{"title":"Typed",
