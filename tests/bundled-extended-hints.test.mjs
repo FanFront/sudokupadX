@@ -69,8 +69,12 @@ test('Energy Transfer proves the index relation from the current row',()=>{
 });
 test('9 Feet Under exact killer cage totals produce supported exclusions',()=>{
   const {puzzle,progress,solution}=load('super-linked-70qpd43i45');
+  // The authored white dots can prove an independent, higher-ranked
+  // elimination in these same cells. Isolate the Killer to assert that the
+  // arithmetic technique itself works, not the UI's technique ranking.
   const cage=puzzle.hintConstraints.find(r=>r.type==='killer'&&r.cells.length===3);
   assert.ok(cage);
+  puzzle.hintConstraints=puzzle.hintConstraints.filter(r=>r.type!=='kropki');
   for(const i of cage.cells.slice(0,2))
     progress.cells[i].value=String(solution[i]);
   const target=cage.cells[2],correct=solution[target];
