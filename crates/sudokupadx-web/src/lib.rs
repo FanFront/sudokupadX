@@ -68,8 +68,8 @@ impl WasmPuzzleEngine {
 
     pub fn hint_step(&self, tier: u8) -> Result<String, JsValue> {
         let session = self.session.as_ref().ok_or_else(|| js_error("No puzzle is open."))?;
-        let (n,grid,rules)=session.hint_input().map_err(js_error)?;
-        let hint=core::creator::next_hint(n,&grid,&rules,tier).map_err(js_error)?;
+        let (n,grid,rules,notes)=session.hint_input().map_err(js_error)?;
+        let hint=core::creator::next_hint_with_notes(n,&grid,&rules,tier,&notes).map_err(js_error)?;
         to_json(&hint)
     }
 
