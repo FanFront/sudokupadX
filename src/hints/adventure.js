@@ -304,6 +304,106 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
   const constraints=[];
   for(const rule of typedConstraints(puzzle,progress)){
     const {cells,type}=rule;
+    // Direct two-cell relations and regional neighbor rules are handled
+    // without brute-force search. Each elimination has a concrete witness
+    // and never assumes invisible digits or a guessed visual rule.
+    if(['palindrome','parity_line','prime_sum','reverse_whisper'].includes(type)){
+      for(let j=0;j<Math.floor((type==='palindrome'?cells.length:0)/2);j++)
+        relation(cells[j],cells[cells.length-1-j],'palindrome',
+          (x,y)=>x===y,'回文线以中心对称的两格必须填写相同数字。');
+      if(type!=='palindrome')for(let j=1;j<cells.length;j++){
+        const relationTest=type==='parity_line'
+          ?(x,y)=>(x%2)!==(y%2)
+          :type==='prime_sum'
+            ?(x,y)=>[2,3,5,7,11,13,17].includes(x+y)
+            :(x,y)=>Math.abs(x-y)<5;
+        const description=type==='parity_line'
+          ?'奇偶线相邻数字必须一奇一偶。'
+          :type==='prime_sum'?'相邻数字之和必须是质数。'
+            :'反低语线相邻数字的差必须小于 5。';
+        relation(cells[j-1],cells[j],type,relationTest,description);
+      }
+      continue;
+    }
+    if(['anti_king','anti_knight','anti_xv','lava'].includes(type)){
+      const group=new Set(cells),required=type;
+      for(const a of cells){
+        const r=Math.floor(a/cols),c=a%cols;
+        const offsets=required==='anti_knight'
+          ?[[1,2],[1,-2],[2,1],[2,-1]]
+          :required==='anti_king'
+            ?[[1,1],[1,-1]]
+            :[[0,1],[1,0]];
+        for(const [dr,dc] of offsets){
+          const nr=r+dr,nc=c+dc;
+          if(nr<0||nc<0||nr>=rows||nc>=cols)continue;
+          const b=nr*cols+nc;
+          if(!group.has(b))continue;
+          if(required==='anti_xv')
+            relation(a,b,type,(x,y)=>x+y!==5&&x+y!==10,
+              '反 XV 区域中的正交相邻格数字和不能为 5 或 10。');
+          else if(required==='lava')
+            relation(a,b,type,(x,y)=>Math.abs(x-y)>=2,
+              '相邻岩浆格的数字差至少为 2。');
+          else
+            relation(a,b,type,(x,y)=>x!==y,
+              required==='anti_knight'
+                ?'反马规则：马步相邻的两个格子不能有相同数字。'
+                :'反王规则：对角相邻格不能有相同数字。');
+        }
+      }
+      continue;
+    }
+    if(type==='shadow_lower'||type==='greater_neighbors'){
+      for(let j=1;j<cells.length;j++){
+        const smaller=type==='shadow_lower';
+        relation(cells[0],cells[j],type,(x,y)=>smaller?x<y:x>y,
+          smaller?'暗格数字必须小于指定的相邻普通格数字。'
+            :'高值格数字必须大于指定的相邻格数字。');
+      }
+      continue;
+    }
+    if(type==='zipline'){
+      const mid=Math.floor(cells.length/2);
+      for(let j=0;j<mid;j++){
+        const triple=[cells[mid],cells[j],cells[cells.length-1-j]];
+        if(triple.every(i=>values[i]||candidates[i]?.length))
+          constraints.push({method:'zipline',cells:triple,unique:false,
+            check:arr=>arr[0]===arr[1]+arr[2],
+            reason:'拉链线中距中心等远的两格数字之和等于中心格数字。'});
+      }
+      continue;
+    }
+    if(type==='magic_square'){
+      // A normal 3×3 magic square contains digits 1..9 exactly once;
+      // each row, column and both diagonals sum to 15.
+      for(let i=0;i<cells.length;i++)for(let j=i+1;j<cells.length;j++)
+        relation(cells[i],cells[j],type,(a,b)=>a!==b,
+          '魔方阵中 1 至 9 各出现一次，两个格不能重复。');
+      const groups=[];
+      for(let i=0;i<3;i++){
+        groups.push([cells[i*3],cells[i*3+1],cells[i*3+2]]);
+        groups.push([cells[i],cells[3+i],cells[6+i]]);
+      }
+      groups.push([cells[0],cells[4],cells[8]],
+        [cells[2],cells[4],cells[6]]);
+      for(const triple of groups)if(triple.every(i=>values[i]||candidates[i]?.length))
+        constraints.push({method:'magic_square',cells:triple,unique:true,goal:15,
+          check:arr=>arr.reduce((a,b)=>a+b,0)===15,
+          reason:'魔方阵的每行、每列和两条主对角线的数字之和都是 15。'});
+      continue;
+    }
+    if(type==='crystal_cage'){
+      for(const group of rule.groups){
+        if(group.length<2||group.length>5||
+          group.some(i=>!values[i]&&!candidates[i]))continue;
+        constraints.push({method:'crystal_cage',cells:group,unique:false,
+          goal:rule.sum,
+          check:arr=>arr.reduce((a,b)=>a+b,0)===rule.sum,
+          reason:'晶体笼每条指定的行或列数字之和必须为 '+rule.sum+'。'});
+      }
+      continue;
+    }
     if(type==='kropki'){
       const [a,b]=cells;
       if(rule.dot==='white')
