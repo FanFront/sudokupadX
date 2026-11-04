@@ -326,9 +326,12 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
           relation(cells[j-1],cells[j],'whisper',
             (x,y)=>Math.abs(x-y)>=5,
             '低语线相邻两格的数字相差至少 5。');
-        else
+        else if(type==='thermo')
           relation(cells[j-1],cells[j],'thermo',(x,y)=>x<y,
             '已注明的温度计从圆头开始严格递增。');
+        else
+          relation(cells[j-1],cells[j],'reverse_thermo',(x,y)=>x>y,
+            '已标注的热风口线从圆头开始严格递减。');
       }
       continue;
     }
