@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from generate_lessons import (LESSON_METHODS, anchor_examples,
-                              anchored_line_examples, collect_report_examples,
-                              make_fixture)
+                              anchored_line_examples, anchored_classic_examples,
+                              collect_report_examples, make_fixture)
 from variant_logic import houses
 
 
@@ -21,6 +21,8 @@ class VerifiedLessonsTests(unittest.TestCase):
         all_examples = collect_report_examples()
         all_examples.update(anchor_examples())
         all_examples.update(anchored_line_examples())
+        all_examples.update(anchored_classic_examples())
+        self.assertEqual(set(all_examples), set(range(1,26)))
         self.assertEqual(set(LESSON_METHODS), set(range(1, 26)))
         self.assertIn(1, all_examples)
         self.assertIn(2, all_examples)
@@ -64,6 +66,21 @@ class VerifiedLessonsTests(unittest.TestCase):
             self.assertIn(fixture["goal"]["digit"], [
                 str(value) for value in fixture["masks"][fixture["goal"]["index"]]])
         self.assertEqual(len(anchored_line_examples()), 3)
+
+    def test_advanced_classic_lessons_use_real_methods(self):
+        examples = anchored_classic_examples()
+        self.assertEqual(set(examples), {4, 8, 10, 11, 12})
+        for number, fixture in examples.items():
+            self.assertEqual(fixture["method"], LESSON_METHODS[number])
+            self.assertEqual(fixture["proof"]["method"], LESSON_METHODS[number])
+            self.assertEqual(len(fixture["puzzle"]["cages"]), 0)
+            self.assertEqual(len(fixture["puzzle"]["lines"]), 0)
+            self.assertTrue(fixture["proof"]["removed"])
+            self.assertNotIn(
+                int(fixture["puzzle"]["metadata"]["solution"][
+                    fixture["goal"]["index"]]), fixture["proof"]["removed"])
+        self.assertEqual(examples[4]["proof"]["source"]["size"], 3)
+        self.assertEqual(examples[11]["proof"]["method"], "xyz_wing")
 
     def test_impossible_eight_cell_128_row_cannot_be_exported(self):
         lesson = anchor_examples()[2]
