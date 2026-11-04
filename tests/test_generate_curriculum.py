@@ -169,6 +169,23 @@ class ClassicCurriculumTests(unittest.TestCase):
                 list(map(int, game["metadata"]["solution"])),
                 required_min_tier=current+1))
 
+    def test_real_focused_variant_lesson(self):
+        # Existing workshop includes an indispensable German-whispers
+        # deduction. Focus mode must *prove* it, not copy a metadata label.
+        puzzles, report = variants.build(
+            20261103, focus_method="whisper", focus_size=9)
+        lesson = report["puzzles"][2]
+        self.assertGreater(lesson["techniques"].get("whisper", 0), 0)
+        self.assertEqual(lesson["education"]["focusTechnique"], "whisper")
+        n = 9
+        game = puzzles[2]
+        givens = {r*n+c: int(cell["value"])
+                  for r, row in enumerate(game["cells"])
+                  for c, cell in enumerate(row) if cell}
+        without = deduce(n, givens, lesson["constraints"], trace=False,
+                         disabled_methods=("whisper",))
+        self.assertFalse(without["solved"])
+
     def test_generator_has_a_complete_chinese_curriculum(self):
         puzzles, report = variants.build(20261103)
         for game, detail in zip(puzzles, report["puzzles"]):
