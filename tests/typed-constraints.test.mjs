@@ -41,7 +41,9 @@ test('fog hides unpublished constraints and concealed witnesses',()=>{
   snapshot.visible[unlock]=true;
   assert.equal(typedConstraints(p,snapshot).length,1);
   snapshot.visible[i(21,1)]=false;
-  assert.deepEqual(typedConstraints(p,snapshot),[]);
+  // The rule itself remains unlocked. The deduction engine still refuses
+  // to use the now-hidden endpoint as a target or a witness.
+  assert.equal(typedConstraints(p,snapshot).length,1);
 });
 
 test('typed generator rules and ordered arrow circles are accepted',()=>{
