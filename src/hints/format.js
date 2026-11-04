@@ -18,6 +18,10 @@ export const TECHNIQUES=Object.freeze({
   anti_kropki_black:'反黑点（负约束）',
   anti_whisper_anchors:'灰格相邻差值限制',
   magic_square:'三阶魔方阵',crystal_cage:'晶体笼等和',
+  odd:'奇数标记',even:'偶数标记',inequality:'不等号',
+  clone:'克隆区域',indexing_rows:'列索引',little_killer:'小杀手对角线',
+  x_sums:'X-Sums',sandwich:'三明治求和',skyscraper:'摩天楼可见数',
+  ambiguous_thermo:'缺失圆头的温度计',
   search_contradiction:'穷举反证'
 });
 const ruleText={
