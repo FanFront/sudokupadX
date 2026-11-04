@@ -169,3 +169,33 @@ test('fogged enemy cells cannot act as witnesses or be hinted as targets',()=>{
   state.visible[12]=false;
   assert.notEqual(nextAdventureHint(p,state,4,12).step?.method,'anti_knight_anchors');
 });
+
+
+test('real Caldera Chaos screenshot: the 45 + 35 = 89 arrow should lock a five when its source domains are proved',()=>{
+  const p=puzzle(),state=progress();
+  const originalSnapshot=[
+    [1,0,9],[2,0,4],[2,7,3],
+    [3,0,3],[3,1,5],[3,2,1],[3,3,6],[3,5,9],[3,7,4],[3,8,2],
+    [4,0,2],[4,1,6],[4,2,9],[4,4,3],[4,5,4],[4,6,5],[4,8,1],
+    [5,0,8],[5,1,4],[5,2,7],[5,6,6],[5,7,9],[5,8,3],
+    [6,1,9],[6,2,8],[6,5,7],
+    [7,0,5],[7,3,9],[7,4,6],[7,5,8],[7,8,7],[8,0,7]
+  ];
+  for(const [row,col,d] of originalSnapshot){
+    assert.equal(d,values[row*9+col],'screenshot matches original answer');
+    state.cells[row*9+col].value=String(d);
+  }
+  state.cells[76].center=['4','5']; // R9C5, arrow shaft
+  state.cells[77].center=['3','5']; // R9C6, arrow shaft
+  state.cells[78].center=['8','9']; // R9C7, circle
+  state.cells[75].center=['1','2','3','4','5'];
+  const result=nextAdventureHint(p,state,4,77);
+  assert.equal(result.status,'step');
+  assert.equal(result.step.method,'constraint_locked_digit',
+    'If this stalls, examine which human candidate eliminations are still missing. Got '+result.step.method+
+    ': '+result.step.reason);
+  assert.ok(result.step.removed.includes(5));
+  assert.ok(result.step.sources.includes(76)&&
+    result.step.sources.includes(77)&&
+    result.step.sources.includes(78));
+});
