@@ -47,8 +47,31 @@ const keyword={
   entropic:/entropic|熵线/i,
   modular:/modular|模三线/i,
   between:/between line|夹心线|介于.*两端/i,
-  arrow:/arrow|箭头/i
+  arrow:/arrow|箭头/i,
+  region_sum:/region.sum|区域和线|等和线/i
 };
+function ruleAvailable(puzzle,progress,kind,cells){
+  const pattern=keyword[kind],cols=puzzle.cols;
+  if(!pattern)return false;
+  for(const s of puzzle.sectors||[]){
+    if(!pattern.test(s.rules||''))continue;
+    const covered=Array.isArray(s.cells)?s.cells:
+      Array.from({length:Math.min(32,(s.width||0)*(s.height||0))},(_,i)=>
+        (s.top+Math.floor(i/s.width))*cols+s.left+i%s.width);
+    // Locked story panels may contain future rule descriptions in the source,
+    // but they have no authority until at least one panel cell is revealed.
+    if(!covered.some(i=>isVisible(progress,i)))continue;
+    const local=cells.every(i=>{
+      const row=Math.floor(i/cols),col=i%cols;
+      return row>=s.top&&row<s.top+s.height&&col>=s.left&&col<s.left+s.width;
+    });
+    const rulePanel=s.width*s.height<=8 &&
+      (/rule|规则|scan dot|whisper vine|thermo|renban|kropki|modular|entropic|between/i
+        .test(s.title||'') || s.width===1);
+    if(local||rulePanel)return true;
+  }
+  return false;
+}
 function squareSector(s,rows,cols){
   if(!SIZES.has(s?.width)||s.width!==s.height||
      ![s.top,s.left].every(Number.isInteger)||s.top<0||s.left<0||
@@ -175,8 +198,7 @@ function markedDots(puzzle,progress,sectors){
     }
     if(!kind)continue;
     const family=kind==='xv'?'xv':'kropki';
-    if(!sectors.some(s=>s.rules&&keyword[family].test(s.rules)&&
-      [a,b].every(i=>Math.floor(i/cols)>=s.top&&Math.floor(i/cols)<s.top+s.height&&i%cols>=s.left&&i%cols<s.left+s.width)))continue;
+    if(!ruleAvailable(puzzle,progress,family,[a,b]))continue;
     output.push({a,b,kind});
   }
   return output;
@@ -282,26 +304,26 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
       const r=Math.floor(i/cols),c=i%cols;
       return r>=s.top&&r<s.top+s.height&&c>=s.left&&c<s.left+s.width;
     }));
-    if(!matched)continue;
-    const text=matched.rules||'',color=colorTag(line.color);
-    if(keyword.whisper.test(text)&&color==='green'){
+    const color=colorTag(line.color),rgb=colorRGB(line.color);
+    if(ruleAvailable(puzzle,progress,'whisper',cells)&&color==='green'){
       for(let k=1;k<cells.length;k++)
         relation(cells[k-1],cells[k],'whisper',(a,b)=>Math.abs(a-b)>=5,
           '低语线相邻两格必须相差至少 5。');
     }
-    if(cells.length<=5&&keyword.renban.test(text)&&color==='blue'){
+    if(cells.length<=5&&ruleAvailable(puzzle,progress,'renban',cells)&&
+      color==='blue'&&(!rgb||rgb[0]>=95)){
       constraints.push({method:'renban',cells,unique:true,
         check:arr=>Math.max(...arr)-Math.min(...arr)===arr.length-1,
         reason:'连续数线必须包含一组不重复的连续整数。'});
     }
-    if(cells.length<=5&&keyword.between.test(text)&&color==='purple'){
+    if(cells.length<=5&&ruleAvailable(puzzle,progress,'between',cells)&&color==='purple'){
       constraints.push({method:'between',cells,unique:false,
         check:arr=>{
           const lo=Math.min(arr[0],arr[arr.length-1]),hi=Math.max(arr[0],arr[arr.length-1]);
           return arr.slice(1,-1).every(v=>v>lo&&v<hi);
         },reason:'夹心线中间的数字必须严格介于两个端点之间。'});
     }
-    if(cells.length<=9&&keyword.thermo.test(text)){
+    if(cells.length<=9&&ruleAvailable(puzzle,progress,'thermo',cells)){
       // A line is a thermometer only when the pictured bulb is attached to
       // its first cell. Color alone is never enough.
       const head=line.wayPoints?.[0];
@@ -313,6 +335,65 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
         relation(cells[j-1],cells[j],'thermo',(a,b)=>a<b,
           '温度计必须从圆头到尾端严格递增。');
     }
+    if(cells.length>=3&&cells.length<=9&&
+        ruleAvailable(puzzle,progress,'entropic',cells)&&color==='gold'&&
+        matched&&matched.width%3===0){
+      const width=matched.width;
+      const group=d=>Math.floor((d-1)/(width/3));
+      for(let j=0;j+2<cells.length;j++)constraints.push({
+        method:'entropic',cells:cells.slice(j,j+3),unique:false,
+        check:arr=>new Set(arr.map(group)).size===3,
+        reason:'熵线每个连续三格分别来自三个不同的数字区间。'
+      });
+    }
+    if(cells.length>=3&&cells.length<=9&&
+        ruleAvailable(puzzle,progress,'modular',cells)&&color==='teal'){
+      for(let j=0;j+2<cells.length;j++)constraints.push({
+        method:'modular',cells:cells.slice(j,j+3),unique:false,
+        check:arr=>new Set(arr.map(d=>(d-1)%3)).size===3,
+        reason:'模三线连续三个数字对 3 的余数必须互不相同。'
+      });
+    }
+    if(cells.length>=3&&cells.length<=5&&matched&&
+        ruleAvailable(puzzle,progress,'region_sum',cells)&&
+        color==='blue'&&rgb&&rgb[0]<95){
+      const n=matched.width,h=n===9?3:n===4?2:2,w=n===9?3:n===4?2:3;
+      const box=i=>{
+        const r=Math.floor(i/cols)-matched.top,c=i%cols-matched.left;
+        return Math.floor(r/h)*Math.floor(n/w)+Math.floor(c/w);
+      };
+      const segments=[];
+      for(const i of cells){
+        if(!segments.length||box(i)!==box(segments[segments.length-1].at(-1)))
+          segments.push([]);
+        segments.at(-1).push(i);
+      }
+      if(segments.length>=2){
+        const sizes=segments.map(s=>s.length);
+        constraints.push({method:'region_sum',cells,unique:false,
+          check:arr=>{
+            let k=0;
+            const sums=sizes.map(n=>{
+              const sum=arr.slice(k,k+n).reduce((a,b)=>a+b,0);k+=n;return sum;
+            });
+            return sums.every(sum=>sum===sums[0]);
+          },reason:'区域和线被宫界分成几段，每段数字之和相同。'});
+      }
+    }
+  }
+  for(const arrow of puzzle.arrows||[]){
+    const cells=lineCells(arrow,rows,cols);
+    if(cells.length<3||cells.length>5||
+       cells.some(i=>!isVisible(progress,i)||(!values[i]&&!candidates[i]))||
+       !ruleAvailable(puzzle,progress,'arrow',cells))continue;
+    const start=arrow.wayPoints?.[0];
+    const bulb=(puzzle.underlays||[]).some(mark=>
+      Array.isArray(mark.center)&&Math.abs(mark.center[0]-start?.[0])<.03&&
+      Math.abs(mark.center[1]-start?.[1])<.03&&mark.rounded===true);
+    if(!bulb)continue;
+    constraints.push({method:'arrow',cells,unique:false,
+      check:arr=>arr[0]===arr.slice(1).reduce((a,b)=>a+b,0),
+      reason:'箭头圆圈内的数字等于箭杆上所有数字之和。'});
   }
   // Tiny arithmetic/sequence constraints are exhaustively enumerated, but
   // only to generate *supported candidates*, never a speculative solution.
