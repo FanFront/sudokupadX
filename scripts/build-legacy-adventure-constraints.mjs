@@ -260,8 +260,34 @@ for(const name of selected.length?selected:Object.keys(configurations)){
   const output=extract(name);
   const expected=JSON.stringify(output,null,2)+'\n';
   if(check){
-    const actual=fs.readFileSync(destination(name),'utf8');
-    if(actual!==expected)throw Error(name+': committed typed manifest is stale; regenerate and review');
+    const actual=JSON.parse(fs.readFileSync(destination(name),'utf8'));
+    // JSON member ordering is not semantic; compare every actual value and
+    // ordered constraint entry, but permit harmless member key reordering.
+    const normalized=obj=>JSON.stringify(obj,(key,value)=>
+      value&&!Array.isArray(value)&&typeof value==='object'
+        ?Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]]))
+        :value);
+    if(normalized(actual)!==normalized(output)){
+      const firstMismatch=(x,y,path='
+    fs.mkdirSync(path.dirname(destination(name).pathname),{recursive:true});
+    fs.writeFileSync(destination(name),expected);
+  }
+  console.log(check?'Verified':'Generated',name,output.sourceFingerprint,output.audit);
+}
+)=>{
+        if(normalized(x)===normalized(y))return '';
+        if(!x||!y||typeof x!=='object'||typeof y!=='object')return path+
+          ' (expected '+JSON.stringify(y)+', got '+JSON.stringify(x)+')';
+        const keys=[...new Set([...Object.keys(x),...Object.keys(y)])];
+        for(const key of keys){
+          const mismatch=firstMismatch(x[key],y[key],path+'.'+key);
+          if(mismatch)return mismatch;
+        }
+        return path;
+      };
+      throw Error(name+': curated manifest differs from source at '+
+        firstMismatch(actual,output));
+    }
   }else{
     fs.mkdirSync(path.dirname(destination(name).pathname),{recursive:true});
     fs.writeFileSync(destination(name),expected);
