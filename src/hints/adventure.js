@@ -154,9 +154,10 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
     const unique=distinct(known.map(p=>p.digit));
     for(const d of unique){
       const witness=known.find(p=>p.digit===d);
-      if(witness) add('peer_elimination',i,[d],
-        initial.filter(v=>v!==d),[witness.source],
-        '依据'+witness.house.description+'的数字不重复规则，已填的 '+d+' 不能再次出现在目标格。');
+      if(witness) add(witness.house.kind==='magic'?'magic_square':'peer_elimination',
+        i,[d],initial.filter(v=>v!==d),[witness.source],
+        '依据'+witness.house.description+'的数字不重复规则，已填的 '+d+' 不能再次出现在目标格。',1,
+        witness.house.kind==='magic');
     }
     if(candidates[i]?.length===1){
       const d=candidates[i][0];
