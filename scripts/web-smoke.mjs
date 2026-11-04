@@ -62,6 +62,21 @@ try{
   await page.locator('#lessonNext').click();
   assert.match(await page.locator('#lessonTitle').textContent(),/Swordfish/);
   await page.screenshot({path:'artifacts/web/chinese-lessons.png'});
+  // Every authored lesson must actually open inside Rust/WASM. Validate
+  // all 25 engine definitions, not only their JSON shape in Node tests.
+  await page.locator('#lessonFilters button[data-stage="all"]').click();
+  for(let lessonId=1;lessonId<=25;lessonId++){
+    await page.locator('#lessonList [data-id="'+lessonId+'"]').click();
+    await page.locator('#lessonStartPractice').click();
+    await page.locator('#lessonPracticeBar').waitFor({state:'visible',timeout:10000});
+    assert.match(await page.locator('#puzzleTitle').textContent(),/技巧练习/);
+    assert.match(await page.locator('#lessonPracticeName').textContent(),
+      new RegExp('第 '+lessonId+' 课'));
+    await page.locator('#lessonPracticeReturn').click();
+    assert.equal(await page.locator('#lessonScreen').isVisible(),true);
+  }
+  await page.locator('#lessonList [data-id="8"]').click();
+  console.log('All 25 themed lesson boards opened successfully in Rust / WASM.');
   await page.locator('#lessonBack').click();
   assert.equal(await page.locator('#homeScreen').isVisible(),true);
   await page.locator('#lessonButton').click();
