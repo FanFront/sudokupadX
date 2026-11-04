@@ -69,7 +69,7 @@ export function createLessonPractice(id) {
   puzzle.id='sudokupadx-lesson-practice-'+id;
   puzzle.metadata={
     ...puzzle.metadata,
-    title:'第 '+id+' 课 · '+fixture.nameZh+' · '+goalLabel,
+    title:'技巧练习 '+id+' · '+fixture.nameZh+' · '+goalLabel,
     author:'SudokuPadX 中文数独课堂',
     rules:'本题来自经过唯一解验证的真实数独。盘面候选数是在无猜测求解器的中途步骤中获得的完整状态，'+
       '不是任意设置的数字。蓝色格为相关位置，黄色格为目标。'+task+
