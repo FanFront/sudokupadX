@@ -73,12 +73,14 @@ class SudopediaChainTests(unittest.TestCase):
 
     def test_remote_pairs(self):
         masks = blank()
-        for cell in (10, 13, 49, 52):
+        # A winding chain, with no local naked pair seeing the target:
+        # R1C4--R4C4--R4C2--R2C2. R1C1 sees only the endpoints.
+        for cell in (3, 30, 28, 10):
             masks[cell] = {1, 5}
-        masks[16] = {1, 5, 8}
+        masks[0] = {1, 5, 8}
         steps = run_method(remote_pairs, masks)
-        self.assertEqual(masks[16], {8})
-        self.assertTrue(any(s[0] == "remote_pairs" and s[1] == 16
+        self.assertEqual(masks[0], {8})
+        self.assertTrue(any(s[0] == "remote_pairs" and s[1] == 0
                             for s in steps))
 
     def test_color_trap(self):
