@@ -299,8 +299,11 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
       if(circles.some(sum=>without.has(sum)))continue;
       const holders=shaft.filter(i=>bound[i].includes(d));
       if(!holders.length||holders.some(i=>values[i]===d))continue;
-      for(const house of houseList){
-        if(!holders.every(i=>house.cells.includes(i)))continue;
+      const sharedHouses=houseList.filter(h=>
+        holders.every(i=>h.cells.includes(i))&&h.cells.some(i=>
+          !shaft.includes(i)&&!values[i]&&visible(progress,i)&&
+          baseline[i]?.includes(d)));
+      for(const house of sharedHouses){
         // Prefer the earliest independently established domains whenever
         // they already prove this locked digit within the very same house.
         // Never use them if the early digit might still be outside the house.
@@ -338,8 +341,9 @@ export function findCombinedConstraintHint(puzzle,progress,layout,state,rules,ti
         const reason=label+'要求 '+sourceDetails+circleDetail+'。'+
           combinationsText+
           '如果所有这些格都不填 '+d+'，就无法满足总和；因此至少一格必有 '+d+
-          '。这些可能位置全部位于'+house.description+
-          '，可以从该组其他格排除 '+d+'。';
+          '。这些可能位置同时落在'+
+          unique(sharedHouses.map(h=>h.description)).join('、')+
+          '中，可以从这些行、列或宫里的其他格排除 '+d+'。';
         for(const target of house.cells){
           if(!visible(progress,target)||shaft.includes(target)||values[target])continue;
           add('constraint_locked_digit',target,[d],rule.cells,reason,3,
