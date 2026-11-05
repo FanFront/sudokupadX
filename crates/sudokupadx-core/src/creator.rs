@@ -189,7 +189,7 @@ impl Solver {
             for d in values(self.masks[cells[k]],self.n){
                 backward[k][d as usize]=(1..=self.n).any(|next|
                     backward[k+1][next] &&
-                    (if ascending {d as usize<next}else{d as usize>next}));
+                    (if ascending {(d as usize)<next}else{d as usize>next}));
             }
         }
         (0..len).map(|k|
