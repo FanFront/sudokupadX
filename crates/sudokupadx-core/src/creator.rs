@@ -1651,6 +1651,26 @@ mod tests{
         }
     }
     #[test]
+    fn small_board_creator_accepts_and_exports_recent_variants(){
+        // Full generation, independent uniqueness and re-import; catches
+        // "selectable but never creatable" variants on a fast 4×4 board.
+        for (offset,kind) in ["parity","inequality","clone",
+            "thermo_unknown"].iter().enumerate(){
+            let request=CreateRequest{
+                id:format!("small-variant-{}",kind.replace('_',"-")),
+                size:4,tier:1,variants:vec![kind.to_string()],
+                focus:None,density:Some("heavy".into()),
+                seed:Some(3000+offset as u64),attempts:Some(80)
+            };
+            let output=generate_puzzle(request)
+                .unwrap_or_else(|err|panic!("Cannot generate {kind}: {err}"));
+            assert_eq!(output.details["tier"],1);
+            assert_eq!(output.puzzle["metadata"]["variantTypes"][0],*kind);
+            let loaded=crate::load(&output.puzzle.to_string()).unwrap();
+            assert!(loaded.hint_rules.as_ref().is_some_and(|rules|!rules.is_empty()));
+        }
+    }
+    #[test]
     fn new_variants_reject_contradictory_givens(){
         let mut rng=Rng::new(67132);
         let solved=make_solution(9,&mut rng);
