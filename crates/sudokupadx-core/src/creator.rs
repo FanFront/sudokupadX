@@ -1036,7 +1036,7 @@ fn candidates(n:usize,solution:&[u8],kind:&str,rng:&mut Rng)->Vec<Rule>{
     if kind=="parity"{
         for i in 0..n*n{
             let mut mark=Rule::new(kind,vec![i]);
-            mark.dot=Some(if solution[i]%2==0{"even"}else{"odd"}.into());
+            mark.dot=Some((if solution[i]%2==0{"even"}else{"odd"}).to_string());
             found.push(mark);
         }
     }else if kind=="anti_knight_anchors"||kind=="anti_whisper_anchors"{
@@ -1152,7 +1152,7 @@ fn create_rules(n:usize,solution:&[u8],selected:&[String],
         let options=candidates(n,solution,kind,rng);
         let mut added=0;
         for rule in options{
-            if added>=if kind=="clone"{per.min(8)}else{per}{break;}
+            if added >= (if kind=="clone"{per.min(8)}else{per}) {break;}
             if kind=="killer"&&rule.cells.iter().any(|c|occupied.contains(c)){continue;}
             if kind=="clone"&&rule.cells.iter().any(|c|clone_cells.contains(c)){continue;}
             let edges:Vec<_>=rule.cells.windows(2).map(|p|
