@@ -97,7 +97,9 @@ fn allowed_focus(method: &str) -> bool {
     matches!(method,
         "peer_elimination"|"hidden_single"|"killer_sum"|"kropki"|
         "thermo"|"renban"|"whisper"|"arrow"|"xv"|"entropic"|
-        "modular"|"between"|"region_sum"|
+        "modular"|"between"|"region_sum"|"parity"|"inequality"|
+        "clone"|"thermo_unknown"|"little_killer"|
+        "anti_knight_anchors"|"anti_whisper_anchors"|
         "naked_subset"|"hidden_subset"|"locked_candidate"|
         "x_wing"|"swordfish"|"xy_wing"|"skyscraper"|
         "jellyfish"|"xyz_wing"|"xy_chain")
@@ -167,12 +169,149 @@ impl Solver {
         let x=self.reduce(a,left,kind)?;
         Ok(self.reduce(b,right,kind)?||x)
     }
+    // Check either possible orientation of a missing-bulb thermometer.
+    // Prefix/suffix feasibility is exact for monotone lines and never guesses.
+    fn monotone_support(&self,cells:&[usize],ascending:bool)->Vec<Mask>{
+        let len=cells.len();
+        let mut forward=vec![vec![false;self.n+1];len];
+        let mut backward=vec![vec![false;self.n+1];len];
+        for d in values(self.masks[cells[0]],self.n){forward[0][d as usize]=true;}
+        for k in 1..len{
+            for d in values(self.masks[cells[k]],self.n){
+                forward[k][d as usize]=(1..=self.n).any(|p|
+                    forward[k-1][p] && (if ascending {p<d as usize}else{p>d as usize}));
+            }
+        }
+        for d in values(self.masks[*cells.last().unwrap()],self.n){
+            backward[len-1][d as usize]=true;
+        }
+        for k in (0..len-1).rev(){
+            for d in values(self.masks[cells[k]],self.n){
+                backward[k][d as usize]=(1..=self.n).any(|next|
+                    backward[k+1][next] &&
+                    (if ascending {(d as usize)<next}else{d as usize>next}));
+            }
+        }
+        (0..len).map(|k|
+            (1..=self.n as u8).filter(|&d|
+                forward[k][d as usize]&&backward[k][d as usize])
+                .fold(0,|mask,d|mask|bit(d))
+        ).collect()
+    }
+    // Prefix/suffix sum DP handles full-length diagonal clues in polynomial
+    // time. Relaxing non-repetition here is safe: it can only retain extras.
+    fn sum_support(&self,cells:&[usize],target:u16)->Vec<Mask>{
+        let len=cells.len();let limit=target as usize;
+        if limit==0||limit>self.n*len{return vec![0;len];}
+        let mut before=vec![vec![false;limit+1];len+1];
+        let mut after=vec![vec![false;limit+1];len+1];
+        before[0][0]=true;after[len][0]=true;
+        for k in 0..len{
+            for sum in 0..=limit{
+                if !before[k][sum]{continue;}
+                for d in values(self.masks[cells[k]],self.n){
+                    let next=sum+d as usize;
+                    if next<=limit{before[k+1][next]=true;}
+                }
+            }
+        }
+        for k in (0..len).rev(){
+            for sum in 0..=limit{
+                if !after[k+1][sum]{continue;}
+                for d in values(self.masks[cells[k]],self.n){
+                    let next=sum+d as usize;
+                    if next<=limit{after[k][next]=true;}
+                }
+            }
+        }
+        (0..len).map(|k|{
+            let mut mask=0;
+            for d in values(self.masks[cells[k]],self.n){
+                let digit=d as usize;
+                if digit<=limit&&(0..=limit-digit).any(|sum|
+                    before[k][sum]&&after[k+1][limit-sum-digit]){
+                    mask|=bit(d);
+                }
+            }
+            mask
+        }).collect()
+    }
     fn rule(&mut self,rule:&Rule)->Result<bool,String>{
         let cells=&rule.cells;
-        if cells.iter().any(|&i|i>=self.n*self.n)||cells.len()<2 {
+        if cells.is_empty()||cells.iter().any(|&i|i>=self.n*self.n)||
+            (cells.len()<2&&!matches!(rule.kind.as_str(),
+                "parity"|"anti_knight_anchors"|"anti_whisper_anchors")){
             return Err("变体坐标错误".into());
         }
         match rule.kind.as_str() {
+            "parity"=>{
+                if cells.len()!=1{return Err("奇偶标记只关联一个格".into());}
+                let odd=match rule.dot.as_deref(){
+                    Some("odd")=>true,Some("even")=>false,
+                    _=>return Err("奇偶标记缺少类型".into())
+                };
+                let allowed=(1..=self.n as u8).filter(|d|(*d%2==1)==odd)
+                    .fold(0,|m,d|m|bit(d));
+                self.reduce(cells[0],allowed,"parity")
+            },
+            "inequality"|"clone"=>{
+                if cells.len()!=2{return Err("比较规则需要两个格".into());}
+                if rule.kind=="inequality"{
+                    self.binary(cells[0],cells[1],"inequality",|a,b|a<b)
+                }else{
+                    if linked(self.n,cells[0],cells[1]){
+                        return Err("同值克隆不能占据同一行列宫".into());
+                    }
+                    self.binary(cells[0],cells[1],"clone",|a,b|a==b)
+                }
+            },
+            "anti_knight_anchors"|"anti_whisper_anchors"=>{
+                if cells.len()!=1{return Err("局部锚点只关联一个格".into());}
+                let anchor=cells[0];let mut changed=false;
+                let neighborhood=if rule.kind=="anti_knight_anchors"{
+                    knight_neighbors(self.n,anchor)
+                }else{neighbors(self.n,anchor)};
+                for other in neighborhood{
+                    changed|=if rule.kind=="anti_knight_anchors"{
+                        self.binary(anchor,other,"anti_knight_anchors",|a,b|a!=b)?
+                    }else{
+                        self.binary(anchor,other,"anti_whisper_anchors",
+                            |a,b|a.abs_diff(b)<5)?
+                    };
+                }
+                Ok(changed)
+            },
+            "thermo_unknown"=>{
+                if cells.len()<3||cells.len()>5{
+                    return Err("无圆头温度计长度必须为 3–5".into());
+                }
+                let asc=self.monotone_support(cells,true);
+                let desc=self.monotone_support(cells,false);
+                let mut changed=false;
+                for (k,&cell) in cells.iter().enumerate(){
+                    changed|=self.reduce(cell,asc[k]|desc[k],"thermo_unknown")?;
+                }
+                Ok(changed)
+            },
+            "little_killer"=>{
+                if cells.len()<2||cells.len()>self.n||rule.sum.unwrap_or(0)==0{
+                    return Err("小杀手斜线求和无效".into());
+                }
+                let first=(cells[1]/self.n).checked_sub(cells[0]/self.n);
+                let col_up=cells[1]%self.n>cells[0]%self.n;
+                if first!=Some(1)||cells.windows(2).any(|p|
+                    p[1]/self.n!=p[0]/self.n+1 ||
+                    (p[0]%self.n).abs_diff(p[1]%self.n)!=1 ||
+                    (p[1]%self.n>p[0]%self.n)!=col_up){
+                    return Err("小杀手必须沿同一条斜线向下延伸".into());
+                }
+                let supported=self.sum_support(cells,rule.sum.unwrap());
+                let mut changed=false;
+                for (k,&cell) in cells.iter().enumerate(){
+                    changed|=self.reduce(cell,supported[k],"little_killer")?;
+                }
+                Ok(changed)
+            },
             "kropki" => {
                 match rule.dot.as_deref(){
                     Some("white")=>self.binary(cells[0],cells[1],"kropki",
@@ -754,12 +893,15 @@ pub struct CreateResponse {
 
 const SUPPORTED: &[&str] = &[
     "killer","kropki","thermo","renban","whisper","arrow","xv",
-    "entropic","modular","between","region_sum"
+    "entropic","modular","between","region_sum",
+    "parity","inequality","clone","thermo_unknown","little_killer",
+    "anti_knight_anchors","anti_whisper_anchors"
 ];
 fn supports(n:usize,kind:&str)->bool{
     if !SUPPORTED.contains(&kind){return false;}
-    if n==4 {matches!(kind,"killer"|"kropki"|"thermo"|"renban"|"arrow"|"xv")}
-    else if n==6 {kind!="whisper"}
+    if n==4 {matches!(kind,"killer"|"kropki"|"thermo"|"renban"|"arrow"|"xv"|
+        "parity"|"inequality"|"clone"|"thermo_unknown")}
+    else if n==6 {kind!="whisper"&&kind!="anti_whisper_anchors"}
     else {true}
 }
 fn zh_name(kind:&str)->&'static str {
@@ -767,7 +909,12 @@ fn zh_name(kind:&str)->&'static str {
         "killer"=>"杀手笼","kropki"=>"黑白点","thermo"=>"温度计",
         "renban"=>"连续线","whisper"=>"耳语线","arrow"=>"箭头",
         "xv"=>"V/X 标记","entropic"=>"熵线","modular"=>"模三线",
-        "between"=>"夹心线","region_sum"=>"区域和线",_=>"普通数独"
+        "between"=>"夹心线","region_sum"=>"区域和线",
+        "parity"=>"奇偶标记","inequality"=>"不等号",
+        "clone"=>"克隆同值格","thermo_unknown"=>"无圆头温度计",
+        "little_killer"=>"小杀手斜线和",
+        "anti_knight_anchors"=>"反马步锚点",
+        "anti_whisper_anchors"=>"反耳语锚点",_=>"普通数独"
     }
 }
 fn zh_rule(kind:&str)->&'static str{
@@ -783,6 +930,13 @@ fn zh_rule(kind:&str)->&'static str{
         "modular"=>"任意连续三格除以 3 后的余数各不相同。",
         "between"=>"夹心线上内部数字必须严格介于两端圆圈数字之间。",
         "region_sum"=>"一条区域和线按宫界分段，各段数字之和相同。",
+        "parity"=>"紫色圆形标记格为奇数、蓝色方形标记格为偶数；未标记的格不受限制。",
+        "inequality"=>"相邻两格之间的不等号尖端指向较小数字。",
+        "clone"=>"每一对同色底纹的克隆格数字相同；不同颜色的克隆对互不关联。",
+        "thermo_unknown"=>"无圆头温度计沿整条线从一端到另一端严格递增，方向未知，但不能中途反向。",
+        "little_killer"=>"斜线上的所有数字之和等于起点处的小号角标；同一斜线上允许重复（标准数独规则仍生效）。",
+        "anti_knight_anchors"=>"棋马标记格与相距一个马步的每个格数字均不相同；普通格不额外受限。",
+        "anti_whisper_anchors"=>"灰色锚点与其上下左右相邻格的数字差必须小于 5。",
         _=>""
     }
 }
@@ -831,11 +985,24 @@ fn neighbors(n:usize,i:usize)->Vec<usize>{
     if c+1<n {out.push(i+1);}
     out
 }
+fn knight_neighbors(n:usize,i:usize)->Vec<usize>{
+    let r=i/n;let c=i%n;let mut out=Vec::new();
+    for (dr,dc) in [(1,2),(2,1),(1,-2),(2,-1),
+                    (-1,2),(-2,1),(-1,-2),(-2,-1)] {
+        let nr=r as isize+dr;let nc=c as isize+dc;
+        if nr>=0&&nc>=0&&(nr as usize)<n&&(nc as usize)<n{
+            out.push(nr as usize*n+nc as usize);
+        }
+    }
+    out
+}
 fn path_valid(n:usize,solution:&[u8],rule:&Rule)->bool{
     let ds:Vec<u8>=rule.cells.iter().map(|&i|solution[i]).collect();
     let len=ds.len();
     match rule.kind.as_str(){
         "thermo"=>ds.windows(2).all(|p|p[0]<p[1]),
+        "thermo_unknown"=>ds.windows(2).all(|p|p[0]<p[1]) ||
+            ds.windows(2).all(|p|p[0]>p[1]),
         "whisper"=>ds.windows(2).all(|p|p[0].abs_diff(p[1])>=5),
         "renban"=>ds.iter().copied().collect::<HashSet<_>>().len()==len &&
             *ds.iter().max().unwrap()-*ds.iter().min().unwrap()==len as u8-1,
@@ -866,12 +1033,59 @@ fn path_valid(n:usize,solution:&[u8],rule:&Rule)->bool{
 }
 fn candidates(n:usize,solution:&[u8],kind:&str,rng:&mut Rng)->Vec<Rule>{
     let mut found=Vec::new();let mut seen=HashSet::new();
-    if kind=="killer"||kind=="kropki"||kind=="xv"{
+    if kind=="parity"{
+        for i in 0..n*n{
+            let mut mark=Rule::new(kind,vec![i]);
+            mark.dot=Some((if solution[i]%2==0{"even"}else{"odd"}).to_string());
+            found.push(mark);
+        }
+    }else if kind=="anti_knight_anchors"||kind=="anti_whisper_anchors"{
+        for i in 0..n*n{
+            let neighbors=if kind=="anti_knight_anchors"{
+                knight_neighbors(n,i)
+            }else{neighbors(n,i)};
+            if !neighbors.is_empty()&&neighbors.iter().all(|&other|
+                if kind=="anti_knight_anchors"{solution[i]!=solution[other]}
+                else{solution[i].abs_diff(solution[other])<5}){
+                found.push(Rule::new(kind,vec![i]));
+            }
+        }
+    }else if kind=="clone"{
+        for a in 0..n*n{
+            for b in a+1..n*n{
+                if !linked(n,a,b)&&solution[a]==solution[b]{
+                    found.push(Rule::new(kind,vec![a,b]));
+                }
+            }
+        }
+    }else if kind=="little_killer"{
+        // Only true border-entering straight diagonals, not arbitrary
+        // zigzags or sums derived from nonvisible cells.
+        for r in 0..n{
+            for c in 0..n{
+                for dc in [-1isize,1]{
+                    if !(r==0||(dc==1&&c==0)||(dc==-1&&c==n-1)){continue;}
+                    let mut cells=Vec::new();let mut row=r;let mut col=c as isize;
+                    while row<n&&col>=0&&(col as usize)<n{
+                        cells.push(row*n+col as usize);row+=1;col+=dc;
+                    }
+                    if cells.len()<3{continue;}
+                    let mut rule=Rule::new(kind,cells);
+                    rule.sum=Some(rule.cells.iter().map(|&i|solution[i] as u16).sum());
+                    found.push(rule);
+                }
+            }
+        }
+    }else if kind=="killer"||kind=="kropki"||kind=="xv"||kind=="inequality"{
         for a in 0..n*n{
             for b in neighbors(n,a) {
                 if b<=a {continue;}
                 let x=solution[a];let y=solution[b];
-                if kind=="kropki" {
+                if kind=="inequality" {
+                    if x!=y {
+                        found.push(Rule::new(kind,if x<y {vec![a,b]}else{vec![b,a]}));
+                    }
+                }else if kind=="kropki" {
                     if x.abs_diff(y)==1{
                         let mut r=Rule::new(kind,vec![a,b]);
                         r.dot=Some("white".into());found.push(r);
@@ -933,18 +1147,21 @@ fn create_rules(n:usize,solution:&[u8],selected:&[String],
     let mut out=Vec::new();
     let mut occupied=HashSet::new();
     let mut used_edges=HashSet::new();
+    let mut clone_cells=HashSet::new();
     for kind in selected{
         let options=candidates(n,solution,kind,rng);
         let mut added=0;
         for rule in options{
-            if added>=per{break;}
+            if added >= (if kind=="clone"{per.min(8)}else{per}) {break;}
             if kind=="killer"&&rule.cells.iter().any(|c|occupied.contains(c)){continue;}
+            if kind=="clone"&&rule.cells.iter().any(|c|clone_cells.contains(c)){continue;}
             let edges:Vec<_>=rule.cells.windows(2).map(|p|
                 (p[0].min(p[1]),p[0].max(p[1]))).collect();
             if edges.iter().any(|edge|used_edges.contains(&(kind.clone(),*edge))){
                 continue;
             }
             if kind=="killer"{occupied.extend(rule.cells.iter().copied());}
+            if kind=="clone"{clone_cells.extend(rule.cells.iter().copied());}
             for edge in edges{used_edges.insert((kind.clone(),edge));}
             added+=1;out.push(rule);
         }
@@ -1005,10 +1222,71 @@ fn render(n:usize,rules:&[Rule])->(Vec<Value>,Vec<Value>,Vec<Value>,Vec<Value>,V
     let mut overlays=Vec::new();
     let mut underlays=Vec::new();
     let mut arrows=Vec::new();
+    let clone_colors=["#ffdbbb","#c3e9f2","#ebc5f5","#ceeac0",
+        "#f6d0df","#e4dfac","#c5d2ff","#ffd3b2"];
+    let mut clone_number=0usize;
     for rule in rules{
         let cells=&rule.cells;
         let path=centers(n,cells);
         match rule.kind.as_str(){
+            "parity"=>{
+                let odd=rule.dot.as_deref()==Some("odd");
+                underlays.push(json!({"center":path[0],"width":0.76,
+                    "height":0.76,"rounded":odd,
+                    "backgroundColor":if odd{"#e9d7f3"}else{"#d4e8f7"},
+                    "borderColor":if odd{"#925eab"}else{"#4c80a8"},
+                    "borderSize":1.8}));
+            },
+            "inequality"=>{
+                let (a,b)=(cells[0],cells[1]);
+                let mid=[((a/n+b/n) as f64)/2.0+0.5,
+                    ((a%n+b%n) as f64)/2.0+0.5];
+                let mark=if a/n==b/n{
+                    if a%n<b%n{"<"}else{">"}
+                }else if a/n<b/n{"∧"}else{"∨"};
+                overlays.push(json!({"center":mid,"width":0.35,
+                    "height":0.35,"backgroundColor":"#fffaf2",
+                    "text":mark,"textColor":"#875438","fontSize":18}));
+            },
+            "clone"=>{
+                let color=clone_colors[clone_number%clone_colors.len()];
+                clone_number+=1;
+                for center in &path{
+                    underlays.push(json!({"center":center,"width":0.90,
+                        "height":0.90,"rounded":true,
+                        "backgroundColor":color,"borderColor":"#6b677c",
+                        "borderSize":1.8}));
+                }
+            },
+            "anti_knight_anchors"|"anti_whisper_anchors"=>{
+                let knight=rule.kind=="anti_knight_anchors";
+                underlays.push(json!({"center":path[0],"width":0.89,
+                    "height":0.89,"rounded":true,
+                    "backgroundColor":if knight{"#f8dbbe"}else{"#dddddd"},
+                    "borderColor":if knight{"#c77b31"}else{"#777777"},
+                    "borderSize":1.7}));
+                let row=(cells[0]/n) as f64;let col=(cells[0]%n) as f64;
+                overlays.push(json!({"center":[row+0.15,col+0.17],
+                    "width":0.27,"height":0.27,
+                    "text":if knight{"♘"}else{"W"},
+                    "textColor":if knight{"#9b531d"}else{"#555555"},
+                    "fontSize":11}));
+            },
+            "little_killer"=>{
+                lines.push(json!({"wayPoints":path,"target":"underlay",
+                    "thickness":5,"color":"#ba7d44"}));
+                let row=(cells[0]/n) as f64;let col=(cells[0]%n) as f64;
+                overlays.push(json!({"center":[row+0.16,col+0.20],
+                    "width":0.35,"height":0.30,
+                    "rounded":true,"backgroundColor":"#fff4dc",
+                    "borderColor":"#b58b4d","borderSize":0.8,
+                    "text":rule.sum.unwrap_or(0).to_string(),
+                    "textColor":"#68401d","fontSize":12}));
+            },
+            "thermo_unknown"=>{
+                lines.push(json!({"wayPoints":path,"target":"underlay",
+                    "thickness":13,"color":"#c293bf"}));
+            },
             "killer"=>cages.push(json!({"cells":cells.iter().map(|&i|point(n,i))
                 .collect::<Vec<_>>(),"value":rule.sum.unwrap_or(0).to_string(),
                 "unique":true,"outlineC":"#3e668b","fontC":"#234e73"})),
@@ -1135,7 +1413,7 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
         !request.id.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'-'){
         return Err("生成谜题编号无效".into());
     }
-    if request.variants.len()>11 ||
+    if request.variants.len()>SUPPORTED.len() ||
        request.variants.iter().collect::<HashSet<_>>().len()!=request.variants.len() ||
        request.variants.iter().any(|k|!supports(request.size,k)){
         return Err("含有重复或当前尺寸不支持的变体规则".into());
@@ -1331,6 +1609,102 @@ mod tests{
         assert!(certify(9,&givens,&answer,&[],5,None).is_some());
         assert!(certify(9,&answer,&answer,&[],5,None).is_none(),
             "Full grid cannot be mislabeled level 5");
+    }
+    #[test]
+    fn recent_variant_geometry_and_rendering_is_real(){
+        let kinds=["parity","inequality","clone","thermo_unknown",
+            "little_killer","anti_knight_anchors","anti_whisper_anchors"];
+        let mut rng=Rng::new(20261105);
+        for kind in kinds {
+            let mut available=None;
+            // Some local anchors are rare with a particular digit permutation.
+            for _ in 0..6 {
+                let solution=make_solution(9,&mut rng);
+                let rules=create_rules(9,&solution,&[kind.to_owned()],"light",&mut rng);
+                if !rules.is_empty(){available=Some((solution,rules));break;}
+            }
+            let (solution,rules)=available.expect("Expected a real rule geometry");
+            assert!(solve(9,&solution,&rules,1,false,None).unwrap().solved,
+                "Rules for {kind} must agree with their independent solution");
+            let (cages,lines,underlays,overlays,arrows)=render(9,&rules);
+            assert!(cages.len()+lines.len()+underlays.len()+overlays.len()+
+                arrows.len()>0,"Rules for {kind} must be visible");
+            assert!(rules.iter().all(|r|r.kind==kind));
+            // Exercise the real SCL serialization and Rust game-loader path,
+            // not only this module's private rule objects.
+            let request=CreateRequest{
+                id:format!("integration-{}",kind.replace('_',"-")),
+                size:9,tier:1,variants:vec![kind.to_owned()],
+                focus:None,density:Some("light".into()),
+                seed:Some(20261105),attempts:Some(1)
+            };
+            let proof=solve(9,&solution,&rules,1,true,None).unwrap();
+            let output=render_puzzle(&request,20261105,&solution,
+                &solution,&rules,&proof,1);
+            let loaded=crate::load(&output.puzzle.to_string()).unwrap();
+            assert_eq!(loaded.hint_rules.as_ref().unwrap().len(),rules.len());
+            let (size,grid,restored,_) =
+                crate::Session::new(loaded).hint_input().unwrap();
+            assert_eq!(size,9);
+            assert_eq!(grid,solution);
+            assert_eq!(restored.len(),rules.len());
+        }
+    }
+    #[test]
+    fn small_board_creator_accepts_and_exports_recent_variants(){
+        // Full generation, independent uniqueness and re-import; catches
+        // "selectable but never creatable" variants on a fast 4×4 board.
+        for (offset,kind) in ["parity","inequality","clone",
+            "thermo_unknown"].iter().enumerate(){
+            let request=CreateRequest{
+                id:format!("small-variant-{}",kind.replace('_',"-")),
+                size:4,tier:1,variants:vec![kind.to_string()],
+                focus:None,density:Some("heavy".into()),
+                seed:Some(3000+offset as u64),attempts:Some(80)
+            };
+            let output=generate_puzzle(request)
+                .unwrap_or_else(|err|panic!("Cannot generate {kind}: {err}"));
+            assert_eq!(output.details["tier"],1);
+            assert_eq!(output.puzzle["metadata"]["variantTypes"][0],*kind);
+            let loaded=crate::load(&output.puzzle.to_string()).unwrap();
+            assert!(loaded.hint_rules.as_ref().is_some_and(|rules|!rules.is_empty()));
+        }
+    }
+    #[test]
+    fn new_variants_reject_contradictory_givens(){
+        let mut rng=Rng::new(67132);
+        let solved=make_solution(9,&mut rng);
+        let mut parity=Rule::new("parity",vec![0]);
+        parity.dot=Some((if solved[0]%2==0{"odd"}else{"even"}).into());
+        assert!(solve(9,&solved,&[parity],1,false,None).is_err());
+
+        let (a,b)=(0,1);
+        let wrong=Rule::new("inequality",
+            if solved[a]<solved[b]{vec![b,a]}else{vec![a,b]});
+        assert!(solve(9,&solved,&[wrong],1,false,None).is_err());
+
+        let different=(0..81).find(|&i|
+            !linked(9,i,0)&&solved[i]!=solved[0]).unwrap();
+        let false_clone=Rule::new("clone",vec![0,different]);
+        assert!(solve(9,&solved,&[false_clone],1,false,None).is_err());
+
+        let diagonal=vec![0,10,20,30,40,50,60,70,80];
+        let mut bad_sum=Rule::new("little_killer",diagonal.clone());
+        bad_sum.sum=Some(diagonal.iter().map(|&i|solved[i] as u16).sum::<u16>()+1);
+        assert!(solve(9,&solved,&[bad_sum],1,false,None).is_err());
+    }
+    #[test]
+    fn missing_bulb_thermometer_is_one_consistent_direction(){
+        let all=vec![0;81];
+        let solver=Solver::new(9,&all,&[],1,false,None).unwrap();
+        let asc=solver.monotone_support(&[0,1,2],true);
+        let desc=solver.monotone_support(&[0,1,2],false);
+        assert_eq!((asc[1]|desc[1])&(bit(1)|bit(9)),0);
+        assert_eq!(asc[0]&bit(9),0);
+        assert_eq!(desc[0]&bit(1),0);
+        let supported=solver.sum_support(&[0,1,2],6);
+        assert_eq!(supported[0]&!((1u16<<4)-1),0);
+        assert_ne!(supported[0]&bit(4),0);
     }
     #[test]
     fn reject_unsupported_and_false_technique_labels(){
