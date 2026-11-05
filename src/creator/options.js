@@ -9,7 +9,14 @@ export const VARIANTS=[
   ['entropic','熵线',[6,9]],
   ['modular','模三线',[6,9]],
   ['between','夹心线',[6,9]],
-  ['region_sum','区域和线',[6,9]]
+  ['region_sum','区域和线',[6,9]],
+  ['parity','奇偶格（圆奇方偶）',[4,6,9]],
+  ['inequality','不等号',[4,6,9]],
+  ['clone','克隆同值格',[4,6,9]],
+  ['thermo_unknown','无圆头温度计',[4,6,9]],
+  ['little_killer','小杀手斜线和',[6,9]],
+  ['anti_knight_anchors','反马步锚点',[6,9]],
+  ['anti_whisper_anchors','反耳语锚点',[9]]
 ];
 export const TECHNIQUES=[
   ['','任意技巧（严格匹配等级）',1],
@@ -26,6 +33,13 @@ export const TECHNIQUES=[
   ['modular','模三线',1],
   ['between','夹心线',1],
   ['region_sum','区域和线',1],
+  ['parity','奇偶标记',1],
+  ['inequality','不等式',1],
+  ['clone','克隆同值',1],
+  ['thermo_unknown','无圆头温度计',1],
+  ['little_killer','小杀手斜线和',1],
+  ['anti_knight_anchors','反马步锚点',1],
+  ['anti_whisper_anchors','反耳语锚点',1],
   ['naked_subset','显性数对 / 数组',2],
   ['hidden_subset','隐性数对 / 数组',2],
   ['locked_candidate','锁定候选数',2],
@@ -42,7 +56,11 @@ export function availableVariants(size){
 }
 const METHOD_RULE={killer_sum:'killer',kropki:'kropki',thermo:'thermo',
   renban:'renban',whisper:'whisper',arrow:'arrow',xv:'xv',
-  entropic:'entropic',modular:'modular',between:'between',region_sum:'region_sum'};
+  entropic:'entropic',modular:'modular',between:'between',region_sum:'region_sum',
+  parity:'parity',inequality:'inequality',clone:'clone',
+  thermo_unknown:'thermo_unknown',little_killer:'little_killer',
+  anti_knight_anchors:'anti_knight_anchors',
+  anti_whisper_anchors:'anti_whisper_anchors'};
 export function availableTechniques(size,tier,selectedVariants=[]){
   if(Number(tier)===5)return TECHNIQUES.slice(0,1);
   return TECHNIQUES.filter(([name,,level])=>level<=Number(tier)&&
