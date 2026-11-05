@@ -1222,10 +1222,71 @@ fn render(n:usize,rules:&[Rule])->(Vec<Value>,Vec<Value>,Vec<Value>,Vec<Value>,V
     let mut overlays=Vec::new();
     let mut underlays=Vec::new();
     let mut arrows=Vec::new();
+    let clone_colors=["#ffdbbb","#c3e9f2","#ebc5f5","#ceeac0",
+        "#f6d0df","#e4dfac","#c5d2ff","#ffd3b2"];
+    let mut clone_number=0usize;
     for rule in rules{
         let cells=&rule.cells;
         let path=centers(n,cells);
         match rule.kind.as_str(){
+            "parity"=>{
+                let odd=rule.dot.as_deref()==Some("odd");
+                underlays.push(json!({"center":path[0],"width":0.76,
+                    "height":0.76,"rounded":odd,
+                    "backgroundColor":if odd{"#e9d7f3"}else{"#d4e8f7"},
+                    "borderColor":if odd{"#925eab"}else{"#4c80a8"},
+                    "borderSize":1.8}));
+            },
+            "inequality"=>{
+                let (a,b)=(cells[0],cells[1]);
+                let mid=[((a/n+b/n) as f64)/2.0+0.5,
+                    ((a%n+b%n) as f64)/2.0+0.5];
+                let mark=if a/n==b/n{
+                    if a%n<b%n{"<"}else{">"}
+                }else if a/n<b/n{"∧"}else{"∨"};
+                overlays.push(json!({"center":mid,"width":0.35,
+                    "height":0.35,"backgroundColor":"#fffaf2",
+                    "text":mark,"textColor":"#875438","fontSize":18}));
+            },
+            "clone"=>{
+                let color=clone_colors[clone_number%clone_colors.len()];
+                clone_number+=1;
+                for center in &path{
+                    underlays.push(json!({"center":center,"width":0.90,
+                        "height":0.90,"rounded":true,
+                        "backgroundColor":color,"borderColor":"#6b677c",
+                        "borderSize":1.8}));
+                }
+            },
+            "anti_knight_anchors"|"anti_whisper_anchors"=>{
+                let knight=rule.kind=="anti_knight_anchors";
+                underlays.push(json!({"center":path[0],"width":0.89,
+                    "height":0.89,"rounded":true,
+                    "backgroundColor":if knight{"#f8dbbe"}else{"#dddddd"},
+                    "borderColor":if knight{"#c77b31"}else{"#777777"},
+                    "borderSize":1.7}));
+                let row=(cells[0]/n) as f64;let col=(cells[0]%n) as f64;
+                overlays.push(json!({"center":[row+0.15,col+0.17],
+                    "width":0.27,"height":0.27,
+                    "text":if knight{"♘"}else{"W"},
+                    "textColor":if knight{"#9b531d"}else{"#555555"},
+                    "fontSize":11}));
+            },
+            "little_killer"=>{
+                lines.push(json!({"wayPoints":path,"target":"underlay",
+                    "thickness":5,"color":"#ba7d44"}));
+                let row=(cells[0]/n) as f64;let col=(cells[0]%n) as f64;
+                overlays.push(json!({"center":[row+0.16,col+0.20],
+                    "width":0.35,"height":0.30,
+                    "rounded":true,"backgroundColor":"#fff4dc",
+                    "borderColor":"#b58b4d","borderSize":0.8,
+                    "text":rule.sum.unwrap_or(0).to_string(),
+                    "textColor":"#68401d","fontSize":12}));
+            },
+            "thermo_unknown"=>{
+                lines.push(json!({"wayPoints":path,"target":"underlay",
+                    "thickness":13,"color":"#c293bf"}));
+            },
             "killer"=>cages.push(json!({"cells":cells.iter().map(|&i|point(n,i))
                 .collect::<Vec<_>>(),"value":rule.sum.unwrap_or(0).to_string(),
                 "unique":true,"outlineC":"#3e668b","fontC":"#234e73"})),
