@@ -1611,6 +1611,64 @@ mod tests{
             "Full grid cannot be mislabeled level 5");
     }
     #[test]
+    fn recent_variant_geometry_and_rendering_is_real(){
+        let kinds=["parity","inequality","clone","thermo_unknown",
+            "little_killer","anti_knight_anchors","anti_whisper_anchors"];
+        let mut rng=Rng::new(20261105);
+        for kind in kinds {
+            let mut available=None;
+            // Some local anchors are rare with a particular digit permutation.
+            for _ in 0..6 {
+                let solution=make_solution(9,&mut rng);
+                let rules=create_rules(9,&solution,&[kind.to_owned()],"light",&mut rng);
+                if !rules.is_empty(){available=Some((solution,rules));break;}
+            }
+            let (solution,rules)=available.expect("Expected a real rule geometry");
+            assert!(solve(9,&solution,&rules,1,false,None).unwrap().solved,
+                "Rules for {kind} must agree with their independent solution");
+            let (cages,lines,underlays,overlays,arrows)=render(9,&rules);
+            assert!(cages.len()+lines.len()+underlays.len()+overlays.len()+
+                arrows.len()>0,"Rules for {kind} must be visible");
+            assert!(rules.iter().all(|r|r.kind==kind));
+        }
+    }
+    #[test]
+    fn new_variants_reject_contradictory_givens(){
+        let mut rng=Rng::new(67132);
+        let solved=make_solution(9,&mut rng);
+        let mut parity=Rule::new("parity",vec![0]);
+        parity.dot=Some((if solved[0]%2==0{"odd"}else{"even"}).into());
+        assert!(solve(9,&solved,&[parity],1,false,None).is_err());
+
+        let (a,b)=(0,1);
+        let wrong=Rule::new("inequality",
+            if solved[a]<solved[b]{vec![b,a]}else{vec![a,b]});
+        assert!(solve(9,&solved,&[wrong],1,false,None).is_err());
+
+        let different=(0..81).find(|&i|
+            !linked(9,i,0)&&solved[i]!=solved[0]).unwrap();
+        let false_clone=Rule::new("clone",vec![0,different]);
+        assert!(solve(9,&solved,&[false_clone],1,false,None).is_err());
+
+        let diagonal=vec![0,10,20,30,40,50,60,70,80];
+        let mut bad_sum=Rule::new("little_killer",diagonal.clone());
+        bad_sum.sum=Some(diagonal.iter().map(|&i|solved[i] as u16).sum::<u16>()+1);
+        assert!(solve(9,&solved,&[bad_sum],1,false,None).is_err());
+    }
+    #[test]
+    fn missing_bulb_thermometer_is_one_consistent_direction(){
+        let all=vec![0;81];
+        let solver=Solver::new(9,&all,&[],1,false,None).unwrap();
+        let asc=solver.monotone_support(&[0,1,2],true);
+        let desc=solver.monotone_support(&[0,1,2],false);
+        assert_eq!((asc[1]|desc[1])&(bit(1)|bit(9)),0);
+        assert_eq!(asc[0]&bit(9),0);
+        assert_eq!(desc[0]&bit(1),0);
+        let supported=solver.sum_support(&[0,1,2],6);
+        assert_eq!(supported[0]&!((1u16<<4)-1),0);
+        assert_ne!(supported[0]&bit(4),0);
+    }
+    #[test]
     fn reject_unsupported_and_false_technique_labels(){
         let request=CreateRequest{
             id:"personal-invalid".into(),size:4,tier:5,variants:vec![],
