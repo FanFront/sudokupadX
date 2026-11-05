@@ -893,12 +893,15 @@ pub struct CreateResponse {
 
 const SUPPORTED: &[&str] = &[
     "killer","kropki","thermo","renban","whisper","arrow","xv",
-    "entropic","modular","between","region_sum"
+    "entropic","modular","between","region_sum",
+    "parity","inequality","clone","thermo_unknown","little_killer",
+    "anti_knight_anchors","anti_whisper_anchors"
 ];
 fn supports(n:usize,kind:&str)->bool{
     if !SUPPORTED.contains(&kind){return false;}
-    if n==4 {matches!(kind,"killer"|"kropki"|"thermo"|"renban"|"arrow"|"xv")}
-    else if n==6 {kind!="whisper"}
+    if n==4 {matches!(kind,"killer"|"kropki"|"thermo"|"renban"|"arrow"|"xv"|
+        "parity"|"inequality"|"clone"|"thermo_unknown")}
+    else if n==6 {kind!="whisper"&&kind!="anti_whisper_anchors"}
     else {true}
 }
 fn zh_name(kind:&str)->&'static str {
@@ -906,7 +909,12 @@ fn zh_name(kind:&str)->&'static str {
         "killer"=>"杀手笼","kropki"=>"黑白点","thermo"=>"温度计",
         "renban"=>"连续线","whisper"=>"耳语线","arrow"=>"箭头",
         "xv"=>"V/X 标记","entropic"=>"熵线","modular"=>"模三线",
-        "between"=>"夹心线","region_sum"=>"区域和线",_=>"普通数独"
+        "between"=>"夹心线","region_sum"=>"区域和线",
+        "parity"=>"奇偶标记","inequality"=>"不等号",
+        "clone"=>"克隆同值格","thermo_unknown"=>"无圆头温度计",
+        "little_killer"=>"小杀手斜线和",
+        "anti_knight_anchors"=>"反马步锚点",
+        "anti_whisper_anchors"=>"反耳语锚点",_=>"普通数独"
     }
 }
 fn zh_rule(kind:&str)->&'static str{
@@ -922,6 +930,13 @@ fn zh_rule(kind:&str)->&'static str{
         "modular"=>"任意连续三格除以 3 后的余数各不相同。",
         "between"=>"夹心线上内部数字必须严格介于两端圆圈数字之间。",
         "region_sum"=>"一条区域和线按宫界分段，各段数字之和相同。",
+        "parity"=>"紫色圆形标记格为奇数、蓝色方形标记格为偶数；未标记的格不受限制。",
+        "inequality"=>"相邻两格之间的不等号尖端指向较小数字。",
+        "clone"=>"每一对同色底纹的克隆格数字相同；不同颜色的克隆对互不关联。",
+        "thermo_unknown"=>"无圆头温度计沿整条线从一端到另一端严格递增，方向未知，但不能中途反向。",
+        "little_killer"=>"斜线上的所有数字之和等于起点处的小号角标；同一斜线上允许重复（标准数独规则仍生效）。",
+        "anti_knight_anchors"=>"棋马标记格与相距一个马步的每个格数字均不相同；普通格不额外受限。",
+        "anti_whisper_anchors"=>"灰色锚点与其上下左右相邻格的数字差必须小于 5。",
         _=>""
     }
 }
@@ -1285,7 +1300,7 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
         !request.id.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'-'){
         return Err("生成谜题编号无效".into());
     }
-    if request.variants.len()>11 ||
+    if request.variants.len()>SUPPORTED.len() ||
        request.variants.iter().collect::<HashSet<_>>().len()!=request.variants.len() ||
        request.variants.iter().any(|k|!supports(request.size,k)){
         return Err("含有重复或当前尺寸不支持的变体规则".into());
