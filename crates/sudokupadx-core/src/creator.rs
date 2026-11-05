@@ -97,7 +97,9 @@ fn allowed_focus(method: &str) -> bool {
     matches!(method,
         "peer_elimination"|"hidden_single"|"killer_sum"|"kropki"|
         "thermo"|"renban"|"whisper"|"arrow"|"xv"|"entropic"|
-        "modular"|"between"|"region_sum"|
+        "modular"|"between"|"region_sum"|"parity"|"inequality"|
+        "clone"|"thermo_unknown"|"little_killer"|
+        "anti_knight_anchors"|"anti_whisper_anchors"|
         "naked_subset"|"hidden_subset"|"locked_candidate"|
         "x_wing"|"swordfish"|"xy_wing"|"skyscraper"|
         "jellyfish"|"xyz_wing"|"xy_chain")
@@ -167,12 +169,149 @@ impl Solver {
         let x=self.reduce(a,left,kind)?;
         Ok(self.reduce(b,right,kind)?||x)
     }
+    // Check either possible orientation of a missing-bulb thermometer.
+    // Prefix/suffix feasibility is exact for monotone lines and never guesses.
+    fn monotone_support(&self,cells:&[usize],ascending:bool)->Vec<Mask>{
+        let len=cells.len();
+        let mut forward=vec![vec![false;self.n+1];len];
+        let mut backward=vec![vec![false;self.n+1];len];
+        for d in values(self.masks[cells[0]],self.n){forward[0][d as usize]=true;}
+        for k in 1..len{
+            for d in values(self.masks[cells[k]],self.n){
+                forward[k][d as usize]=(1..=self.n).any(|p|
+                    forward[k-1][p] && (if ascending {p<d as usize}else{p>d as usize}));
+            }
+        }
+        for d in values(self.masks[*cells.last().unwrap()],self.n){
+            backward[len-1][d as usize]=true;
+        }
+        for k in (0..len-1).rev(){
+            for d in values(self.masks[cells[k]],self.n){
+                backward[k][d as usize]=(1..=self.n).any(|next|
+                    backward[k+1][next] &&
+                    (if ascending {d as usize<next}else{d as usize>next}));
+            }
+        }
+        (0..len).map(|k|
+            (1..=self.n as u8).filter(|&d|
+                forward[k][d as usize]&&backward[k][d as usize])
+                .fold(0,|mask,d|mask|bit(d))
+        ).collect()
+    }
+    // Prefix/suffix sum DP handles full-length diagonal clues in polynomial
+    // time. Relaxing non-repetition here is safe: it can only retain extras.
+    fn sum_support(&self,cells:&[usize],target:u16)->Vec<Mask>{
+        let len=cells.len();let limit=target as usize;
+        if limit==0||limit>self.n*len{return vec![0;len];}
+        let mut before=vec![vec![false;limit+1];len+1];
+        let mut after=vec![vec![false;limit+1];len+1];
+        before[0][0]=true;after[len][0]=true;
+        for k in 0..len{
+            for sum in 0..=limit{
+                if !before[k][sum]{continue;}
+                for d in values(self.masks[cells[k]],self.n){
+                    let next=sum+d as usize;
+                    if next<=limit{before[k+1][next]=true;}
+                }
+            }
+        }
+        for k in (0..len).rev(){
+            for sum in 0..=limit{
+                if !after[k+1][sum]{continue;}
+                for d in values(self.masks[cells[k]],self.n){
+                    let next=sum+d as usize;
+                    if next<=limit{after[k][next]=true;}
+                }
+            }
+        }
+        (0..len).map(|k|{
+            let mut mask=0;
+            for d in values(self.masks[cells[k]],self.n){
+                let digit=d as usize;
+                if digit<=limit&&(0..=limit-digit).any(|sum|
+                    before[k][sum]&&after[k+1][limit-sum-digit]){
+                    mask|=bit(d);
+                }
+            }
+            mask
+        }).collect()
+    }
     fn rule(&mut self,rule:&Rule)->Result<bool,String>{
         let cells=&rule.cells;
-        if cells.iter().any(|&i|i>=self.n*self.n)||cells.len()<2 {
+        if cells.is_empty()||cells.iter().any(|&i|i>=self.n*self.n)||
+            (cells.len()<2&&!matches!(rule.kind.as_str(),
+                "parity"|"anti_knight_anchors"|"anti_whisper_anchors")){
             return Err("变体坐标错误".into());
         }
         match rule.kind.as_str() {
+            "parity"=>{
+                if cells.len()!=1{return Err("奇偶标记只关联一个格".into());}
+                let odd=match rule.dot.as_deref(){
+                    Some("odd")=>true,Some("even")=>false,
+                    _=>return Err("奇偶标记缺少类型".into())
+                };
+                let allowed=(1..=self.n as u8).filter(|d|(*d%2==1)==odd)
+                    .fold(0,|m,d|m|bit(d));
+                self.reduce(cells[0],allowed,"parity")
+            },
+            "inequality"|"clone"=>{
+                if cells.len()!=2{return Err("比较规则需要两个格".into());}
+                if rule.kind=="inequality"{
+                    self.binary(cells[0],cells[1],"inequality",|a,b|a<b)
+                }else{
+                    if linked(self.n,cells[0],cells[1]){
+                        return Err("同值克隆不能占据同一行列宫".into());
+                    }
+                    self.binary(cells[0],cells[1],"clone",|a,b|a==b)
+                }
+            },
+            "anti_knight_anchors"|"anti_whisper_anchors"=>{
+                if cells.len()!=1{return Err("局部锚点只关联一个格".into());}
+                let anchor=cells[0];let mut changed=false;
+                let neighborhood=if rule.kind=="anti_knight_anchors"{
+                    knight_neighbors(self.n,anchor)
+                }else{neighbors(self.n,anchor)};
+                for other in neighborhood{
+                    changed|=if rule.kind=="anti_knight_anchors"{
+                        self.binary(anchor,other,"anti_knight_anchors",|a,b|a!=b)?
+                    }else{
+                        self.binary(anchor,other,"anti_whisper_anchors",
+                            |a,b|a.abs_diff(b)<5)?
+                    };
+                }
+                Ok(changed)
+            },
+            "thermo_unknown"=>{
+                if cells.len()<3||cells.len()>5{
+                    return Err("无圆头温度计长度必须为 3–5".into());
+                }
+                let asc=self.monotone_support(cells,true);
+                let desc=self.monotone_support(cells,false);
+                let mut changed=false;
+                for (k,&cell) in cells.iter().enumerate(){
+                    changed|=self.reduce(cell,asc[k]|desc[k],"thermo_unknown")?;
+                }
+                Ok(changed)
+            },
+            "little_killer"=>{
+                if cells.len()<2||cells.len()>self.n||rule.sum.unwrap_or(0)==0{
+                    return Err("小杀手斜线求和无效".into());
+                }
+                let first=(cells[1]/self.n).checked_sub(cells[0]/self.n);
+                let col_up=cells[1]%self.n>cells[0]%self.n;
+                if first!=Some(1)||cells.windows(2).any(|p|
+                    p[1]/self.n!=p[0]/self.n+1 ||
+                    (p[0]%self.n).abs_diff(p[1]%self.n)!=1 ||
+                    (p[1]%self.n>p[0]%self.n)!=col_up){
+                    return Err("小杀手必须沿同一条斜线向下延伸".into());
+                }
+                let supported=self.sum_support(cells,rule.sum.unwrap());
+                let mut changed=false;
+                for (k,&cell) in cells.iter().enumerate(){
+                    changed|=self.reduce(cell,supported[k],"little_killer")?;
+                }
+                Ok(changed)
+            },
             "kropki" => {
                 match rule.dot.as_deref(){
                     Some("white")=>self.binary(cells[0],cells[1],"kropki",
@@ -829,6 +968,17 @@ fn neighbors(n:usize,i:usize)->Vec<usize>{
     if r+1<n {out.push(i+n);}
     if c>0 {out.push(i-1);}
     if c+1<n {out.push(i+1);}
+    out
+}
+fn knight_neighbors(n:usize,i:usize)->Vec<usize>{
+    let r=i/n;let c=i%n;let mut out=Vec::new();
+    for (dr,dc) in [(1,2),(2,1),(1,-2),(2,-1),
+                    (-1,2),(-2,1),(-1,-2),(-2,-1)] {
+        let nr=r as isize+dr;let nc=c as isize+dc;
+        if nr>=0&&nc>=0&&(nr as usize)<n&&(nc as usize)<n{
+            out.push(nr as usize*n+nc as usize);
+        }
+    }
     out
 }
 fn path_valid(n:usize,solution:&[u8],rule:&Rule)->bool{
