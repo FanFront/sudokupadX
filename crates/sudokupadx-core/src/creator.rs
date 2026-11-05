@@ -1001,6 +1001,8 @@ fn path_valid(n:usize,solution:&[u8],rule:&Rule)->bool{
     let len=ds.len();
     match rule.kind.as_str(){
         "thermo"=>ds.windows(2).all(|p|p[0]<p[1]),
+        "thermo_unknown"=>ds.windows(2).all(|p|p[0]<p[1]) ||
+            ds.windows(2).all(|p|p[0]>p[1]),
         "whisper"=>ds.windows(2).all(|p|p[0].abs_diff(p[1])>=5),
         "renban"=>ds.iter().copied().collect::<HashSet<_>>().len()==len &&
             *ds.iter().max().unwrap()-*ds.iter().min().unwrap()==len as u8-1,
@@ -1031,12 +1033,59 @@ fn path_valid(n:usize,solution:&[u8],rule:&Rule)->bool{
 }
 fn candidates(n:usize,solution:&[u8],kind:&str,rng:&mut Rng)->Vec<Rule>{
     let mut found=Vec::new();let mut seen=HashSet::new();
-    if kind=="killer"||kind=="kropki"||kind=="xv"{
+    if kind=="parity"{
+        for i in 0..n*n{
+            let mut mark=Rule::new(kind,vec![i]);
+            mark.dot=Some(if solution[i]%2==0{"even"}else{"odd"}.into());
+            found.push(mark);
+        }
+    }else if kind=="anti_knight_anchors"||kind=="anti_whisper_anchors"{
+        for i in 0..n*n{
+            let neighbors=if kind=="anti_knight_anchors"{
+                knight_neighbors(n,i)
+            }else{neighbors(n,i)};
+            if !neighbors.is_empty()&&neighbors.iter().all(|&other|
+                if kind=="anti_knight_anchors"{solution[i]!=solution[other]}
+                else{solution[i].abs_diff(solution[other])<5}){
+                found.push(Rule::new(kind,vec![i]));
+            }
+        }
+    }else if kind=="clone"{
+        for a in 0..n*n{
+            for b in a+1..n*n{
+                if !linked(n,a,b)&&solution[a]==solution[b]{
+                    found.push(Rule::new(kind,vec![a,b]));
+                }
+            }
+        }
+    }else if kind=="little_killer"{
+        // Only true border-entering straight diagonals, not arbitrary
+        // zigzags or sums derived from nonvisible cells.
+        for r in 0..n{
+            for c in 0..n{
+                for dc in [-1isize,1]{
+                    if !(r==0||(dc==1&&c==0)||(dc==-1&&c==n-1)){continue;}
+                    let mut cells=Vec::new();let mut row=r;let mut col=c as isize;
+                    while row<n&&col>=0&&(col as usize)<n{
+                        cells.push(row*n+col as usize);row+=1;col+=dc;
+                    }
+                    if cells.len()<3{continue;}
+                    let mut rule=Rule::new(kind,cells);
+                    rule.sum=Some(rule.cells.iter().map(|&i|solution[i] as u16).sum());
+                    found.push(rule);
+                }
+            }
+        }
+    }else if kind=="killer"||kind=="kropki"||kind=="xv"||kind=="inequality"{
         for a in 0..n*n{
             for b in neighbors(n,a) {
                 if b<=a {continue;}
                 let x=solution[a];let y=solution[b];
-                if kind=="kropki" {
+                if kind=="inequality" {
+                    if x!=y {
+                        found.push(Rule::new(kind,if x<y {vec![a,b]}else{vec![b,a]}));
+                    }
+                }else if kind=="kropki" {
                     if x.abs_diff(y)==1{
                         let mut r=Rule::new(kind,vec![a,b]);
                         r.dot=Some("white".into());found.push(r);
@@ -1098,18 +1147,21 @@ fn create_rules(n:usize,solution:&[u8],selected:&[String],
     let mut out=Vec::new();
     let mut occupied=HashSet::new();
     let mut used_edges=HashSet::new();
+    let mut clone_cells=HashSet::new();
     for kind in selected{
         let options=candidates(n,solution,kind,rng);
         let mut added=0;
         for rule in options{
-            if added>=per{break;}
+            if added>=if kind=="clone"{per.min(8)}else{per}{break;}
             if kind=="killer"&&rule.cells.iter().any(|c|occupied.contains(c)){continue;}
+            if kind=="clone"&&rule.cells.iter().any(|c|clone_cells.contains(c)){continue;}
             let edges:Vec<_>=rule.cells.windows(2).map(|p|
                 (p[0].min(p[1]),p[0].max(p[1]))).collect();
             if edges.iter().any(|edge|used_edges.contains(&(kind.clone(),*edge))){
                 continue;
             }
             if kind=="killer"{occupied.extend(rule.cells.iter().copied());}
+            if kind=="clone"{clone_cells.extend(rule.cells.iter().copied());}
             for edge in edges{used_edges.insert((kind.clone(),edge));}
             added+=1;out.push(rule);
         }
