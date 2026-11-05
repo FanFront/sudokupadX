@@ -1630,6 +1630,24 @@ mod tests{
             assert!(cages.len()+lines.len()+underlays.len()+overlays.len()+
                 arrows.len()>0,"Rules for {kind} must be visible");
             assert!(rules.iter().all(|r|r.kind==kind));
+            // Exercise the real SCL serialization and Rust game-loader path,
+            // not only this module's private rule objects.
+            let request=CreateRequest{
+                id:format!("integration-{}",kind.replace('_',"-")),
+                size:9,tier:1,variants:vec![kind.to_owned()],
+                focus:None,density:Some("light".into()),
+                seed:Some(20261105),attempts:Some(1)
+            };
+            let proof=solve(9,&solution,&rules,1,true,None).unwrap();
+            let output=render_puzzle(&request,20261105,&solution,
+                &solution,&rules,&proof,1);
+            let loaded=crate::load(&output.puzzle.to_string()).unwrap();
+            assert_eq!(loaded.hint_rules.as_ref().unwrap().len(),rules.len());
+            let (size,grid,restored,_) =
+                crate::Session::new(loaded).hint_input().unwrap();
+            assert_eq!(size,9);
+            assert_eq!(grid,solution);
+            assert_eq!(restored.len(),rules.len());
         }
     }
     #[test]
