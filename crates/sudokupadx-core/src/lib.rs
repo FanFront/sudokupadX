@@ -425,6 +425,15 @@ pub struct InputCell {
     pub color: Option<String>,
 }
 
+/// An atomic, validated replacement of only the two pencil-mark lists.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PencilUpdate {
+    pub index: usize,
+    pub corner: Vec<String>,
+    pub center: Vec<String>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
@@ -745,6 +754,49 @@ impl Session {
         self.refresh_fog();
         Ok(self.result(index, &changed_indices))
     }
+    /// Apply an entire quick-note action as one reversible edit. Preserve
+    /// large values, cell colours, fog and authored clues. Validate every
+    /// update before changing anything, so malformed batches are atomic.
+    pub fn apply_pencil_updates(&mut self, updates: Vec<PencilUpdate>) -> Result<EditResult, String> {
+        if updates.is_empty() || updates.len() > self.cells.len() {
+            return Err("Invalid pencil update batch.".into());
+        }
+        let mut seen_indices = std::collections::HashSet::new();
+        for update in &updates {
+            if update.index >= self.cells.len() || !seen_indices.insert(update.index) {
+                return Err("Invalid or repeated pencil cell index.".into());
+            }
+            for marks in [&update.corner, &update.center] {
+                let mut unique = std::collections::HashSet::new();
+                if marks.len() > 26 ||
+                    marks.iter().any(|s| !valid_symbol(s) || !unique.insert(s))
+                {
+                    return Err("Invalid candidate marks.".into());
+                }
+            }
+        }
+        let fallback = updates.last().unwrap().index;
+        let mut changes = Vec::new();
+        for update in updates {
+            let before = self.cells[update.index].clone();
+            let current = &mut self.cells[update.index];
+            current.corner = update.corner;
+            current.center = update.center;
+            let after = current.clone();
+            if before != after {
+                changes.push(CellChange { index: update.index, before, after });
+            }
+        }
+        let indices: Vec<usize> = changes.iter().map(|change| change.index).collect();
+        if !changes.is_empty() {
+            self.undo.push(Edit { changes });
+            if self.undo.len() > 300 { self.undo.remove(0); }
+            self.redo.clear();
+        }
+        self.refresh_fog();
+        Ok(self.result(*indices.last().unwrap_or(&fallback), &indices))
+    }
+
     pub fn undo(&mut self) -> Result<EditResult, String> {
         let edit = self.undo.pop().ok_or_else(|| "Nothing to undo.".to_string())?;
         let mut indices = Vec::new();
@@ -848,6 +900,45 @@ mod tests {
         assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("9"));
         session.redo().unwrap();
         assert_eq!(session.snapshot().cells[2].corner, vec!["2"]);
+    }
+
+    #[test]
+    fn quick_pencil_batch_is_atomic_and_undoable_without_touching_values() {
+        let mut session = Session::new(load(DEMO).unwrap());
+        session.apply(2, "value", "4").unwrap();
+        session.apply(2, "color", "#f8cd75").unwrap();
+        let update = |index, corner: Vec<&str>, center: Vec<&str>| PencilUpdate {
+            index,
+            corner: corner.into_iter().map(str::to_owned).collect(),
+            center: center.into_iter().map(str::to_owned).collect(),
+        };
+        let edits = vec![
+            update(2, vec!["7"], vec!["1", "6"]),
+            update(3, vec![], vec!["2", "8"]),
+        ];
+        let result = session.apply_pencil_updates(edits).unwrap();
+        assert_eq!(result.changes.len(), 2);
+        assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("4"));
+        assert_eq!(session.snapshot().cells[2].color.as_deref(), Some("#f8cd75"));
+        assert_eq!(session.snapshot().cells[3].center, vec!["2", "8"]);
+        session.undo().unwrap();
+        assert!(session.snapshot().cells[3].center.is_empty());
+        assert!(session.snapshot().cells[2].center.is_empty());
+        assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("4"));
+        session.redo().unwrap();
+        assert_eq!(session.snapshot().cells[2].corner, vec!["7"]);
+
+        // Reject the full batch, not just the malformed cell at its end.
+        let before = session.snapshot().cells;
+        assert!(session.apply_pencil_updates(vec![
+            update(3, vec![], vec!["9"]),
+            update(4, vec![], vec!["not-a-digit"]),
+        ]).is_err());
+        assert_eq!(session.snapshot().cells, before);
+        assert!(session.apply_pencil_updates(vec![
+            update(3, vec![], vec!["1"]),
+            update(3, vec![], vec!["2"]),
+        ]).is_err());
     }
 
     #[test]

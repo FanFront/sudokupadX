@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::sync::Mutex;
-use sudokupadx_core::{EditResult, InputCell, ProgressCheck, Puzzle, Session, Snapshot};
+use sudokupadx_core::{EditResult, InputCell, PencilUpdate, ProgressCheck, Puzzle, Session, Snapshot};
 use tauri::State;
 
 #[derive(Default)]
@@ -68,6 +68,10 @@ fn update_cells(
     indices: Vec<usize>, mode: String, symbol: String, state: State<'_, AppState>
 ) -> Result<EditResult, String> {
     with_session(&state, |session| session.apply_many(&indices, &mode, &symbol))
+}
+#[tauri::command]
+fn update_notes(updates: Vec<PencilUpdate>, state: State<'_, AppState>) -> Result<EditResult, String> {
+    with_session(&state, |session| session.apply_pencil_updates(updates))
 }
 #[tauri::command]
 fn check_progress(state: State<'_, AppState>) -> Result<ProgressCheck, String> {
@@ -203,7 +207,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            open_puzzle, update_cell, update_cells, check_progress, hint_step, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters
+            open_puzzle, update_cell, update_cells, update_notes, check_progress, hint_step, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");

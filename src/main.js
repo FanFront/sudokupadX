@@ -5,6 +5,7 @@ import {invokeBrowser} from './web-runtime.js';
 import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
+import {buildCenterCandidateUpdates,buildRedNoteRemovalUpdates} from './quick-notes.js';
 import {cellInk} from './cell-ink.js';
 import {TAP_MOVE_TOLERANCE,cellLargeValue,isHighlightedNumber,advanceNumberHighlight} from './number-highlight.js';
 import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
@@ -658,6 +659,9 @@ function updateControls() {
   $('undoButton').disabled=undoStack.length===0;
   $('redoButton').disabled=redoStack.length===0;
   $('hintButton').disabled=Boolean(lessonPractice);
+  $('autoCenterButton').disabled=Boolean(lessonPractice);
+  $('clearRedNotesButton').disabled=Boolean(lessonPractice) ||
+    !conflicts.noteSymbols?.some(marks=>marks?.size);
   const typed=usesTypedHintEngine(puzzle);
   const small=puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9;
   for(const option of $('hintTier').options){
@@ -967,6 +971,33 @@ async function edit(action,symbol='') {
     updateControls();scheduleSave();requestDraw();
     showCompletionIfNew();
   } catch(error){notify(error);}
+  finally{pending=false;}
+}
+// Quick pencil actions always work across the visible board. An existing
+// center list represents the player's own deductions and is not overwritten.
+async function quickNotes(kind) {
+  clearNumberHighlight();
+  if(pending||!puzzle||!progress||lessonPractice)return;
+  const updates=kind==='fill'
+    ?buildCenterCandidateUpdates(puzzle,progress,conflictHouses)
+    :buildRedNoteRemovalUpdates(progress,conflicts);
+  if(!updates.length){
+    toast(kind==='fill'?'没有需要自动填写的空白中心候选数':'没有需要清理的红色候选数');
+    return;
+  }
+  pending=true;
+  try{
+    const change=await call('update_notes',{updates});
+    applyChange(change);
+    if(change.changes?.length){
+      undoStack.push({kind:'cell'});
+      redoStack=[];
+    }
+    updateControls();scheduleSave();requestDraw();
+    toast(kind==='fill'
+      ?'已为 '+change.changes.length+' 格填写中心候选数（仅按已知不重复规则排除）'
+      :'已从 '+change.changes.length+' 格清理红色候选数');
+  }catch(error){notify(error);}
   finally{pending=false;}
 }
 async function history(direction) {
@@ -1398,6 +1429,8 @@ $('eraseButton').addEventListener('click',()=>{
   if(mode==='pen'){penErase=!penErase;updateControls();}
   else edit('erase');
 });
+$('autoCenterButton').addEventListener('click',()=>quickNotes('fill'));
+$('clearRedNotesButton').addEventListener('click',()=>quickNotes('clear'));
 $('undoButton').addEventListener('click',()=>history('undo'));
 $('redoButton').addEventListener('click',()=>history('redo'));
 $('hintButton').addEventListener('click',requestHint);
