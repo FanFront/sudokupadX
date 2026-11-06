@@ -49,6 +49,10 @@ test('suggestion classes distinguish proved placements, multi-removal and single
     method:'peer_elimination',before:[1,2,3,4],remaining:[4],removed:[1,2,3],
     forceElimination:true
   },[3,4]).rank,1,'only written candidates count as actionable');
+  assert.equal(hintImpact({
+    method:'constraint_locked_digit',cell:7,affectedCells:[7,8,9],
+    before:[1,2,3],remaining:[1,2],removed:[3],forceElimination:true
+  }).rank,2,'a single digit eliminated from three cells is a batch');
 });
 
 test('an adventure placement wins even when a multi-removal is focused',()=>{
@@ -65,12 +69,12 @@ test('an adventure placement wins even when a multi-removal is focused',()=>{
   assert.match(formatted.title,/建议 A · 确定数字/);
 });
 
-test('a multi-removal wins over a focused one-digit elimination',()=>{
+test('a marked multi-removal wins over a focused one-digit elimination',()=>{
   const state=setup();
   given(state,21,0,1);
   given(state,21,1,2);
   given(state,21,3,3);
-  const batch=show(state,21,2);
+  const batch=show(state,21,2,[1,2,3,4,5,6]);
   const focused=show(state,22,3,[3,4,5,6]);
   const result=nextAdventureHint(state.puzzle,state.progress,4,focused);
   assert.equal(result.status,'step');
