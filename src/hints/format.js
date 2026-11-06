@@ -1,4 +1,5 @@
 // Readable Chinese explanations reference the actual witness cells returned by Rust.
+import {hintImpact} from './priority.js';
 export const TECHNIQUES=Object.freeze({
   peer_elimination:'已知数排除',hidden_single:'隐性唯一数',
   naked_single:'显性唯一数',
@@ -85,6 +86,7 @@ export function describeHint(response,size,cells=[]){
   const effectiveRemoved=annotated
     ?step.removed.filter(d=>noted.includes(d)):step.removed||[];
   const removed=effectiveRemoved.join('、');
+  const impact=hintImpact(step,noted);
   const notedAfter=noted.filter(d=>!effectiveRemoved.includes(d));
 
   const cellCount=cells?.length||size*size;
@@ -121,7 +123,7 @@ export function describeHint(response,size,cells=[]){
       (step.method==='pencil_subset'
         ?'中心手记'+(step.subsetSize===2?'数对':
           step.subsetSize===3?'三数组':step.subsetSize+' 数组')
-        :TECHNIQUES[step.method]||step.method)+' · 等级 '+level,
+        :TECHNIQUES[step.method]||step.method)+' · 技巧等级 '+level+' · 建议 '+impact.label,
     description:(conditional?'【条件推理，不是已证明的排除】 ':'')+
       cellName(step.cell,size)+'：'+rationale+
       ' 由此'+action+'。'+(sourceCells.length?
@@ -134,6 +136,6 @@ export function describeHint(response,size,cells=[]){
     target:step.cell,sources:sourceCells,
     affectedCells,removed:effectiveRemoved,
     placement:placement&&step.method!=='search_contradiction',
-    assumptionBased:conditional,level
+    assumptionBased:conditional,level,suggestionRank:impact.rank
   };
 }
