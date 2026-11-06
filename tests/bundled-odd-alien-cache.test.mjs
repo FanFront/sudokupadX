@@ -95,7 +95,9 @@ test('supply cache must exceed each specified ordinary neighbor',()=>{
   const wrong=Math.min(9,solution[source]+1);
   assert.ok(wrong>solution[source]);
   progress.cells[target].center=[String(solution[target]),String(wrong)];
-  const hint=nextAdventureHint(puzzle,progress,4,target);
+  // Tier 1 isolates the authored inequality proof; higher tiers can offer
+  // a verified placement from an unrelated subset first.
+  const hint=nextAdventureHint(puzzle,progress,1,target);
   assert.equal(hint.step?.method,'greater_neighbors');
   assert.ok(hint.step.removed.includes(wrong));
   assert.ok(hint.step.sources.includes(source));
