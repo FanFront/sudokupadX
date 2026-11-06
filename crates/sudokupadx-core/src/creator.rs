@@ -1602,6 +1602,30 @@ mod tests{
         assert!(hint.step.is_none());
     }
     #[test]
+    fn hint_prioritizes_a_determined_digit_above_batch_eliminations(){
+        let mut grid=vec![0u8;16];
+        grid[0]=1;grid[1]=2;grid[2]=3;
+        let result=next_hint(4,&grid,&[],2).unwrap();
+        assert_eq!(result.status,"step");
+        let step=result.step.unwrap();
+        assert_eq!(step.cell,3,"the fourth cell in the row is forced to 4");
+        assert_eq!(step.remaining,vec![4]);
+        assert!(step.before.len()>1);
+    }
+    #[test]
+    fn hint_batches_multiple_visible_peer_exclusions(){
+        let mut grid=vec![0u8;16];
+        grid[0]=1;grid[1]=2;
+        let result=next_hint(4,&grid,&[],1).unwrap();
+        assert_eq!(result.status,"step");
+        let step=result.step.unwrap();
+        assert_eq!(step.method,"peer_elimination");
+        assert!(step.removed.contains(&1));
+        assert!(step.removed.contains(&2));
+        assert!(step.removed.len()>=2);
+        assert!(step.remaining.len()>1,"do not invent a unique placement");
+    }
+    #[test]
     fn correctly_annotated_eliminations_are_not_replayed(){
         let n=4;
         let mut grid=vec![0;n*n];
