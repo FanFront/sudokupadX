@@ -1,0 +1,39 @@
+name: Optional private Android reference compatibility
+
+# Never fetch a private repository during public/untrusted pull-request CI.
+# This is an opt-in integration check, enabled only by a trusted maintainer.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference-assets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Require private reference repository credentials
+        env:
+          REFERENCE_TOKEN: ${{ secrets.SUDOKUPAD_ANDROID_READ_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "$REFERENCE_TOKEN" ]]; then
+            echo "::error::Set the SUDOKUPAD_ANDROID_READ_TOKEN Actions secret to a fine-grained token with Contents: read on FanFront/sodokupadAndroid."
+            exit 1
+          fi
+      - name: Check out SudokuPadX
+        uses: actions/checkout@v4
+      - name: Check out private Android reference fixtures
+        uses: actions/checkout@v4
+        with:
+          repository: FanFront/sodokupadAndroid
+          path: reference-assets
+          token: ${{ secrets.SUDOKUPAD_ANDROID_READ_TOKEN }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Test reference SCL compatibility
+        env:
+          SUDOKUPAD_REFERENCE_ASSETS: ${{ github.workspace }}/reference-assets/app/src/main/assets/offline/translated
+        run: cargo test -p sudokupadx-core --test reference_assets -- --nocapture

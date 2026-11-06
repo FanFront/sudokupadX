@@ -48,7 +48,9 @@ test('factory boss can explain an actual bulb deduction with the original map',(
   // The first thermometer starts at R4C6 (r3c5).
   const bulb=3*9+5;
   progress.cells[bulb].center=['9','1'];
-  const h=nextAdventureHint(puzzle,progress,4,bulb);
+  // Tier 1 verifies this bulb rule; an unrelated higher-tier naked-subset
+  // placement rightfully has priority at the default technique cap.
+  const h=nextAdventureHint(puzzle,progress,1,bulb);
   assert.equal(h.status,'step');
   assert.equal(h.step.method,'thermo');
   assert.equal(h.step.cell,bulb);

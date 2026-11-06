@@ -93,7 +93,9 @@ test('an enemy alien constrains any knight-step neighbor, not only another alien
   solved(state,[1]); // Blue alien at R1C2 is 8; R2C4 is a knight move.
   state.cells[12].center=['8','3'];
   const snapshot=JSON.stringify(state);
-  const result=nextAdventureHint(p,state,4,12);
+  // Prove the anti-knight rule without tier-2 subsets outranking this
+  // targeted level-1 clue due the new placement-first ranking.
+  const result=nextAdventureHint(p,state,1,12);
   assert.equal(result.status,'step');
   assert.equal(result.step.method,'anti_knight_anchors');
   assert.equal(result.step.cell,12);
