@@ -755,31 +755,52 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
     if proof.solved && proof.trace.is_empty() {
         return Ok(HintResponse{status:"complete".into(),step:None,level:0});
     }
-    // The solver trace begins from all possible digits, while the player may
-    // have already crossed out many of them in center notes. The earliest raw
-    // elimination is often redundant (e.g. remove 1 from annotated {2,7}).
-    // Prefer a proven removal that still appears in a player's notes.
-    let noted_progress=proof.trace.iter().find(|step|
-        notes.get(step.cell).is_some_and(|candidates|
-            !candidates.is_empty() && step.removed.iter().any(|digit|
-                candidates.contains(digit))));
-    // When no written candidate can be removed, a genuine determined digit
-    // is more useful than another elementary reduction of a blank cell.
-    let placement=proof.trace.iter().enumerate().find(|(idx,step)|
-        step.remaining.len()==1 && step.before.len()>1 &&
-        proof.trace[..*idx].iter().all(|prior|
-            level_of(&prior.method)==1)).map(|(_,step)|step);
-    // When there are annotations, do not fall back to eliminating candidates
-    // that were *already absent* from the marked cell. Instead pick another
-    // cell for which the player has not recorded candidates.
-    let unannotated=proof.trace.iter().find(|step|
-        notes.get(step.cell).is_none_or(|candidates|candidates.is_empty()));
-    let chosen=noted_progress.or(placement)
-        .or_else(||proof.trace.iter().find(|step|
-            step.remaining.len()==1 && step.before.len()>1))
-        .or(unannotated)
-        .or_else(||if notes.is_empty(){proof.trace.first()}else{None});
-    if let Some(step)=chosen {
+    // Aggregate the exclusions from ALL visible fixed peers of each cell.
+    // These are independently proven by row/column/box uniqueness, and give
+    // the player one meaningful batch instead of a stream of single removals.
+    // Do not derive these groups from incomplete handwritten notes.
+    let mut options=Vec::<Step>::new();
+    let houses=units(n);
+    for cell in 0..n*n {
+        if grid[cell]!=0 {continue;}
+        let mut removed=Vec::<u8>::new();
+        let mut sources=Vec::<usize>::new();
+        for house in houses.iter().filter(|h|h.contains(&cell)) {
+            for &source in house {
+                let digit=grid[source];
+                if source!=cell && digit!=0 {
+                    if !removed.contains(&digit) {removed.push(digit);}
+                    if !sources.contains(&source) {sources.push(source);}
+                }
+            }
+        }
+        if removed.is_empty() || removed.len()>=n {continue;}
+        removed.sort_unstable();
+        options.push(Step{method:"peer_elimination".into(),cell,
+            remaining:(1..=n as u8).filter(|d|!removed.contains(d)).collect(),
+            before:(1..=n as u8).collect(),removed,sources});
+    }
+    // The trace contains the other independently derived logical steps.
+    // The solver never treats a player's pencil marks as proof.
+    options.extend(proof.trace.iter().cloned());
+    let mut best:Option<((u8,usize,u8,usize),&Step)>=None;
+    for (index,step) in options.iter().enumerate() {
+        let marked=notes.get(step.cell).filter(|marks|!marks.is_empty());
+        let count=step.removed.iter().filter(|digit|
+            marked.is_none_or(|marks|marks.contains(digit))).count();
+        let placement=step.remaining.len()==1 && step.before.len()>1
+            && step.method!="search_contradiction";
+        if !placement && count==0 {continue;}
+        // Priority A: determined digit. B: remove multiple actionable
+        // candidates. C: remove one. Complexity and trace order only break
+        // ties within the same category.
+        let category=if placement {3}else if count>=2 {2}else {1};
+        let rank=(category,count,5-level_of(&step.method),usize::MAX-index);
+        if best.as_ref().is_none_or(|(prior,_)|rank>*prior) {
+            best=Some((rank,step));
+        }
+    }
+    if let Some((_,step))=best {
         return Ok(HintResponse{
             status:"step".into(),level:level_of(&step.method),step:Some(step.clone())
         });
