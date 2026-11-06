@@ -45,7 +45,9 @@ test('anti-black Kropki eliminates a double from adjacent player notes',()=>{
   const {puzzle,progress}=prepare();
   progress.cells[0].value='3';
   progress.cells[1].center=['6','5'];
-  const response=nextAdventureHint(puzzle,progress,4,1);
+  // Restrict to the base rules so an independent subset placement does not
+  // replace this direct anti-Kropki proof.
+  const response=nextAdventureHint(puzzle,progress,1,1);
   assert.equal(response.status,'step');
   assert.equal(response.step.method,'anti_kropki_black');
   assert.equal(response.step.cell,1);
