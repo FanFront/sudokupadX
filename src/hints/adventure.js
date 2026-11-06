@@ -183,6 +183,11 @@ function score(step,notes,focus,tier,variant=false){
   if(!impact.rank)return -Infinity;
   // Impact category dominates focus, note presence, method and technique level.
   let points=impact.rank*100000+impact.count*1800;
+  // An unmarked empty cell may have many theoretical exclusions from 1..9.
+  // These are not actual player progress: prefer a proved deletion from a
+  // written candidate (including advanced variant rules) instead. Keep such
+  // unmarked hints only as a fallback for players who do not use notes.
+  if(!marked.length&&impact.rank!==3)points-=400000;
   if(marked.length)points+=150;
   if(variant)points+=160;
   if(step.cell===focus)points+=400;
