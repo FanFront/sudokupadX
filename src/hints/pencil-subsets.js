@@ -1,3 +1,5 @@
+import {hintImpact} from './priority.js';
+
 // Center/corner note sets can suggest a naked pair or triple, but they are
 // player observations, not axioms. Confirm their completeness against a
 // sound upper bound from VISIBLE givens before promoting an elimination to
@@ -120,9 +122,10 @@ export function findPencilSubsetHint(puzzle,progress,tier=4,focus=-1){
           };
           const markedRemoved=removed.filter(d=>marks[target].includes(d)).length;
           const focusMatch=target===focus?3:sources.includes(focus)?1:0;
-          const score=(verified?100000:0)+focusMatch*10000+
-            (annotated?1000:0)+count*75+
-            markedRemoved*80-removed.length+remaining.length/100;
+          const impact=hintImpact(step,marks[target]);
+          const score=(verified?1000000:0)+impact.rank*100000+
+            focusMatch*10000+(annotated?1000:0)+count*75+
+            markedRemoved*80+removed.length*20+remaining.length/100;
           options.push({step,score});
         }
       }
@@ -135,11 +138,23 @@ export function findPencilSubsetHint(puzzle,progress,tier=4,focus=-1){
   return step?{status:'step',level:2,step}:null;
 }
 
-export function preferPencilSubset(base,pencil,focus=-1){
+export function preferPencilSubset(base,pencil,focus=-1,cells=[]){
   if(pencil?.status!=='step')return base;
   if(['conflict','complete'].includes(base?.status))return base;
   if(base?.status!=='step')return pencil;
   const step=pencil.step,baseStep=base.step;
+  const marked=i=>{
+    const note=cells[i]||{};
+    const source=note.center?.length?note.center:note.corner||[];
+    return source.map(Number);
+  };
+  const baseRank=hintImpact(baseStep,marked(baseStep?.cell)).rank;
+  const pencilRank=hintImpact(step,marked(step.cell)).rank;
+  // A verified placement must always remain above note-based eliminations.
+  if(baseRank===3 || pencilRank<baseRank)return base;
+  if(!step.assumptionBased&&pencilRank>baseRank)return pencil;
+  // A handwritten, unverified subset cannot displace a proved multi-removal.
+  if(step.assumptionBased&&baseRank>=2)return base;
   if(!step.assumptionBased&&
       (step.cell===focus||step.sources.includes(focus)))return pencil;
   if(step.assumptionBased&&
