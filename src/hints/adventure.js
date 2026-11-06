@@ -3,6 +3,7 @@
 // all-different sets and explicitly typed variants, not colors or fogged givens.
 import {typedConstraints} from './constraint-data.js';
 import {findCombinedConstraintHint} from './constraint-propagation.js';
+import {hintImpact} from './priority.js';
 
 const SIZES=new Set([4,6,9]);
 const whole=n=>Array.from({length:n},(_,i)=>i+1);
@@ -178,23 +179,23 @@ function runCandidates(puzzle,progress,houses,domains){
 function score(step,notes,focus,tier,variant=false){
   if(step.level>tier)return -Infinity;
   const marked=notes[step.cell]||[];
-  const usable=step.removed.filter(d=>marked.includes(d));
-  if(marked.length&&usable.length===0&&step.remaining.length!==1)return -Infinity;
-  let points=marked.length&&usable.length?1200:0;
-  if(step.remaining.length===1)points+=850;
+  const impact=hintImpact(step,marked);
+  if(!impact.rank)return -Infinity;
+  // Impact category dominates focus, note presence, method and technique level.
+  let points=impact.rank*100000+impact.count*1800;
+  if(marked.length)points+=150;
   if(variant)points+=160;
   if(step.cell===focus)points+=400;
   else if(focus>=0)points+=Math.max(0,90-Math.abs(step.cell-focus));
-  if(marked.length===0&&step.remaining.length>1)points-=200;
   return points-step.level*7;
 }
 function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
   const {rows,cols}=puzzle,total=rows*cols,{values,candidates,peers}=state;
   const notes=Array.from({length:total},(_,i)=>noteDigits(progress.cells[i],domains[i]||9));
   const options=[];
-  const add=(method,cell,removed,remaining,sources,reason,level=1,variant=false)=>{
+  const add=(method,cell,removed,remaining,sources,reason,level=1,variant=false,beforeOverride=null)=>{
     if(!isVisible(progress,cell)||values[cell]||!removed.length)return;
-    const original=candidates[cell]||whole(domains[cell]||9);
+    const original=beforeOverride||candidates[cell]||whole(domains[cell]||9);
     const allowed=remaining||original.filter(d=>!removed.includes(d));
     if(!allowed.length)return;
     const step={method,cell,removed:distinct(removed),remaining:allowed,
@@ -208,19 +209,23 @@ function chooseStep(puzzle,progress,domains,houses,sectors,state,tier,focus){
   for(let i=0;i<total;i++)if(isVisible(progress,i)&&!values[i]){
     const known=peers[i];
     const initial=whole(domains[i]||9);
-    const unique=distinct(known.map(p=>p.digit));
-    for(const d of unique){
-      const witness=known.find(p=>p.digit===d);
-      if(witness) add(witness.house.kind==='magic'?'magic_square':'peer_elimination',
-        i,[d],initial.filter(v=>v!==d),[witness.source],
-        '依据'+witness.house.description+'的数字不重复规则，已填的 '+d+' 不能再次出现在目标格。',1,
-        witness.house.kind==='magic');
+    const unique=distinct(known.map(p=>p.digit)).filter(d=>initial.includes(d));
+    if(unique.length){
+      // These exclusions all follow independently from visible fixed digits.
+      // Offer one actionable batch instead of repeating a one-digit hint.
+      const witnesses=unique.map(d=>known.find(p=>p.digit===d));
+      add(witnesses.every(p=>p.house.kind==='magic')?'magic_square':'peer_elimination',
+        i,unique,initial.filter(v=>!unique.includes(v)),
+        witnesses.map(p=>p.source),
+        '目标格所在已验证不重复组中已填入 '+unique.join('、')+
+        '，因此这些数字都不能再填入目标格。',1,
+        witnesses.some(p=>p.house.kind==='magic'),initial);
     }
     if(candidates[i]?.length===1){
       const d=candidates[i][0];
       add('naked_single',i,initial.filter(v=>v!==d),[d],
         known.filter(p=>p.digit!==d).map(p=>p.source),
-        '根据目标格所在各行、列和宫（或其他不重复组）内已知数字的排除，唯一剩下的候选数是 '+d+'。');
+        '根据目标格所在各行、列和宫（或其他不重复组）内已知数字的排除，唯一剩下的候选数是 '+d+'。',1,false,initial);
     }
   }
   const completeHouses=houses.filter(h=>h.n&&h.cells.length===h.n);
@@ -947,10 +952,17 @@ export function nextAdventureHint(puzzle,progress,tier=4,focus=-1){
   const basic=['peer_elimination','locked_candidate',
     'hidden_single','naked_subset'].includes(step?.method);
   const relevant=combined?.sources.includes(focus)||combined?.cell===focus;
-  const preferCombined=Boolean(combined)&&
-    (!step||(combined.method==='constraint_locked_digit'
-      ? (relevant||basic)
-      : (basic&&relevant)));
+  const notesAt=i=>noteDigits(progress.cells[i],domains[i]||9);
+  const basicImpact=step?hintImpact(step,notesAt(step.cell)).rank:0;
+  const combinedImpact=combined?hintImpact(combined,notesAt(combined.cell)).rank:0;
+  // A direct placement must never be displaced by a multi-cell elimination.
+  // Within the same impact category, retain the existing variant relevance.
+  const preferCombined=Boolean(combined)&&combinedImpact>0&&
+    (combinedImpact>basicImpact||
+      (combinedImpact===basicImpact&&
+        (combined.method==='constraint_locked_digit'
+          ? (relevant||basic)
+          : (basic&&relevant))));
   if(preferCombined){
     return {status:'step',level:combined.level,step:combined};
   }
