@@ -143,8 +143,9 @@ async function requestHint(){
     // Center-note 34/35/45 triples work on Rust and adventure paths.
     // Unverified pencil lists remain conditional, not solver axioms.
     const pencil=findPencilSubsetHint(puzzle,{cells,visible},tier,focus);
-    const result=preferPencilSubset(baseResult,pencil,focus);
+    const result=preferPencilSubset(baseResult,pencil,focus,cells);
     const data=describeHint(result,puzzle.cols,cells);
+    $('hintSupportNote').textContent+=' 建议等级：A 确定数字 ＞ B 批量排除 ＞ C 单一排除；技巧等级是使用的推理复杂度，与建议等级不同。';
     if(result?.step?.assumptionBased)
       $('hintSupportNote').textContent+=' 本次为条件式中心手记推理，'+
         '请先核实紫色格候选数已列全；它不是已验证的必然排除。';
