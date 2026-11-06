@@ -783,7 +783,7 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
     // The trace contains the other independently derived logical steps.
     // The solver never treats a player's pencil marks as proof.
     options.extend(proof.trace.iter().cloned());
-    let mut best:Option<((u8,usize,u8,usize),&Step)>=None;
+    let mut best:Option<((u8,u8,usize,u8,usize),&Step)>=None;
     for (index,step) in options.iter().enumerate() {
         let marked=notes.get(step.cell).filter(|marks|!marks.is_empty());
         let count=step.removed.iter().filter(|digit|
@@ -795,7 +795,13 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
         // candidates. C: remove one. Complexity and trace order only break
         // ties within the same category.
         let category=if placement {3}else if count>=2 {2}else {1};
-        let rank=(category,count,5-level_of(&step.method),usize::MAX-index);
+        // A filled digit or a marked removal is actionable; an empty-note
+        // reduction is a fallback even if it removes many theoretical
+        // candidates. This prevents routine peer cleanup from hiding
+        // genuinely useful deductions in the player's current notes.
+        let actionable=placement || marked.is_some();
+        let rank=(actionable as u8,category,count,5-level_of(&step.method),
+            usize::MAX-index);
         if best.as_ref().is_none_or(|(prior,_)|rank>*prior) {
             best=Some((rank,step));
         }
