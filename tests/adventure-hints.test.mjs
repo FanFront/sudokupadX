@@ -132,9 +132,12 @@ test('6×6 explicitly declared 3×2 boxes also respect width × height',()=>{
   const {puzzle,progress}=world(40,50,[
     sector(21,0,6,'数独：每行、每列及每个 3×2 宫使用 1 至 6。')
   ]);
+  // The second 3-column-wide box starts at zero-based column 3.
+  // Column 2 belongs to the first box; testing [2,3,4] would cross
+  // a genuine box boundary and incorrectly fail a correct solver.
   const box=gridsAndHouses(puzzle).houses.find(h=>
-    h.kind==='box'&&h.cells.includes(idx(22,2)));
-  assert.deepEqual(box?.cells,[21,22].flatMap(r=>[2,3,4].map(c=>idx(r,c))));
+    h.kind==='box'&&h.cells.includes(idx(22,3)));
+  assert.deepEqual(box?.cells,[21,22].flatMap(r=>[3,4,5].map(c=>idx(r,c))));
   for(const [r,c] of [[21,2],[23,3]]){
     const i=idx(r,c);progress.visible[i]=true;progress.cells[i].value='5';
   }
