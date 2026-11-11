@@ -120,6 +120,8 @@ test('Sudokuvania 1 opening 2×3 boxes are 2 columns by 3 rows',()=>{
   // (both 4) together and falsely reports a conflict.
   for(const [r,c,d] of [[23,0,6],[24,1,6],[23,2,4],[24,0,4]]){
     const i=idx(r,c);
+    assert.equal(source.metadata.solution[i],String(d),
+      'bundled solution index confirms the reported placed digit');
     progress.visible[i]=true;
     progress.cells[i].value=String(d);
   }
@@ -137,6 +139,15 @@ test('6×6 explicitly declared 3×2 boxes also respect width × height',()=>{
     const i=idx(r,c);progress.visible[i]=true;progress.cells[i].value='5';
   }
   assert.notEqual(nextAdventureHint(puzzle,progress,4).status,'conflict');
+});
+
+test('6×6 Sudoku with unspecified box direction never invents box houses',()=>{
+  const {puzzle}=world(40,50,[
+    sector(21,0,6,'数独：每行与每列不能重复；宫的尺寸未声明。')
+  ]);
+  const {houses}=gridsAndHouses(puzzle);
+  assert.ok(houses.some(h=>h.kind==='row'));
+  assert.equal(houses.some(h=>h.kind==='box'),false);
 });
 
 test('duplicate visible numbers do not become a false proof',()=>{
