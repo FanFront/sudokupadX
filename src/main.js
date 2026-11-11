@@ -228,8 +228,8 @@ function updateHomeCard() {
       source?.type==='imported'?catalog.find(e=>e.id===source.key):null;
   $('homePuzzleTitle').textContent=puzzle?.title || previous?.title || '最近导入的谜题';
   $('homePuzzleMeta').textContent=puzzle
-    ?puzzle.rows+' × '+puzzle.cols+' · 进度和棋盘位置已保存'
-    :'进度和棋盘位置已保存 · 点击继续恢复';
+    ?puzzle.rows+' × '+puzzle.cols
+    :'恢复棋盘与解题进度';
 }
 function showGame() {
   $('lessonScreen').hidden=true;
@@ -381,11 +381,15 @@ function updateSector() {
 }
 function renderLibrary(){
   const list=$('libraryList');list.replaceChildren();
-  for(const entry of filterBundledEntries(catalog, {
+  const entries=filterBundledEntries(catalog, {
     category:$('bundledCategory').value,
     query:$('bundledSearch').value,
     showLinked:$('showAllPuzzles').checked
-  })){
+  });
+  $('bundledResultCount').textContent=entries.length
+    ?entries.length+' 道谜题'
+    :'没有符合条件的谜题';
+  for(const entry of entries){
     const btn=document.createElement('button');btn.type='button';btn.className='library-entry';
     const title=document.createElement('strong');title.textContent=entry.title;
     const sub=document.createElement('small');sub.textContent=bundledEntrySubtitle(entry);
@@ -629,12 +633,14 @@ function updateControls() {
   $('alphabetButton').disabled=mode==='pen';
   $('letterPage').hidden=!alphabet||mode==='pen';
   $('letterPage').textContent=['A–I','J–R','S–Z'][letterPage];
-  $('padTitle').textContent=mode==='pen'?'画线工具':alphabet?'字母输入 · '+(['A–I','J–R','S–Z'][letterPage]):'数字输入';
+  $('padTitle').textContent=mode==='pen'?'画线工具':mode==='color'?'颜色标记':
+    alphabet?'字母输入 · '+(['A–I','J–R','S–Z'][letterPage]):'数字输入';
   $('palette').hidden=mode!=='color';
   $('penTools').hidden=mode!=='pen';
-  $('keypad').hidden=mode==='pen';
+  $('keypad').hidden=mode==='pen'||mode==='color';
   $('eraseButton').textContent=mode==='pen'?(penErase?'✎':'⌫'):'⌫';
   $('eraseButton').setAttribute('aria-label',mode==='pen'?(penErase?'切换绘线':'切换擦线'):'清除');
+  $('eraseButton').title=$('eraseButton').getAttribute('aria-label');
   $('eraseButton').setAttribute('aria-pressed',String(mode==='pen'&&penErase));
   document.querySelectorAll('[data-pen-color]').forEach(el=>{
     el.setAttribute('aria-pressed',String(el.dataset.penColor===penColor));
@@ -1661,7 +1667,6 @@ document.addEventListener('keydown',event=>{
 });
 new ResizeObserver(resizeCanvas).observe(frame);
 resizeCanvas();
-$('runtimeBadge').textContent=native?'Rust / Tauri':'Rust / WASM';
 // Only the HTTPS web build uses a service worker. Android already bundles
 // these assets through Tauri, so no service worker is needed there.
 if(!native && import.meta.env.PROD && location.protocol==='https:' &&

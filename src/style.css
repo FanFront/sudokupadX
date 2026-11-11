@@ -3,7 +3,7 @@
 :root{--app-top-inset:env(safe-area-inset-top,0px);--app-bottom-inset:env(safe-area-inset-bottom,0px)}
 html.android-native{--app-top-inset:max(env(safe-area-inset-top,0px),40px);--app-bottom-inset:max(env(safe-area-inset-bottom,0px),12px)}
 :root{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;color:#eaf3fb;background:#0b1422;font-synthesis:none}
-*{box-sizing:border-box}body{margin:0;overflow:hidden}button,input,textarea{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}button:focus-visible,canvas:focus-visible,input:focus-visible{outline:3px solid #9ddfff;outline-offset:2px}button:disabled{opacity:.36;cursor:default}#app{height:100dvh;min-height:400px;padding-bottom:var(--app-bottom-inset);display:flex;flex-direction:column;background:radial-gradient(ellipse at 35% -35%,#234567 0,transparent 52%),#0b1422}
+*{box-sizing:border-box}body{margin:0;overflow:hidden}button,input,textarea{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}button:focus-visible,canvas:focus-visible,input:focus-visible{outline:3px solid #9ddfff;outline-offset:2px}button:disabled{opacity:.36;cursor:default}#app{height:100dvh;padding-bottom:var(--app-bottom-inset);display:flex;flex-direction:column;background:radial-gradient(ellipse at 35% -35%,#234567 0,transparent 52%),#0b1422}
 .topbar{height:calc(72px + var(--app-top-inset));flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:var(--app-top-inset) max(20px,env(safe-area-inset-right,0px)) 0 max(22px,env(safe-area-inset-left,0px));border-bottom:1px solid #29405c;background:#101e30d9}
 .brand{display:flex;align-items:center;gap:12px}.brand-mark{display:grid;place-items:center;width:41px;height:41px;border-radius:12px;background:linear-gradient(135deg,#e9cc86,#a5e3cc);color:#13283d;font-size:26px;font-weight:900;box-shadow:0 5px 18px #0003}.brand strong{font-size:18px;letter-spacing:.2px}.brand small{display:block;font-size:11px;color:#92b0c8;margin-top:2px}.top-actions{display:flex;align-items:center;gap:9px}.runtime-badge{color:#9cddc7;border:1px solid #3e7b70;border-radius:20px;font-size:11px;padding:5px 9px}
 button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:10px;transition:background .12s,border-color .12s;min-height:42px;font-weight:600}button:active:not(:disabled){background:#356183}button:hover:not(:disabled){border-color:#79bfd5}.primary-btn{background:#b9e4d6;color:#122737;border-color:#c2f2e4;padding:0 14px}.primary-btn:active:not(:disabled){background:#8ecdbc}.subtle-btn{padding:0 12px}
@@ -194,16 +194,38 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   height:min(88dvh,830px);max-height:none;min-height:0;overflow:hidden;
   padding:20px;gap:14px
 }
-#libraryDialog .modal-top{flex-shrink:0;padding-bottom:4px}
-#libraryDialog .library-tabs{flex-shrink:0}
-#libraryDialog .library-tabs button{min-height:46px;padding:7px 8px;line-height:1.3}
+#libraryDialog .modal-top{flex-shrink:0;padding-bottom:2px}
+#libraryDialog .modal-top h2{font-size:23px;letter-spacing:-.025em}
+#libraryDialog .modal-close{height:42px;width:42px}
+#libraryDialog .library-tabs{
+  flex-shrink:0;gap:4px;padding:4px;border:1px solid #344b60;
+  border-radius:13px;background:#0e1d2d;
+}
+#libraryDialog .library-tabs button{min-height:43px;padding:6px 8px;line-height:1.3}
+#libraryDialog .library-tabs button[aria-selected="false"]{border-color:transparent;background:transparent;color:#bcd0de}
+#libraryDialog .library-tabs button[aria-selected="false"]:hover{background:#1e3548;color:#edf7fd}
 #libraryDialog #bundledLibraryPanel,
 #libraryDialog #onlineLibraryPanel,
 #libraryDialog #lmdLibraryPanel{flex:1;min-height:0;overflow:hidden}
 #libraryDialog #bundledLibraryPanel{display:flex;flex-direction:column;gap:10px}
 #libraryDialog .library-list,
 #libraryDialog #onlineIndexList{flex:1;min-height:0;max-height:none;overflow-y:auto}
-#libraryDialog .library-list{padding:2px}
+#libraryDialog .library-list{
+  align-content:start;padding:3px;overscroll-behavior:contain;
+}
+#libraryDialog .library-entry{
+  justify-content:center;min-width:0;min-height:62px;gap:3px;padding:9px 12px;
+  border-color:#385269;background:#192e42;overflow-wrap:anywhere;
+}
+#libraryDialog .library-entry:hover:not(:disabled){background:#213c51;border-color:#71aaae}
+#libraryDialog .library-entry small{color:#afc6d6}
+#libraryDialog .bundled-result-count{color:#afc6d6;font-size:12px;flex-shrink:0;padding:0 2px}
+.library-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  flex-shrink:0;border-top:1px solid #344b60;padding-top:8px;
+}
+.library-footer .library-spoiler{min-height:42px;line-height:1.4;padding:0}
+.library-footer .library-spoiler input{flex:0 0 16px;margin:0}
 .library-section-heading{display:flex;flex-direction:column;gap:3px}
 .library-section-heading strong{font-size:17px;line-height:1.3}
 .library-section-heading span{font-size:12px;color:#a8c7d8;line-height:1.4}
@@ -276,8 +298,7 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
     gap:12px
   }
   #libraryDialog .modal-top h2{font-size:19px}
-  #libraryDialog .library-tabs{gap:6px}
-  #libraryDialog .library-tabs button{font-size:12px;min-height:44px;padding:4px}
+  #libraryDialog .library-tabs button{font-size:12px;padding:4px}
   .library-section-heading strong{font-size:16px}
   #libraryDialog #onlineIndexList,
   #libraryDialog .library-list,
@@ -362,120 +383,167 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   #app .board-tools .icon-button{height:34px;min-height:34px}
 }
 
-/* Home and game are distinct screens. Keep app-level actions off the board. */
+/* Home and game are distinct screens. */
 #app #homeScreen[hidden],#app #gameScreen[hidden],
 #app #homeContinueSection[hidden],#app .action-bar button[hidden]{display:none!important}
-.home-screen{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:calc(24px + var(--app-top-inset)) max(18px,env(safe-area-inset-right,0px)) calc(28px + var(--app-bottom-inset)) max(18px,env(safe-area-inset-left,0px))}
-.home-content{max-width:730px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
-.home-hero{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:4px 2px 18px;border-bottom:1px solid #294359}
-.home-hero .brand-mark{width:50px;height:50px;font-size:30px}
-.home-hero .brand strong{font-size:23px}
-.home-hero .brand small{font-size:12px;display:block}
-.home-hero .runtime-badge{display:inline-flex;white-space:nowrap}
-.home-continue{display:flex;justify-content:space-between;align-items:center;gap:18px;min-width:0;padding:23px;border:1px solid #548a87;border-radius:18px;background:linear-gradient(125deg,#224d55,#163044);box-shadow:0 12px 32px #0003}
-.home-continue-copy{min-width:0;display:flex;flex-direction:column;gap:7px}
-.home-eyebrow{color:#b0e8d3;text-transform:uppercase;font-size:11px;letter-spacing:.08em;font-weight:750}
-.home-continue-copy strong{font-size:20px;line-height:1.3;overflow-wrap:anywhere}
-.home-continue-copy>span:last-child{font-size:12px;line-height:1.5;color:#b3cede}
-.home-continue button{min-width:118px;min-height:48px;flex-shrink:0}
-.home-section-title h1{margin:0 0 6px;font-size:20px}
-.home-section-title p{margin:0;color:#9dbbcf;font-size:13px}
-.home-menu{display:grid;grid-template-columns:1fr;gap:12px}
-#app .home-action{width:100%;min-height:89px;display:grid;grid-template-columns:52px minmax(0,1fr) 18px;align-items:center;gap:15px;padding:15px 17px;border:1px solid #39556d;text-align:left;background:#162c42;border-radius:16px}
-#app .home-action:active{background:#274b60}
-.home-action-icon{width:49px;height:49px;display:grid;place-items:center;border-radius:13px;background:#2a5260;color:#baf1d8;font-size:29px;line-height:1}
-.home-action>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:6px}
-.home-action strong{font-size:16px}
-.home-action small{font-size:12px;font-weight:450;line-height:1.5;color:#a2bfd3;overflow-wrap:anywhere}
-.home-chevron{font-size:24px;font-weight:400;color:#9cc3d6}
-.home-footnote{color:#8faec1;font-size:12px;line-height:1.6;margin:0 2px}
+.home-screen{
+  flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;
+  padding:calc(clamp(18px,5vh,54px) + var(--app-top-inset))
+    max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));
+}
+.home-content{max-width:800px;margin:0 auto;display:grid;gap:14px}
+.home-brand{display:flex;align-items:center;gap:12px;padding:0 0 5px}
+.home-brand h1{font-size:clamp(22px,4vw,30px);line-height:1.1;letter-spacing:-.035em;margin:0}
+.home-brand .brand-mark{
+  flex:0 0 38px;width:38px;height:38px;border-radius:11px;
+  background:#b9e4d6;color:#173748;font-size:23px;
+}
+.home-continue{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;min-width:0;
+  padding:14px 16px;border:1px solid #46655f;border-radius:14px;background:#192e36;
+}
+.home-continue-copy{min-width:0;display:flex;flex-direction:column;gap:3px}
+.home-eyebrow{color:#a9dbcb;font-size:11px;font-weight:700}
+.home-continue-copy strong{
+  font-size:clamp(14px,2.6vw,17px);line-height:1.35;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.home-continue-copy>span:last-child{font-size:11px;line-height:1.4;color:#afc6d3}
+.home-continue button{min-height:44px;flex-shrink:0;font-size:13px}
+.home-library{
+  isolation:isolate;position:relative;overflow:hidden;display:flex;align-items:center;
+  width:100%;min-height:clamp(148px,25vw,222px);padding:clamp(17px,4vw,32px);text-align:left;
+  border:1px solid #4d8179;border-radius:18px;
+  background:linear-gradient(108deg,#16323e 20%,#214853 64%,#2a5e5c);color:#f3f9f7;
+}
+.home-library:hover:not(:disabled),.home-library:active:not(:disabled){
+  background:linear-gradient(108deg,#1c3d49 20%,#26545e 64%,#326b67);
+}
+.home-library-copy{position:relative;z-index:1;display:grid;justify-items:start;gap:8px}
+.home-library-copy strong{font-size:clamp(28px,5vw,46px);line-height:1.12;letter-spacing:-.045em}
+.home-library-copy small{font-size:clamp(11px,2vw,14px);color:#d3e7e6}
+.home-library-cta{
+  display:inline-flex;align-items:center;gap:10px;margin-top:5px;padding:8px 11px;
+  border-radius:8px;background:#b9e4d6;color:#142d36;font-size:12px;font-weight:800;
+}
+.home-grid-art{
+  position:absolute;right:clamp(-39px,2vw,20px);top:50%;width:clamp(168px,36vw,300px);
+  aspect-ratio:1;transform:translateY(-50%) rotate(-14deg);opacity:.48;
+  border:1px solid #b7eee2;border-radius:12px;
+  background:
+    linear-gradient(90deg,transparent calc(100% - 1px),#c3f3e9) 0 0 / 33.333% 100%,
+    linear-gradient(transparent calc(100% - 1px),#c3f3e9) 0 0 / 100% 33.333%,
+    linear-gradient(90deg,transparent calc(100% - 1px),#9edcd177) 0 0 / 11.111% 100%,
+    linear-gradient(transparent calc(100% - 1px),#9edcd177) 0 0 / 100% 11.111%;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 48%);
+  mask-image:linear-gradient(90deg,transparent,#000 48%);
+}
+.home-menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#app .home-action{
+  display:grid;grid-template-columns:34px minmax(0,1fr) 12px;align-items:center;
+  min-height:70px;gap:10px;padding:10px 13px;text-align:left;
+  border:1px solid #344c60;border-radius:13px;background:#182b3d;
+}
+#app .home-action:hover:not(:disabled),#app .home-action:active:not(:disabled){background:#21394b}
+.home-action-icon{
+  width:34px;height:34px;display:grid;place-items:center;border-radius:9px;
+  background:#294753;color:#b9e4d6;font-size:22px;line-height:1;
+}
+.home-action>span:nth-child(2){min-width:0;display:grid;gap:3px}
+.home-action strong{font-size:14px;line-height:1.3}
+.home-action small{font-size:11px;font-weight:500;line-height:1.45;color:#b2c6d5;overflow-wrap:anywhere}
+.home-chevron{font-size:21px;font-weight:400;color:#a0bccc}
+@media(max-width:450px){
+  .home-content{gap:11px}
+  .home-menu{gap:8px}
+  #app .home-action{
+    grid-template-columns:25px minmax(0,1fr);min-height:64px;gap:8px;padding:8px;
+  }
+  .home-action-icon{width:25px;height:27px;border-radius:7px;font-size:17px}
+  .home-action strong{font-size:13px}
+  .home-action small{font-size:10px}
+  .home-chevron{display:none}
+  .home-continue{gap:8px;padding:10px 11px}
+  .home-continue button{padding:0 9px;font-size:12px}
+}
 #app .board-tools #homeButton{background:#24445b;color:#d5f4ed}
 #app .board-tools #backButton:not([hidden]){display:inline-flex}
 #app .board-tools .icon-button[hidden]{display:none!important}
 
-/* Solver controls follow the familiar SudokuPad layout: digits beside modes. */
-.play-deck{display:flex;flex-direction:column;gap:8px}
-.pad-input{display:flex;flex-direction:column;gap:8px;min-width:0}
+/* Place input modes and frequent actions alongside the keypad on phones. */
+.play-deck,.pad-input{display:flex;flex-direction:column;gap:8px;min-width:0}
 .play-deck .mode-bar{order:-1}
-#app .action-bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch;gap:5px}
-#app .action-bar button{min-width:0;flex:1 1 0;padding:0 3px;white-space:nowrap}
-#app .action-bar #alphabetButton{min-width:0;font-size:12px}
-#app .action-bar #letterPage{min-width:0;font-size:11px}
-#app .action-bar #eraseButton,#app .action-bar #undoButton,#app .action-bar #redoButton,#app .action-bar #checkButton{font-size:20px}
-#app .action-bar #autoCenterButton{font-size:12px;color:#bdebdc}
-#app .action-bar #clearRedNotesButton{font-size:12px;color:#ffb9c5}
-#app .controls .control-heading small{color:#87a9c2;font-size:11px}
+#app .action-bar{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;gap:5px}
+#app .action-bar button{min-width:0;padding:0 3px;white-space:nowrap}
+#app .action-bar #alphabetButton{font-size:12px}
+#app .action-bar #alphabetButton[aria-pressed="true"]{background:#b9e4d6;color:#173748}
+#app .action-bar #letterPage{font-size:11px}
+#app .action-bar #eraseButton,#app .action-bar #undoButton,#app .action-bar #redoButton{font-size:19px}
+#app .action-bar #autoCenterButton{color:#bdebdc}
+#app .action-bar #clearRedNotesButton{color:#ffb9c5}
+#app .action-bar #hintButton{color:#ffdeab;border-color:#705b46;background:#382f2a}
+#app .action-bar #hintButton:active:not(:disabled){background:#574333}
+#app .keypad button{font-variant-numeric:tabular-nums}
+#app #gameScreen.workspace{padding-top:calc(16px + var(--app-top-inset))}
 @media(max-width:850px){
-  #app .workspace{padding:5px 6px 6px;gap:5px}
-  #app .board-panel{min-height:0;border-radius:11px}
-  #app .board-heading{height:46px;gap:5px;padding:3px 8px}
+  #app #gameScreen.workspace{
+    padding:calc(4px + var(--app-top-inset)) max(5px,env(safe-area-inset-right,0px))
+      5px max(5px,env(safe-area-inset-left,0px));
+    gap:5px;
+  }
+  #app .board-panel{min-height:0;border-radius:12px}
+  #app .board-heading{height:44px;gap:5px;padding:3px 7px}
   #app .board-footer{display:none}
-  #app .board-tools{gap:4px}
-  #app .board-tools .icon-button{flex:0 0 38px;width:38px;min-width:38px;max-width:38px;height:38px;min-height:38px;border-radius:10px}
-  #app .controls{gap:5px;padding:7px;border-radius:11px;overflow:visible}
-  #app .controls .control-heading,#app .controls .pad-title{display:none}
-  #app .play-deck{display:grid;grid-template-columns:minmax(0,1fr) minmax(64px,76px);gap:7px;align-items:start}
+  #app .board-tools{gap:3px}
+  #app .board-tools .icon-button{
+    flex:0 0 36px;width:36px;min-width:36px;max-width:36px;
+    height:36px;min-height:36px;border-radius:9px;
+  }
+  #app .controls{gap:5px;padding:6px;border-radius:12px;overflow:visible}
+  #app .controls .pad-title{display:none}
+  #app .play-deck{
+    display:grid;grid-template-columns:minmax(0,1fr) clamp(49px,15vw,67px) clamp(87px,27vw,135px);
+    gap:7px;align-items:start;
+  }
   #app .play-deck .mode-bar{order:initial;grid-template-columns:1fr;gap:4px}
-  #app .mode-bar button{height:39px;min-height:39px;padding:0 2px;font-size:12px}
+  #app .mode-bar button,#app .action-bar button{
+    height:39px;min-height:39px;padding:0 2px;font-size:12px;border-radius:8px;
+  }
+  #app .mode-bar button:not(.active){background:#162b3e;border-color:#34495c}
   #app .keypad{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
-  #app .keypad button{min-height:42px;height:42px;font-size:21px;border-radius:9px;padding:0}
+  #app .keypad button{min-height:43px;height:43px;font-size:22px;border-radius:8px;padding:0}
   #app .keypad button[data-symbol="0"]{grid-column:1/-1}
-  #app .action-bar{gap:5px}
-  #app .action-bar button{height:38px;min-height:38px;border-radius:9px}
-  #app .palette{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-  #app .palette button{height:46px;min-height:46px}
-  #app .pen-tools{padding:7px;gap:6px}
+  #app .action-bar{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+  #app .action-bar #letterPage{grid-column:1/-1}
+  #app .palette{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  #app .palette button{height:42px;min-height:42px}
+  #app .pen-tools{padding:5px;gap:5px}
   #app .pen-tools small{display:none}
-  #app .pen-grid button{font-size:11px;min-height:39px}
-  #app .pen-colors button{min-height:39px}
+  #app .pen-grid{gap:4px}
+  #app .pen-grid button{font-size:10px;min-height:38px;padding:3px}
+  #app .pen-colors{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  #app .pen-colors button{min-height:33px}
   #app .board-hud{top:5px;left:5px;right:5px}
   #app .board-hud span{padding:4px 6px}
   #app .zoom-tools button{width:34px;height:34px;min-height:34px}
-  #app .home-screen{padding-top:calc(22px + var(--app-top-inset))}
+  #toast{top:calc(52px + var(--app-top-inset));bottom:auto;text-align:center}
 }
-@media(max-width:410px){
-  #app .home-content{gap:19px}
-  #app .home-continue{align-items:stretch;flex-direction:column;gap:14px;padding:18px}
-  #app .home-continue button{width:100%}
-  #app .home-action{gap:11px;grid-template-columns:46px minmax(0,1fr) 14px;padding:12px;min-height:80px}
-  .home-action-icon{width:44px;height:44px}
-  #app .board-tools .icon-button{flex-basis:34px;width:34px;min-width:34px;max-width:34px;height:36px;min-height:36px}
-  #app .board-tools{gap:3px}
-  #app .board-heading{height:42px;padding:2px 6px}
-  #app .play-deck{grid-template-columns:minmax(0,1fr) 67px;gap:5px}
-  #app .mode-bar button{height:36px;min-height:36px}
-  #app .keypad button{height:39px;min-height:39px;font-size:19px}
-  #app .action-bar button{height:36px;min-height:36px}
-  #app .controls{padding:5px}
+@media(max-width:370px){
+  #app .play-deck{gap:5px}
+  #app .board-tools .icon-button{flex-basis:32px;width:32px;min-width:32px;max-width:32px}
 }
 @media(max-height:650px) and (max-width:850px){
-  #app .workspace{padding:3px 5px;gap:3px}
-  #app .board-heading{height:38px}
-  #app .controls{padding:4px;gap:3px}
-  #app .mode-bar button{height:32px;min-height:32px}
-  #app .keypad button{height:33px;min-height:33px;font-size:17px}
-  #app .action-bar button{height:31px;min-height:31px}
+  #app .board-heading{height:39px}
+  #app .controls{padding:5px}
+  #app .mode-bar button,#app .action-bar button{height:35px;min-height:35px}
+  #app .keypad button{height:39px;min-height:39px;font-size:19px}
 }
-@media (orientation:landscape) and (max-height:520px) and (min-width:600px){
+@media(orientation:landscape) and (max-height:520px) and (min-width:540px) and (max-width:850px){
   #app .workspace{flex-direction:row}
   #app .board-panel{flex:1;min-width:0}
-  #app .controls{width:min(45vw,360px);overflow-y:auto;flex-shrink:0}
-  #app .keypad button{height:38px;min-height:38px}
-  #app .mode-bar button{height:36px;min-height:36px}
+  #app .controls{width:min(47vw,390px);overflow-y:auto;overscroll-behavior:contain;flex-shrink:0}
+  #app .play-deck{grid-template-columns:minmax(0,1fr) clamp(42px,18%,62px) clamp(72px,29%,104px)}
 }
-
-/* No top app toolbar remains: reserve the camera/status-bar cutout directly
-   above the game header, including Android WebViews with zero env() insets. */
-#app #gameScreen.workspace{padding-top:calc(16px + var(--app-top-inset))}
-@media(max-width:850px){
-  #app #gameScreen.workspace{padding-top:calc(5px + var(--app-top-inset))}
-}
-
-/* The previous phone toolbar hid its brand copy. Home must always show the
-   product name and subtitle, including on narrow Android screens. */
-#app .home-hero .brand{gap:12px}
-#app .home-hero .brand strong,#app .home-hero .brand small{display:block}
-
 
 /* The learning screen is a proper application page, not an external
    Markdown link or an overlay that hides the game without saving. */
@@ -659,9 +727,13 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 }
 
 /* Compact controls for browsing the 100 offline-generated nine-by-nine puzzles. */
-.bundled-filters{display:grid;grid-template-columns:minmax(135px,1fr) minmax(160px,2fr);gap:8px;flex-shrink:0}
+.bundled-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px;flex-shrink:0}
 .bundled-filters select,.bundled-filters input{min-width:0;width:100%;height:42px;padding:8px 10px;background:#112638;color:#e6f5fc;border:1px solid #496981;border-radius:8px;font:inherit;font-size:13px}
-@media(max-width:440px){.bundled-filters{grid-template-columns:1fr}}
+.bundled-filters input::placeholder{color:#a7bac9}
+@media(max-width:440px){
+  .bundled-filters{grid-template-columns:minmax(0,1fr) minmax(112px,40%)}
+  .bundled-filters input{font-size:16px}
+}
 
 
 /* On-device creator: a dedicated scrollable, touch-friendly library screen.
@@ -703,7 +775,7 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 #creatorDialog .creator-saved-actions .creator-play{background:#286c60;color:#f0fff7;border-color:#51a18c}
 #creatorDialog .creator-saved-actions .creator-delete{color:#ffd9d0;border-color:#aa685a}
 #creatorDialog .creator-empty{font-size:12px;color:#a6c8db;line-height:1.5}
-#libraryDialog .creator-library-action{width:100%;min-height:38px;flex-shrink:0;font-size:12px}
+#libraryDialog .creator-library-action{min-height:42px;flex-shrink:0;font-size:12px}
 @media(max-width:650px){
   #creatorDialog{width:96vw;max-height:94dvh}
   #creatorDialog .creator-content{max-height:92dvh;padding:13px}
@@ -731,4 +803,8 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
   .controls{position:relative}
   .hint-panel{position:absolute;bottom:calc(100% + 5px);left:0;right:0;z-index:5;max-height:min(38dvh,290px);overflow-y:auto;padding:10px;box-shadow:0 -5px 22px #0008}
   #hintDescription{max-height:none}
+}
+
+@media(orientation:landscape) and (max-height:520px) and (min-width:540px) and (max-width:850px){
+  #app .hint-panel{position:static;max-height:none;overflow:visible;box-shadow:none}
 }

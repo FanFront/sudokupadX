@@ -107,7 +107,7 @@ try{
     assert.ok(response?.ok(),url.href+' failed to load');
     await page.waitForFunction(expected=>
       document.querySelector('#boardMeta')?.textContent?.includes(expected) &&
-      document.querySelector('#runtimeBadge')?.textContent==='Rust / WASM' &&
+      document.querySelector('#gameScreen')?.hidden===false &&
       document.querySelector('#puzzleTitle')?.textContent!=='Loading…',
       dimensions,{timeout:60000});
     // Ensure a substantial, actually painted Canvas, not just a DOM title.
@@ -334,18 +334,37 @@ try{
   await page.waitForFunction(()=>document.querySelector('#boardMeta')?.textContent?.includes('9 × 9') &&
     document.querySelector('#puzzleTitle')?.textContent?.includes('UI Smoke Fixture'),null,{timeout:60000});
   const canvas=page.locator('#boardCanvas');
+  await page.setViewportSize({width:360,height:640});
+  const shortBoard=await canvas.boundingBox();
+  const shortActions=await page.locator('.action-bar').boundingBox();
+  assert.ok(shortBoard && shortActions,'board and actions must be visible in portrait');
+  assert.ok(shortBoard.height>=640*.55,'short portrait screens keep most height for the board');
+  assert.ok(shortActions.y+shortActions.height<=640,'actions must fit in the viewport');
+  await page.setViewportSize({width:568,height:320});
+  const landscapeBoard=await canvas.boundingBox();
+  const landscapeControls=await page.locator('.controls').boundingBox();
+  assert.ok(landscapeBoard && landscapeControls,'board and controls must be visible in landscape');
+  assert.ok(landscapeBoard.x+landscapeBoard.width<=landscapeControls.x,
+    'landscape controls must sit beside the board');
+  assert.ok(landscapeControls.y+landscapeControls.height<=320,
+    'the side controls must fit in a short landscape viewport');
+  await page.setViewportSize({width:430,height:860});
+  await page.locator('#fitButton').click();
   const bounds=await canvas.boundingBox();
-  // Mobile buttons are a T9 pad with modes on its right, not stacked toolbars.
+  // The keypad, modes and frequently used actions fit on one level.
   const keyOne=await page.locator('#keypad [data-symbol="1"]').boundingBox();
   const keyTwo=await page.locator('#keypad [data-symbol="2"]').boundingBox();
   const keyFour=await page.locator('#keypad [data-symbol="4"]').boundingBox();
   const modeRail=await page.locator('#modeBar').boundingBox();
-  assert.ok(keyOne && keyTwo && keyFour && modeRail);
+  const actions=await page.locator('.action-bar').boundingBox();
+  assert.ok(keyOne && keyTwo && keyFour && modeRail && actions);
   assert.ok(keyTwo.x>keyOne.x && Math.abs(keyOne.y-keyTwo.y)<2,'keypad must have columns');
   assert.ok(keyFour.y>keyOne.y,'keypad must have rows');
   assert.ok(modeRail.x>keyTwo.x,'mode rail must be beside the keypad');
-  assert.ok(bounds.height>200,'board must retain substantial vertical room on Android-sized screens');
-  assert.ok(bounds && bounds.width>100 && bounds.height>100);
+  assert.ok(actions.x>=modeRail.x+modeRail.width && Math.abs(actions.y-keyOne.y)<2,
+    'frequent actions must sit beside the mode rail');
+  assert.ok(bounds && bounds.width>100 && bounds.height>200,
+    'board must retain substantial vertical room on Android-sized screens');
   await canvas.click({position:{x:bounds.width/2,y:bounds.height/2}});
   const selection=await page.locator('#selectionLabel').textContent();
   assert.match(selection,/R5C5/);
@@ -372,7 +391,7 @@ try{
   // Emulate an Android WebView that does not report the camera-cutout inset.
   await page.evaluate(()=>document.documentElement.classList.add('android-native'));
   await page.locator('#homeButton').click();
-  const brand=await page.locator('.home-hero .brand').boundingBox();
+  const brand=await page.locator('.home-brand').boundingBox();
   assert.ok(brand && brand.y>=40,'Home must sit below the camera/status-bar safe area');
   await page.locator('#continueButton').click();
   const boardHeader=await page.locator('.board-heading').boundingBox();
