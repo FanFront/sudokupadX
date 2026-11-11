@@ -125,12 +125,13 @@ function gridsAndHouses(puzzle,typedRules=[]){
       // Sector box dimensions follow width × height notation. In the
       // original Sudokuvania 1, "2×3 宫" is two columns and three rows.
       // Reversing the dimensions falsely treats correct digits as duplicates.
-      let h=n===6?3:n===9?3:2,w=n===6?2:n===9?3:2;
+      let h=n===9?3:2,w=n===9?3:2;
       if(n===6){
         const explicit=text.match(/([23])\s*[×xX*]\s*([23])\s*(?:宫|box|region)/i);
-        if(explicit&&Number(explicit[1])*Number(explicit[2])===6){
-          w=Number(explicit[1]);h=Number(explicit[2]);
-        }
+        // A 6×6 Sudoku might have either 2×3 or 3×2 boxes. When the
+        // authored sector does not specify which, do not invent a box house.
+        if(!explicit||Number(explicit[1])*Number(explicit[2])!==6)continue;
+        w=Number(explicit[1]);h=Number(explicit[2]);
       }
       for(let r=0;r<n;r+=h)for(let c=0;c<n;c+=w){
         add(Array.from({length:h*w},(_,j)=>
