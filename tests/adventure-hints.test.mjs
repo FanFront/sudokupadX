@@ -103,6 +103,56 @@ test('numeric cages are not assumed to mean a sum without an unlocked killer rul
   progress.cells[target].center=['2','4'];
   assert.notEqual(nextAdventureHint(puzzle,progress,4,target).step?.method,'killer_sum');
 });
+test('Sudokuvania 1 opening 2×3 boxes are 2 columns by 3 rows',()=>{
+  // Use the actual bundled sector index rather than a guessed replacement.
+  const raw=readFileSync(join(root,'public','puzzles','digits-of-despair.scl'),'utf8');
+  const source=JSON.parse(LZString.decompressFromBase64(raw.trim().slice(3)));
+  const opening=source.metadata.grids.find(grid=>
+    grid.top===21&&grid.left===0&&grid.width===6&&grid.height===6);
+  assert.ok(opening,'the original 6×6 opening sector must be indexed');
+  assert.match(opening.rules,/2×3 宫/);
+  const {puzzle,progress}=world(40,50,[opening]);
+  const box=gridsAndHouses(puzzle).houses.find(h=>
+    h.kind==='box'&&h.cells.includes(idx(23,0)));
+  assert.deepEqual(box?.cells,[21,22,23].flatMap(r=>[idx(r,0),idx(r,1)]));
+  // Visible correct digits from the reported board: the *wrong* 3×2
+  // orientation groups R24C1/R25C2 (both 6), and R24C3/R25C1
+  // (both 4) together and falsely reports a conflict.
+  for(const [r,c,d] of [[23,0,6],[24,1,6],[23,2,4],[24,0,4]]){
+    const i=idx(r,c);
+    assert.equal(source.metadata.solution[i],String(d),
+      'bundled solution index confirms the reported placed digit');
+    progress.visible[i]=true;
+    progress.cells[i].value=String(d);
+  }
+  assert.notEqual(nextAdventureHint(puzzle,progress,4).status,'conflict');
+});
+
+test('6×6 explicitly declared 3×2 boxes also respect width × height',()=>{
+  const {puzzle,progress}=world(40,50,[
+    sector(21,0,6,'数独：每行、每列及每个 3×2 宫使用 1 至 6。')
+  ]);
+  // The second 3-column-wide box starts at zero-based column 3.
+  // Column 2 belongs to the first box; testing [2,3,4] would cross
+  // a genuine box boundary and incorrectly fail a correct solver.
+  const box=gridsAndHouses(puzzle).houses.find(h=>
+    h.kind==='box'&&h.cells.includes(idx(22,3)));
+  assert.deepEqual(box?.cells,[21,22].flatMap(r=>[3,4,5].map(c=>idx(r,c))));
+  for(const [r,c] of [[21,2],[23,3]]){
+    const i=idx(r,c);progress.visible[i]=true;progress.cells[i].value='5';
+  }
+  assert.notEqual(nextAdventureHint(puzzle,progress,4).status,'conflict');
+});
+
+test('6×6 Sudoku with unspecified box direction never invents box houses',()=>{
+  const {puzzle}=world(40,50,[
+    sector(21,0,6,'数独：每行与每列不能重复；宫的尺寸未声明。')
+  ]);
+  const {houses}=gridsAndHouses(puzzle);
+  assert.ok(houses.some(h=>h.kind==='row'));
+  assert.equal(houses.some(h=>h.kind==='box'),false);
+});
+
 test('duplicate visible numbers do not become a false proof',()=>{
   const {puzzle,progress}=world(40,50,[sector(21,0)]);
   const [a,b,c]=[idx(21,0),idx(21,1),idx(21,2)];
