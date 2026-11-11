@@ -10,9 +10,9 @@
   <div id="app">
     <section id="homeScreen" class="home-screen" aria-label="SudokuPad X 首页">
       <div class="home-content">
-        <header class="home-hero">
-          <div class="brand"><span class="brand-mark">X</span><div><strong>SudokuPad X</strong><small>冒险数独 · 随时继续</small></div></div>
-          <span class="runtime-badge" id="runtimeBadge">预览</span>
+        <header class="home-brand">
+          <span class="brand-mark" aria-hidden="true">X</span>
+          <h1>SudokuPad X</h1>
         </header>
         <section id="homeContinueSection" class="home-continue" aria-label="继续上次谜题" hidden>
           <div class="home-continue-copy">
@@ -22,25 +22,24 @@
           </div>
           <button id="continueButton" class="primary-btn" type="button">继续游戏 →</button>
         </section>
-        <div class="home-section-title"><h1>选择要做的事</h1><p>工具收在首页，解题时专注棋盘。</p></div>
+        <button id="libraryButton" class="home-library" type="button" aria-label="打开谜题库">
+          <span class="home-library-copy"><strong>谜题库</strong><small>冒险地图 · 数独变体 · 离线谜题</small><span class="home-library-cta">浏览谜题 <span aria-hidden="true">→</span></span></span>
+          <span class="home-grid-art" aria-hidden="true"></span>
+        </button>
         <div class="home-menu" aria-label="首页功能">
-          <button id="libraryButton" class="home-action" type="button" aria-label="打开谜题库">
-            <span class="home-action-icon" aria-hidden="true">▦</span><span><strong>谜题库</strong><small>冒险地图 · 在线探索 · 离线下载</small></span><span class="home-chevron" aria-hidden="true">›</span>
-          </button>
           <button id="lessonButton" class="home-action" type="button" aria-label="打开数独解题技巧课堂">
-            <span class="home-action-icon" aria-hidden="true">◇</span><span><strong>解题技巧课堂</strong><small>25 节中文课程 · 真实棋盘训练 · 离线学习</small></span><span class="home-chevron" aria-hidden="true">›</span>
+            <span class="home-action-icon" aria-hidden="true">◇</span><span><strong>技巧课堂</strong><small>25 节中文棋盘练习</small></span><span class="home-chevron" aria-hidden="true">›</span>
           </button>
           <button id="creatorButton" class="home-action" type="button" aria-label="本机生成数独">
-            <span class="home-action-icon" aria-hidden="true">✦</span><span><strong>本机数独创作</strong><small>Rust 生成 · 自选规则与技巧 · 我的题库</small></span><span class="home-chevron" aria-hidden="true">›</span>
+            <span class="home-action-icon" aria-hidden="true">✦</span><span><strong>本机出题</strong><small>自选规则与技巧</small></span><span class="home-chevron" aria-hidden="true">›</span>
           </button>
           <button id="importButton" class="home-action" type="button" aria-label="导入谜题">
             <span class="home-action-icon" aria-hidden="true">＋</span><span><strong>导入谜题</strong><small>SudokuPad SCL / JSON · Penpa+</small></span><span class="home-chevron" aria-hidden="true">›</span>
           </button>
           <button id="checkpointButton" class="home-action" type="button" aria-label="存档导入和导出">
-            <span class="home-action-icon" aria-hidden="true">⇄</span><span><strong>存档导入 / 导出</strong><small>保存和迁移解题进度</small></span><span class="home-chevron" aria-hidden="true">›</span>
+            <span class="home-action-icon" aria-hidden="true">⇄</span><span><strong>存档迁移</strong><small>导入或导出进度</small></span><span class="home-chevron" aria-hidden="true">›</span>
           </button>
         </div>
-        <p class="home-footnote">解题进度自动保存在本机。返回首页不会重置当前棋盘。</p>
       </div>
     </section>
     <section id="lessonScreen" class="lesson-screen" aria-label="数独解题技巧课堂" hidden>
@@ -80,7 +79,7 @@
       </div>
     </section>
     <main id="gameScreen" class="workspace" aria-label="谜题游玩" hidden>
-      <section class="board-panel" aria-label="Puzzle board">
+      <section class="board-panel" aria-label="棋盘">
         <div id="lessonPracticeBar" class="lesson-practice-bar" hidden aria-label="技巧课堂练习">
           <div class="lesson-practice-copy">
             <strong id="lessonPracticeName">技巧练习</strong>
@@ -111,14 +110,13 @@
             <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
           </div>
         </div>
-        <div class="board-footer"><span id="boardMeta">9 × 9</span><span id="saveLabel">本地自动保存</span></div>
+        <div class="board-footer"><span id="boardMeta">9 × 9</span><span id="saveLabel" role="status">本地自动保存</span></div>
       </section>
-      <aside class="controls" aria-label="Puzzle controls">
-        <div class="control-heading"><strong>输入控制台</strong><small>单指选格 · 双指缩放</small></div>
+      <aside class="controls" aria-label="棋盘输入与辅助操作">
         <div class="play-deck">
           <div class="pad-input">
             <div class="pad-title"><span id="padTitle">数字输入</span></div>
-            <div class="keypad" id="keypad" role="group" aria-label="Number and letter pad"></div>
+            <div class="keypad" id="keypad" role="group" aria-label="数字与字母键盘"></div>
             <div class="palette" id="palette" aria-label="Color palette" hidden>
               <button data-color="#f8cd75" style="--swatch:#f8cd75" type="button" aria-label="Yellow"></button>
               <button data-color="#a9d9a1" style="--swatch:#a9d9a1" type="button" aria-label="Green"></button>
@@ -141,24 +139,24 @@
               <small>拖动画线 · 点按标记○/× · 双指缩放</small>
             </div>
           </div>
-          <div id="modeBar" class="mode-bar" role="group" aria-label="Input mode">
+          <div id="modeBar" class="mode-bar" role="group" aria-label="输入模式">
             <button data-mode="value" class="active" type="button">数字</button>
             <button data-mode="corner" type="button">角标</button>
             <button data-mode="center" type="button">中心</button>
             <button data-mode="color" type="button">颜色</button>
             <button data-mode="pen" type="button">画线</button>
           </div>
-        </div>
-        <div class="action-bar">
-          <button id="alphabetButton" class="switch-button" type="button" aria-pressed="false" aria-label="切换到字母输入">ABC</button>
-          <button id="letterPage" type="button" aria-label="切换字母页" hidden>下一组</button>
-          <button id="eraseButton" type="button" aria-label="清除">⌫</button>
-          <button id="autoCenterButton" type="button" title="为整盘可见空格填写中心候选数（保留已有手记）" aria-label="快速填写中心候选数">中心+</button>
-          <button id="clearRedNotesButton" type="button" title="移除整盘已标红的中心候选数和角标" aria-label="快速移除红色候选数">清红</button>
-          <button id="undoButton" type="button" aria-label="撤销">↶</button>
-          <button id="redoButton" type="button" aria-label="重做">↷</button>
-          <button id="checkButton" type="button" aria-label="检查">✓</button>
-          <button id="hintButton" type="button" aria-label="获取下一步逻辑提示" title="下一步提示">💡</button>
+          <div class="action-bar" role="group" aria-label="辅助操作">
+            <button id="eraseButton" type="button" aria-label="清除" title="清除">⌫</button>
+            <button id="alphabetButton" class="switch-button" type="button" aria-pressed="false" aria-label="切换到字母输入">ABC</button>
+            <button id="undoButton" type="button" aria-label="撤销" title="撤销">↶</button>
+            <button id="redoButton" type="button" aria-label="重做" title="重做">↷</button>
+            <button id="autoCenterButton" type="button" title="为整盘可见空格填写中心候选数（保留已有手记）" aria-label="快速填写中心候选数">中心+</button>
+            <button id="clearRedNotesButton" type="button" title="移除整盘已标红的中心候选数和角标" aria-label="快速移除红色候选数">清红</button>
+            <button id="checkButton" type="button" aria-label="检查">检查</button>
+            <button id="hintButton" type="button" aria-label="获取下一步逻辑提示" title="下一步提示">提示</button>
+            <button id="letterPage" type="button" aria-label="切换字母页" hidden>下一组</button>
+          </div>
         </div>
         <section id="hintPanel" class="hint-panel" aria-label="数独解题提示" aria-live="polite" hidden>
           <div class="hint-heading">
@@ -229,34 +227,36 @@
       </div>
     </div>
   </dialog>
-<dialog id="libraryDialog" class="modal">
+  <dialog id="libraryDialog" class="modal" aria-labelledby="libraryTitle">
     <div class="modal-content">
-      <div class="modal-top"><h2>谜题库</h2><button id="closeLibrary" class="modal-close" type="button">✕</button></div>
+      <div class="modal-top"><h2 id="libraryTitle">谜题库</h2><button id="closeLibrary" class="modal-close" type="button" aria-label="关闭谜题库">✕</button></div>
       <div class="library-tabs" role="tablist" aria-label="谜题来源">
-        <button id="bundledLibraryTab" type="button" role="tab" aria-controls="bundledLibraryPanel" aria-selected="true">内置谜题</button>
-        <button id="onlineLibraryTab" type="button" role="tab" aria-controls="onlineLibraryPanel" aria-selected="false">在线题库索引</button>
+        <button id="bundledLibraryTab" type="button" role="tab" aria-controls="bundledLibraryPanel" aria-selected="true">内置</button>
+        <button id="onlineLibraryTab" type="button" role="tab" aria-controls="onlineLibraryPanel" aria-selected="false">在线索引</button>
         <button id="lmdLibraryTab" type="button" role="tab" aria-controls="lmdLibraryPanel" aria-selected="false">Logic Masters</button>
       </div>
       <div id="bundledLibraryPanel" role="tabpanel">
-        <p>可离线游玩冒险地图、独立谜题，以及生成器验证的 100 道 9×9 混合变体题与六道少提示单规则挑战，以及四道严格认证的三级高阶逻辑题。内置新题均有唯一解且可不靠猜测完成；自己的等级 5 谜题可能需要试探。</p>
         <div class="bundled-filters">
+          <input id="bundledSearch" type="search" placeholder="搜索标题或编号" aria-label="搜索内置谜题">
           <select id="bundledCategory" aria-label="内置谜题分类">
-            <option value="all">全部可玩谜题</option>
-            <option value="generated">生成的 9×9（100 题）</option>
-            <option value="single">少提示 · 单规则（6 题）</option>
-            <option value="advanced">高阶逻辑 · 三级（4 题）</option>
-            <option value="personal">我的本机生成谜题</option>
+            <option value="all">全部谜题</option>
+            <option value="generated">生成的 9×9</option>
+            <option value="single">单规则挑战</option>
+            <option value="advanced">高阶逻辑题</option>
+            <option value="personal">本机生成</option>
             <option value="adventure">冒险地图</option>
             <option value="other">其他独立谜题</option>
           </select>
-          <input id="bundledSearch" type="search" placeholder="搜索谜题标题或编号" aria-label="搜索内置谜题">
         </div>
+        <p id="bundledResultCount" class="bundled-result-count" role="status"></p>
         <div id="libraryList" class="library-list"></div>
-        <button id="creatorOpenFromLibrary" class="primary-btn creator-library-action" type="button">✦ 自己生成新谜题 · 收藏与管理</button>
-        <label class="library-spoiler"><input id="showAllPuzzles" type="checkbox"> 显示全部首领与支线（可能剧透）</label>
+        <div class="library-footer">
+          <label class="library-spoiler"><input id="showAllPuzzles" type="checkbox"> 显示首领与支线（剧透）</label>
+          <button id="creatorOpenFromLibrary" class="primary-btn creator-library-action" type="button">本机出题</button>
+        </div>
       </div>
       <section id="onlineLibraryPanel" role="tabpanel" hidden>
-        <p>本地内置在线题库的索引快照；离线可检索目录。首次游玩需联网获取题面，使用“下载离线”保存后才可断网打开。</p>
+        <p>目录可离线搜索。题目下载后可断网游玩。</p>
         <div class="online-search-row">
           <input id="onlineSearch" type="search" placeholder="搜索标题、作者来源、题目编号或链接" aria-label="搜索在线谜题">
           <select id="onlineSourceFilter" aria-label="按来源筛选"><option value="">所有来源</option></select>

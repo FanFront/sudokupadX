@@ -37,11 +37,12 @@ test('puzzle board has a single icon toolbar including Home and linked-puzzle ba
   assert.ok(!html.slice(html.indexOf('id="gameScreen"'),html.indexOf('</main>')).includes('id="libraryButton"'));
 });
 
-test('mobile solving controls use a three-column number grid and a vertical mode rail',()=>{
-  assert.match(html,/class="play-deck"/);
-  assert.match(css,/#app \.play-deck\{display:grid;grid-template-columns/);
+test('mobile solving controls place the keypad, mode rail and actions in one deck',()=>{
+  assert.match(html,/class="play-deck"[\s\S]*?id="keypad"[\s\S]*?id="modeBar"[\s\S]*?class="action-bar"[\s\S]*?id="hintPanel"/);
+  assert.match(css,/#app \.play-deck\{\s*display:grid;grid-template-columns/);
   assert.match(css,/#app \.keypad\{grid-template-columns:repeat\(3/);
   assert.match(css,/#app \.play-deck \.mode-bar\{order:initial;grid-template-columns:1fr/);
+  assert.match(css,/#app \.action-bar\{grid-template-columns:repeat\(2/);
   assert.match(css,/#app \.board-footer\{display:none\}/);
   assert.match(css,/#app #gameScreen\[hidden\]/);
   for(const id of ['alphabetButton','letterPage','eraseButton','undoButton','redoButton','checkButton'])
