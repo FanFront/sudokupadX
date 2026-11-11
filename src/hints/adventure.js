@@ -122,11 +122,14 @@ function gridsAndHouses(puzzle,typedRules=[]){
     }
     const text=s.rules||'';
     if(!/irregular|jigsaw|不规则|无宫|no boxes|latin square/i.test(text)){
-      let h=n===9?3:n===4?2:2,w=n===9?3:n===4?2:3;
+      // Sector box dimensions follow width × height notation. In the
+      // original Sudokuvania 1, "2×3 宫" is two columns and three rows.
+      // Reversing the dimensions falsely treats correct digits as duplicates.
+      let h=n===6?3:n===9?3:2,w=n===6?2:n===9?3:2;
       if(n===6){
         const explicit=text.match(/([23])\s*[×xX*]\s*([23])\s*(?:宫|box|region)/i);
         if(explicit&&Number(explicit[1])*Number(explicit[2])===6){
-          h=Number(explicit[1]);w=Number(explicit[2]);
+          w=Number(explicit[1]);h=Number(explicit[2]);
         }
       }
       for(let r=0;r<n;r+=h)for(let c=0;c<n;c+=w){
