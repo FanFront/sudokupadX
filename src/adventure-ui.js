@@ -59,7 +59,7 @@ export function getLinkedPuzzles(rules, catalog, group) {
       catch {return false;}
     });
     // A visible sector rule is the source of truth, even for cross-game links.
-    if (!entry || seen.has(entry.id)) continue;
+    if (!entry || (!entry.file && !entry.remote) || seen.has(entry.id)) continue;
     seen.add(entry.id);
     results.push(entry);
   }
