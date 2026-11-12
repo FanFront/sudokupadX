@@ -425,13 +425,16 @@ pub struct InputCell {
     pub color: Option<String>,
 }
 
-/// An atomic, validated replacement of only the two pencil-mark lists.
+/// An atomic, validated pencil replacement with an optional large digit.
+/// Existing quick-note callers omit `value`, preserving the current digit.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PencilUpdate {
     pub index: usize,
     pub corner: Vec<String>,
     pub center: Vec<String>,
+    #[serde(default)]
+    pub value: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -754,9 +757,9 @@ impl Session {
         self.refresh_fog();
         Ok(self.result(index, &changed_indices))
     }
-    /// Apply an entire quick-note action as one reversible edit. Preserve
-    /// large values, cell colours, fog and authored clues. Validate every
-    /// update before changing anything, so malformed batches are atomic.
+    /// Apply quick notes or Hint+ as one reversible edit. Only an explicitly
+    /// provided value can fill an empty cell. Preserve colours, authored
+    /// clues and fog; validate the whole batch before mutating anything.
     pub fn apply_pencil_updates(&mut self, updates: Vec<PencilUpdate>) -> Result<EditResult, String> {
         if updates.is_empty() || updates.len() > self.cells.len() {
             return Err("Invalid pencil update batch.".into());
@@ -774,6 +777,17 @@ impl Session {
                     return Err("Invalid candidate marks.".into());
                 }
             }
+            if let Some(value) = &update.value {
+                // Automated pencil promotions must never overwrite a clue or
+                // a value entered by the player, even under adventure fog.
+                if !valid_symbol(value) ||
+                    self.cells[update.index].value.is_some() ||
+                    self.puzzle.cells[update.index].given.is_some() ||
+                    !self.visible[update.index]
+                {
+                    return Err("Cannot promote this cell to a large digit.".into());
+                }
+            }
         }
         let fallback = updates.last().unwrap().index;
         let mut changes = Vec::new();
@@ -782,6 +796,7 @@ impl Session {
             let current = &mut self.cells[update.index];
             current.corner = update.corner;
             current.center = update.center;
+            if let Some(value) = update.value { current.value = Some(value); }
             let after = current.clone();
             if before != after {
                 changes.push(CellChange { index: update.index, before, after });
@@ -911,6 +926,7 @@ mod tests {
             index,
             corner: corner.into_iter().map(str::to_owned).collect(),
             center: center.into_iter().map(str::to_owned).collect(),
+            value: None,
         };
         let edits = vec![
             update(2, vec!["7"], vec!["1", "6"]),
@@ -939,6 +955,46 @@ mod tests {
             update(3, vec![], vec!["1"]),
             update(3, vec![], vec!["2"]),
         ]).is_err());
+    }
+
+    #[test]
+    fn hint_plus_promotes_notes_and_digit_in_one_undo_step() {
+        let mut session = Session::new(load(DEMO).unwrap());
+        session.apply(2, "center", "3").unwrap();
+        session.apply(2, "center", "4").unwrap();
+        session.apply(3, "corner", "8").unwrap();
+        let before = session.snapshot().cells;
+        let update = |index, corner: Vec<&str>, center: Vec<&str>, value: Option<&str>| PencilUpdate {
+            index,
+            corner: corner.into_iter().map(str::to_owned).collect(),
+            center: center.into_iter().map(str::to_owned).collect(),
+            value: value.map(str::to_owned),
+        };
+        let edit = session.apply_pencil_updates(vec![
+            update(2, vec![], vec![], Some("4")),
+            update(3, vec![], vec![], Some("8")),
+        ]).unwrap();
+        assert_eq!(edit.changes.len(), 2);
+        assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("4"));
+        assert!(session.snapshot().cells[2].center.is_empty());
+        assert_eq!(session.snapshot().cells[3].value.as_deref(), Some("8"));
+        session.undo().unwrap();
+        assert_eq!(session.snapshot().cells, before);
+        session.redo().unwrap();
+        assert_eq!(session.snapshot().cells[2].value.as_deref(), Some("4"));
+        assert_eq!(session.snapshot().cells[3].value.as_deref(), Some("8"));
+
+        // Validate the entire batch before writing anything.
+        let unchanged = session.snapshot().cells;
+        assert!(session.apply_pencil_updates(vec![
+            update(5, vec![], vec![], Some("2")),
+            update(0, vec![], vec![], Some("9")),
+        ]).is_err()); // authored clue at cell 0
+        assert_eq!(session.snapshot().cells, unchanged);
+        assert!(session.apply_pencil_updates(vec![
+            update(2, vec![], vec![], Some("3")),
+        ]).is_err()); // an existing player value
+        assert_eq!(session.snapshot().cells, unchanged);
     }
 
     #[test]

@@ -152,9 +152,10 @@
             <button id="undoButton" type="button" aria-label="撤销" title="撤销">↶</button>
             <button id="redoButton" type="button" aria-label="重做" title="重做">↷</button>
             <button id="autoCenterButton" type="button" title="为整盘可见空格填写中心候选数（保留已有手记）" aria-label="快速填写中心候选数">中心+</button>
-            <button id="clearRedNotesButton" type="button" title="移除整盘已标红的中心候选数和角标" aria-label="快速移除红色候选数">清红</button>
+            <button id="clearRedNotesButton" type="button" title="移除整盘红色候选数，单候选自动填入大数字" aria-label="快速移除红色候选数并填入单候选">清红</button>
             <button id="checkButton" type="button" aria-label="检查">检查</button>
-            <button id="hintButton" type="button" aria-label="获取下一步逻辑提示" title="下一步提示">提示</button>
+            <button id="hintButton" type="button" aria-label="获取下一步逻辑提示" title="下一步提示（不改盘面）">提示</button>
+            <button id="hintPlusButton" type="button" aria-label="获取并执行下一步逻辑提示" title="提示+：清除已证实的候选数，单候选自动填数">提示+</button>
             <button id="letterPage" type="button" aria-label="切换字母页" hidden>下一组</button>
           </div>
         </div>
@@ -174,7 +175,7 @@
           </label>
           <p id="hintDescription">根据当前填写的大数字查找下一步。</p>
           <small id="hintCandidates"></small>
-          <small class="hint-footnote" id="hintSupportNote">绿色：依据格；橙色：目标格。中心/角标手记用来跳过重复排除，不作为已证明的事实。提示不改盘面；等级 5 可能使用穷举反证。</small>
+          <small class="hint-footnote" id="hintSupportNote">绿色：依据格；橙色：目标格。中心/角标手记用来跳过重复排除，不作为已证明的事实。普通提示不改盘面；提示+ 自动执行已验证的步骤并填入单候选。等级 5 可能使用穷举反证。</small>
         </section>
         <div class="detail-panel">
           <div class="detail-heading"><span id="sectorHeading">谜题规则</span><button id="moreRules" type="button">展开</button></div>
