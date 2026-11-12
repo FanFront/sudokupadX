@@ -25,7 +25,7 @@ export function linksAtCell(puzzle,progress,index,catalog,currentId=null) {
   if(generated)return result;
   for(const rules of sources){
     for(const entry of getLinkedPuzzles(rules,catalog)){
-      if(!entry?.file || entry.id===currentId || seen.has(entry.id))continue;
+      if((!entry?.file && !entry?.remote) || entry.id===currentId || seen.has(entry.id))continue;
       seen.add(entry.id);
       result.push(entry);
     }
