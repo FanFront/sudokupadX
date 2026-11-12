@@ -15,7 +15,7 @@ const groups=new Set([
 ]);
 const entries=catalog.items.filter(x=>groups.has(x.group));
 test('every original adventure map and linked/Boss puzzle has a reviewed status',()=>{
-  assert.equal(entries.length,46,'four games plus 42 authored linked puzzles');
+  assert.equal(entries.length,47,'four main games, 42 authored links, plus the tutorial/prologue');
   assert.deepEqual(Object.keys(ADVENTURE_HINT_COVERAGE).sort(),
     entries.map(x=>x.id).sort());
   const counts={certified:0,partial:0};
@@ -33,7 +33,7 @@ test('every original adventure map and linked/Boss puzzle has a reviewed status'
     }
   }
   assert.equal(counts.certified,14);
-  assert.equal(counts.partial,32);
+  assert.equal(counts.partial,33);
 });
 test('a certified manifest matches the exact bundled SCL source file',()=>{
   for(const entry of entries){

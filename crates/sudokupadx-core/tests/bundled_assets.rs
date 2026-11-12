@@ -8,7 +8,7 @@ fn all_bundled_scl_packages_decode() {
     let catalog=fs::read_to_string(root.join("catalog.json")).expect("catalog");
     let index:serde_json::Value=serde_json::from_str(&catalog).expect("catalog JSON");
     let entries=index["items"].as_array().expect("puzzle entries");
-    assert_eq!(entries.len(),115,"4 old adventure maps, 42 old links, 4 new hubs, 65 new links");
+    assert_eq!(entries.len(),116,"4 old adventure maps, 42 old links, 4 new hubs, 65 new links, and the Sudokuvania 2 prologue");
     for item in entries {
         let path=item["file"].as_str().expect("file");
         assert!(path.starts_with("puzzles/") && path.ends_with(".scl"));
@@ -19,6 +19,20 @@ fn all_bundled_scl_packages_decode() {
             .unwrap_or_else(|e|panic!("{}: {e}",file.display()));
         assert!(puzzle.rows>0 && puzzle.cols>0);
         assert_eq!(puzzle.cells.len(),puzzle.rows*puzzle.cols);
+        if item["id"]=="lineage-of-logic" {
+            assert!(puzzle.rules.contains("prologue-empty-house") ||
+                puzzle.sectors.iter().any(|sector|
+                    sector.rules.contains("prologue-empty-house")),
+                "original main map must link to the tutorial prologue");
+        }
+        if item["id"]=="prologue-empty-house" {
+            assert_eq!((puzzle.rows,puzzle.cols),(15,15));
+            assert!(!puzzle.sectors.is_empty(),"prologue sectors must be preserved");
+            assert!(puzzle.foglight.as_ref().is_some_and(|v|!v.is_empty()),
+                "prologue must retain authored initial fog");
+            assert!(!puzzle.triggers.is_empty(),
+                "prologue must retain authored dynamic fog triggers");
+        }
         if item["kind"]=="main" {
             assert!(!puzzle.sectors.is_empty(),"{} sector grid missing",path);
             assert!(puzzle.foglight.as_ref().is_some_and(|v|!v.is_empty()));
@@ -33,5 +47,5 @@ fn all_bundled_scl_packages_decode() {
     }
     let locale=fs::read_to_string(root.join("locale-zh.json")).expect("locales");
     let translations:serde_json::Value=serde_json::from_str(&locale).unwrap();
-    assert_eq!(translations.as_object().unwrap().len(),91);
+    assert_eq!(translations.as_object().unwrap().len(),92);
 }

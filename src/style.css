@@ -177,6 +177,15 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .bilingual-column{min-width:0;padding:12px 13px;border-radius:9px;background:#0d1b2b;border:1px solid #39546b}
 .bilingual-label{display:block;font-size:12px;letter-spacing:.03em;color:#8ad9d0;margin-bottom:8px}
 .bilingual-copy{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65;font-size:13px;color:#e2edf7;user-select:text}
+
+.rule-local-link{
+  display:inline;background:transparent;border:0;border-radius:0;padding:0;
+  margin:0;color:#a2e5ff;font:inherit;text-decoration:underline;
+  text-underline-offset:2px;text-align:inherit;cursor:pointer;
+}
+.rule-local-link:hover{color:#d7f6ff}
+.rule-local-link:focus-visible{outline:2px solid #a2e5ff;outline-offset:3px}
+
 .bilingual-column[lang="und"] .bilingual-label{color:#d8bbf5}
 .bilingual-column[lang="und"] .bilingual-copy{color:#bfcede}
 @media(max-width:650px){.bilingual-columns{grid-template-columns:minmax(0,1fr)}.bilingual-column{padding:10px}}

@@ -109,3 +109,26 @@ test('new four game hubs and nested links work offline',()=>{
   assert.equal(parentMain(deep,catalog)?.id,'jsccrlmi02');
   assert.equal(returnDestination(deep,catalog,[]).id,'jsccrlmi02');
 });
+
+
+test('Sudokuvania 2 tutorial/prologue links to its fully bundled offline map',()=>{
+  const entry=catalog.find(item=>item.id==='prologue-empty-house');
+  assert.ok(entry,'prologue needs its own catalog entry');
+  assert.equal(entry.parent,'lineage-of-logic');
+  assert.equal(entry.group,'lineage-of-logic');
+  assert.equal(entry.kind,'linked');
+  assert.equal(entry.file,'puzzles/prologue-empty-house.scl');
+  assert.deepEqual(getLinkedPuzzles(
+    '[Click here to play the tutorial/prologue](https://sudokupad.app/sudokuvania/prologue-empty-house?setting-nogrid=1).',
+    catalog).map(item=>item.id),['prologue-empty-house']);
+  const puzzle=adventure(),index=7*50+8;
+  puzzle.sectors=[grid(5,5,9,9,
+    'Tutorial: https://sudokupad.app/sudokuvania/prologue-empty-house?setting-nogrid=1')];
+  const progress={visible:Array(2000).fill(false)};
+  assert.deepEqual(linksAtCell(puzzle,progress,index,catalog),[]);
+  progress.visible[index]=true;
+  assert.deepEqual(linksAtCell(puzzle,progress,index,catalog).map(item=>item.id),
+    ['prologue-empty-house']);
+  assert.equal(parentMain(entry,catalog)?.id,'lineage-of-logic');
+  assert.equal(returnDestination(entry,catalog,[]).id,'lineage-of-logic');
+});

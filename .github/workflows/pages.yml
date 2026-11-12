@@ -51,6 +51,7 @@ jobs:
           test -s dist/wasm/sudokupadx_web.js
           test -s dist/wasm/sudokupadx_web_bg.wasm
           test -s dist/puzzles/catalog.json
+          test -s dist/puzzles/prologue-empty-house.scl
           test -s dist/puzzles/digits-of-despair.scl
           test -s dist/puzzles/super-sudokoid-1.scl
           test -s dist/puzzles/generated/generated-adventure-1.json
