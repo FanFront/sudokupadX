@@ -16,6 +16,7 @@ jobs:
       - run: npm install
       - run: npm test
       - run: npm run build
+      - run: test -s dist/puzzles/prologue-empty-house.scl
   rust-core:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
