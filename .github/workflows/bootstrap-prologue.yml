@@ -20,7 +20,7 @@ jobs:
         run: node scripts/fetch-prologue.mjs
       - name: Commit verified offline source
         run: |
-          git add public/puzzles/prologue-empty-house.scl
+          git add -f public/puzzles/prologue-empty-house.scl
           if ! git diff --cached --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
