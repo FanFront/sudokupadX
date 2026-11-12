@@ -25,7 +25,7 @@ import {describeHint} from './hints/format.js';
 import {buildHintPlusUpdates,buildClearRedPlusUpdates} from './hints/apply.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
-import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
+import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle,readOfflinePuzzle,cacheRemoteLinkedPuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
 import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
 import {bilingualTitle,displayBilingual,renderLinkedRules} from './bilingual.js';
@@ -500,10 +500,23 @@ async function openBundled(id,push=false,backState=null){
   if(fromHome)showGame();
   pending=true;
   try{
-    const response=await fetch(entry.file);
-    if(!response.ok)throw Error('缺少离线文件: '+entry.file);
-    const input=await response.text();
+    let input,needsCache=false;
+    if(entry.remote){
+      // Curated optional enemies are not included in the shipped SCL pack.
+      // Fetch them only on first play; subsequent visits use local IndexedDB.
+      const cached=await readOfflinePuzzle(entry.id).catch(()=>null);
+      needsCache=!cached;
+      input=cached||await fetchOnlinePuzzle({puzzleUrl:entry.url});
+    }else{
+      const response=await fetch(entry.file);
+      if(!response.ok)throw Error('缺少离线文件: '+entry.file);
+      input=await response.text();
+    }
     const result=await call('open_puzzle',{input,localization:localeZh[id]||null});
+    if(needsCache){
+      try {await cacheRemoteLinkedPuzzle(entry.id,input);}
+      catch(error){console.warn('无法缓存可选敌人谜题：',error);}
+    }
     currentEntry=entry;
     mainDictionary={};
     if(entry.kind==='main') {
