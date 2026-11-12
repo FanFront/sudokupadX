@@ -22,6 +22,7 @@ import {usesTypedHintEngine} from './hints/mode.js';
 import {findPencilSubsetHint,preferPencilSubset} from './hints/pencil-subsets.js';
 import {adventureHintCoverage} from './hints/coverage.js';
 import {describeHint} from './hints/format.js';
+import {buildHintPlusUpdates,buildClearRedPlusUpdates} from './hints/apply.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
 import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
@@ -103,7 +104,7 @@ function focusHintTarget(index){
   camera.y=frame.clientHeight/2-(Math.floor(index/puzzle.cols)+.5)*CELL*camera.scale;
   scheduleViewSave();
 }
-async function requestHint(){
+async function requestHint(applyAutomatically=false){
   if(!puzzle||!progress||pending||lessonPractice)return;
   const serial=++hintSerial;
   if(hintTask){hintTask.cancel?.();hintTask=null;}
@@ -120,7 +121,7 @@ async function requestHint(){
   const typed=usesTypedHintEngine(puzzle);
   $('hintSupportNote').textContent=typed
     ?'绿色：依据格；橙色：目标格。旧版冒险与首领题采用题目明确声明的约束类型，不会根据颜色猜测规则；迷雾下的数字不参与推理。此路径不使用等级 5 穷举。'
-    :'绿色：依据格；橙色：目标格。中心/角标手记只用来跳过重复排除，不作为已证明的事实。提示不改盘面。';
+    :'绿色：依据格；橙色：目标格。中心/角标手记只用来跳过重复排除，不作为已证明的事实。普通提示不改盘面。';
   const coverage=adventureHintCoverage(currentEntry?.id);
   if(coverage?.status==='partial'){
     const missing=coverage.unmodelled;
@@ -150,11 +151,42 @@ async function requestHint(){
       $('hintSupportNote').textContent+=' 本次为条件式中心手记推理，'+
         '请先核实紫色格候选数已列全；它不是已验证的必然排除。';
     currentHint=result.status==='step'?data:null;
-    if(typed&&currentHint)focusHintTarget(data.target);
+    if((typed||applyAutomatically)&&currentHint)focusHintTarget(data.target);
     $('hintTitle').textContent=data.title;
     $('hintDescription').textContent=data.description;
     $('hintCandidates').textContent=data.candidates;
     requestDraw();
+    if(!applyAutomatically||result.status!=='step')return;
+    if(result.step.assumptionBased){
+      toast('提示+ 不会自动执行尚未证明的条件式手记推理');
+      return;
+    }
+    const updates=buildHintPlusUpdates(puzzle,progress,result,
+      index=>!lockedBossGate(puzzle,index,localStorage));
+    if(!updates.length){
+      toast('这一步没有可清除的已标候选数或可填入的大数字');
+      return;
+    }
+    clearNumberHighlight();
+    pending=true;
+    try{
+      // Note removal and any singleton placements share one Rust undo record.
+      const change=await call('update_notes',{updates});
+      applyChange(change);
+      if(change.changes?.length){
+        undoStack.push({kind:'cell'});redoStack=[];
+        updateControls();scheduleSave();requestDraw();
+        showCompletionIfNew();
+      }
+      const filled=updates.filter(update=>update.value!=null).length;
+      // Keep the reason visible after clearing stale target highlights.
+      $('hintPanel').hidden=false;
+      $('hintTitle').textContent='提示+ 已执行 · '+data.title;
+      $('hintDescription').textContent=data.description;
+      $('hintCandidates').textContent='已更新 '+(change.changes?.length||0)+
+        ' 格'+(filled?'，其中 '+filled+' 格已填入大数字':'')+'。可通过撤销恢复。';
+      $('hintSupportNote').textContent='只执行已证明的逻辑排除；当用户手记在本步后仅剩一个候选数时，会按该手记直接填入。普通提示仍不会修改盘面。';
+    }finally{pending=false;}
   }catch(error){
     if(serial!==hintSerial)return;
     hintTask=null;
@@ -678,9 +710,11 @@ function updateControls() {
   $('undoButton').disabled=undoStack.length===0;
   $('redoButton').disabled=redoStack.length===0;
   $('hintButton').disabled=Boolean(lessonPractice);
+  $('hintPlusButton').disabled=Boolean(lessonPractice);
   $('autoCenterButton').disabled=Boolean(lessonPractice);
   $('clearRedNotesButton').disabled=Boolean(lessonPractice) ||
-    !conflicts.noteSymbols?.some(marks=>marks?.size);
+    !buildClearRedPlusUpdates(puzzle,progress,conflicts,
+      index=>!lockedBossGate(puzzle,index,localStorage)).length;
   const typed=usesTypedHintEngine(puzzle);
   const small=puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9;
   for(const option of $('hintTier').options){
@@ -999,9 +1033,10 @@ async function quickNotes(kind) {
   if(pending||!puzzle||!progress||lessonPractice)return;
   const updates=kind==='fill'
     ?buildCenterCandidateUpdates(puzzle,progress,conflictHouses)
-    :buildRedNoteRemovalUpdates(progress,conflicts);
+    :buildClearRedPlusUpdates(puzzle,progress,conflicts,
+      index=>!lockedBossGate(puzzle,index,localStorage));
   if(!updates.length){
-    toast(kind==='fill'?'没有需要自动填写的空白中心候选数':'没有需要清理的红色候选数');
+    toast(kind==='fill'?'没有需要自动填写的空白中心候选数':'没有红色候选数或可转换为大数字的单候选格');
     return;
   }
   pending=true;
@@ -1013,9 +1048,11 @@ async function quickNotes(kind) {
       redoStack=[];
     }
     updateControls();scheduleSave();requestDraw();
+    const filled=updates.filter(update=>update.value!=null).length;
     toast(kind==='fill'
       ?'已为 '+change.changes.length+' 格填写中心候选数（仅按已知不重复规则排除）'
-      :'已从 '+change.changes.length+' 格清理红色候选数');
+      :'清红完成：更新 '+change.changes.length+' 格，自动填入 '+filled+' 格单候选');
+    showCompletionIfNew();
   }catch(error){notify(error);}
   finally{pending=false;}
 }
@@ -1452,7 +1489,8 @@ $('autoCenterButton').addEventListener('click',()=>quickNotes('fill'));
 $('clearRedNotesButton').addEventListener('click',()=>quickNotes('clear'));
 $('undoButton').addEventListener('click',()=>history('undo'));
 $('redoButton').addEventListener('click',()=>history('redo'));
-$('hintButton').addEventListener('click',requestHint);
+$('hintButton').addEventListener('click',()=>requestHint());
+$('hintPlusButton').addEventListener('click',()=>requestHint(true));
 $('hintClose').addEventListener('click',clearHint);
 $('hintTier').addEventListener('change',()=>{if(!$('hintPanel').hidden)requestHint();});
 $('checkButton').addEventListener('click',async()=>{
