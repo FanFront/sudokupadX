@@ -41,6 +41,7 @@ export function bundledEntrySubtitle(entry) {
       (entry.tier || '—') + ' / 4 · 无需猜测';
   if (entry.group === GENERATED_9X9_GROUP)
     return '生成 9×9 · 最低技巧等级 ' + (entry.tier || '—') + ' / 4 · 无需猜测';
+  if (entry.kind === 'enemy') return '可选敌人 · 首次需联网载入，之后可离线游玩';
   if (entry.kind === 'main') return '冒险地图';
   if (entry.kind === 'standalone') return '独立谜题';
   return entry.group + ' · ' + (entry.kind === 'boss' ? '首领谜题' : '支线谜题');
