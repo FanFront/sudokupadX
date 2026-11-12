@@ -29,7 +29,7 @@ export function buildConflictHouses(puzzle) {
   // to override the ordinary whole-board Sudoku. Look for an authored grid.
   const localGrids = rows <= 16 && cols <= 16
     ? squareSectors.filter(sector =>
-        /\bsudoku\b|数独/i.test(String(sector.rules || '')) ||
+        /(?:^|\n)\s*(?:sudoku|数独)\s*[-–—:：]/i.test(String(sector.rules || '')) ||
         /\bgrid\b/i.test(String(sector.title || '')))
     : squareSectors;
   if (localGrids.length) {
