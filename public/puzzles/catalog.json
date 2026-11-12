@@ -20,6 +20,15 @@
       "file": "puzzles/lineage-of-logic.scl"
     },
     {
+      "id": "prologue-empty-house",
+      "title": "教程序章：空屋 / Prologue: Empty House",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "linked",
+      "url": "https://sudokupad.app/sudokuvania/prologue-empty-house?setting-nogrid=1",
+      "file": "puzzles/prologue-empty-house.scl"
+    },
+    {
       "id": "super-sudokoid-1",
       "title": "超级数独机器人 1 — 最终传输（Final Transmission）",
       "group": "super-sudokoid-1",
