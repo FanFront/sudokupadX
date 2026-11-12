@@ -89,6 +89,14 @@ test('clear red never promotes hidden or given cells; gate can prevent placement
   ]);
 });
 
+test('clear red can promote a pre-existing singleton even without red marks',()=>{
+  const {puzzle,progress}=setup();
+  progress.cells[8].corner=['7'];
+  assert.deepEqual(buildClearRedPlusUpdates(puzzle,progress,{noteSymbols:[]}),[
+    {index:8,corner:[],center:[],value:'7'}
+  ]);
+});
+
 test('a removed last candidate never invents a value',()=>{
   const {puzzle,progress}=setup();
   progress.cells[0].center=['6'];
