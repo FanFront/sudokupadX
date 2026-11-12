@@ -492,6 +492,8 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 #app .action-bar #clearRedNotesButton{color:#ffb9c5}
 #app .action-bar #hintButton{color:#ffdeab;border-color:#705b46;background:#382f2a}
 #app .action-bar #hintButton:active:not(:disabled){background:#574333}
+#app .action-bar #hintPlusButton{color:#c2f3de;border-color:#447a65;background:#234337}
+#app .action-bar #hintPlusButton:active:not(:disabled){background:#315c4b}
 #app .keypad button{font-variant-numeric:tabular-nums}
 #app #gameScreen.workspace{padding-top:calc(16px + var(--app-top-inset))}
 @media(max-width:850px){
