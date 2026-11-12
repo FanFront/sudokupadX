@@ -874,7 +874,12 @@ function draw() {
       ctx.strokeStyle='#bec7c9';ctx.lineWidth=.65;ctx.strokeRect(x,y,CELL,CELL);
     }
   }
-  // Each 6×6/9×9 adventure board has its own fine grid, perimeter and\n  // 3×2 / 2×3 / 3×3 boxes; hiding the *map-wide* grid must not hide these.\n  // Draw under fog, without mistaking authored castle walls for Sudoku boxes.\n  drawEmbeddedSudokuGrids(ctx,puzzle.sectors,clip);\n  // Explicit imported regions (including irregular ones) take precedence over\n  // inferred board geometry and are also independent of the fine-grid toggle.\n  if(regionMap.some(v=>v>=0)){
+  // Each 6×6/9×9 adventure board has its own fine grid, perimeter and
+  // 3×2 / 2×3 / 3×3 boxes; hiding the map-wide fine grid must not hide these.
+  // Draw under fog, without mistaking authored castle walls for Sudoku boxes.
+  drawEmbeddedSudokuGrids(ctx,puzzle.sectors,clip);
+  // Explicit imported regions keep their original grid-toggle behavior.
+  if(showGridLines && regionMap.some(v=>v>=0)){
     ctx.strokeStyle='#3d566b';ctx.lineWidth=2.6;
     ctx.beginPath();
     for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
