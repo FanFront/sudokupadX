@@ -126,3 +126,18 @@ test('search-and-select LMD interface is present on Android and web',()=>{
   assert.match(rust,/params\.append_pair\("skname", "x"\)/);
   assert.match(rust,/params\.append_pair\("sktext", "x"\)/);
 });
+
+test('optional enemy uses the same validated remote SCL download route and caches after import',async()=>{
+  const enemy={puzzleUrl:'https://sudokupad.app/sudokuvania/enemy-clockwork-trap?setting-nogrid=1'};
+  const urls=[];
+  const source=await fetchOnlinePuzzle(enemy,async url=>{
+    urls.push(url);
+    return {ok:true,headers:{get:()=>0},text:async()=> 'sclABC='};
+  });
+  assert.equal(source,'sclABC=');
+  assert.deepEqual(urls,[
+    'https://sudokupad.svencodes.com/ctclegacy/sudokuvania/enemy-clockwork-trap'
+  ]);
+  assert.equal(puzzleIdFromUrl(enemy.puzzleUrl),
+    'sudokuvania/enemy-clockwork-trap');
+});
