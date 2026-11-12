@@ -8,6 +8,7 @@ src-tauri/target/
 *.apk
 *.aab
 *.scl
+!public/puzzles/prologue-empty-house.scl
 *.puz
 !tests/fixtures/*.scl
 public/wasm/
