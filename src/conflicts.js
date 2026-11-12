@@ -30,7 +30,7 @@ export function buildConflictHouses(puzzle) {
   const localGrids = rows <= 16 && cols <= 16
     ? squareSectors.filter(sector =>
         /(?:^|\n)\s*(?:sudoku|数独)\s*[-–—:：]/i.test(String(sector.rules || '')) ||
-        /\bgrid\b/i.test(String(sector.title || '')))
+        /^\s*grid\s+(?:[a-z]|\d+)(?=\b|[,.:])/i.test(String(sector.title || '')))
     : squareSectors;
   if (localGrids.length) {
     for (const sector of localGrids) {
