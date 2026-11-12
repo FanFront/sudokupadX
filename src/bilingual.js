@@ -4,11 +4,11 @@ export function bilingualTitle(localized, original) {
   const source=String(original||'').trim();
   return source && source!==zh ? zh+' / '+source : zh;
 }
-export function displayBilingual(container, translation, original, glossary = []) {
+export function displayBilingual(container, translation, original, glossary = [], localAction = null) {
   const zh=String(translation||'');
   const source=typeof original==='string'?original:'';
   container.replaceChildren();
-  if(!source || source===zh){container.textContent=zh;return;}
+  if(!source || source===zh){renderLinkedRules(container,zh,localAction);return;}
   const grid=document.createElement('div');
   grid.className='bilingual-columns';
   for(const [lang,label,text] of [
@@ -22,7 +22,7 @@ export function displayBilingual(container, translation, original, glossary = []
     heading.textContent=label;
     const body=document.createElement('div');
     body.className='bilingual-copy';
-    body.textContent=text;
+    renderLinkedRules(body,text,localAction);
     column.append(heading,body);
     grid.append(column);
   }
@@ -49,4 +49,30 @@ export function displayBilingual(container, translation, original, glossary = []
     legend.append(terms);
     container.append(legend);
   }
+}
+
+// Only locally bundled SudokuPad links become active controls. All remaining
+// source markup stays literal text; no untrusted puzzle HTML is injected.
+export function renderLinkedRules(container, text, localAction = null) {
+  const value=String(text||'');
+  if(typeof localAction!=='function') {container.textContent=value;return;}
+  const pattern=/\[([^\]\n]{1,160})\]\((https:\/\/sudokupad\.app\/[A-Za-z0-9_/-]+(?:\?[^\s)]*)?)\)/g;
+  let cursor=0,found=false;
+  container.replaceChildren();
+  for(const match of value.matchAll(pattern)) {
+    const action=localAction(match[2]);
+    if(typeof action!=='function')continue;
+    if(match.index>cursor)
+      container.append(document.createTextNode(value.slice(cursor,match.index)));
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='rule-local-link';
+    button.textContent=match[1];
+    button.addEventListener('click',action);
+    container.append(button);
+    cursor=match.index+match[0].length;
+    found=true;
+  }
+  if(!found){container.textContent=value;return;}
+  if(cursor<value.length)container.append(document.createTextNode(value.slice(cursor)));
 }
