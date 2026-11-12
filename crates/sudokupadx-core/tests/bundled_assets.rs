@@ -19,6 +19,12 @@ fn all_bundled_scl_packages_decode() {
             .unwrap_or_else(|e|panic!("{}: {e}",file.display()));
         assert!(puzzle.rows>0 && puzzle.cols>0);
         assert_eq!(puzzle.cells.len(),puzzle.rows*puzzle.cols);
+        if item["id"]=="lineage-of-logic" {
+            assert!(puzzle.rules.contains("prologue-empty-house") ||
+                puzzle.sectors.iter().any(|sector|
+                    sector.rules.contains("prologue-empty-house")),
+                "original main map must link to the tutorial prologue");
+        }
         if item["id"]=="prologue-empty-house" {
             assert_eq!((puzzle.rows,puzzle.cols),(15,15));
             assert!(!puzzle.sectors.is_empty(),"prologue sectors must be preserved");
