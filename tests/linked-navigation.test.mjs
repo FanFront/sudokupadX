@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {linksAtCell,parentMain,returnDestination} from '../src/linked-navigation.js';
 import {getLinkedPuzzles} from '../src/adventure-ui.js';
 import {readFileSync} from 'node:fs';
+import LZString from 'lz-string';
 
 const catalog=JSON.parse(readFileSync(new URL('../public/puzzles/catalog.json',import.meta.url),'utf8')).items;
 const grid=(left,top,width,height,rules,title='Sector')=>({
@@ -131,4 +132,38 @@ test('Sudokuvania 2 tutorial/prologue links to its fully bundled offline map',()
     ['prologue-empty-house']);
   assert.equal(parentMain(entry,catalog)?.id,'lineage-of-logic');
   assert.equal(returnDestination(entry,catalog,[]).id,'lineage-of-logic');
+});
+
+test('every optional Sudokuvania 2 enemy tile resolves to an in-app playable catalog target',()=>{
+  const source=readFileSync(new URL('../public/puzzles/lineage-of-logic.scl',import.meta.url),'utf8').trim();
+  const raw=LZString.decompressFromBase64(source.slice(3));
+  assert.ok(raw,'main adventure SCL must decompress');
+  const sectors=JSON.parse(raw).metadata.grids;
+  const enemies=sectors.filter(g=>g.width===1&&g.height===1&&
+    /https:\/\/sudokupad\.app\/sudokuvania\/enemy-[a-z0-9-]+/.test(g.rules||''));
+  assert.equal(enemies.length,27,'all original enemy encounters should be indexed');
+  const entries=catalog.filter(e=>e.kind==='enemy'&&e.group==='lineage-of-logic');
+  assert.equal(entries.length,27);
+  assert.equal(new Set(entries.map(e=>e.id)).size,27);
+  const puzzle={
+    rows:50,cols:50,rules:'',
+    cells:Array.from({length:2500},()=>({given:null})),
+    sectors:enemies.map(g=>grid(g.left,g.top,g.width,g.height,g.rules,g.title))
+  };
+  const progress={visible:Array(2500).fill(false)};
+  for(const sector of enemies){
+    const at=sector.top*50+sector.left;
+    const found=getLinkedPuzzles(sector.rules,catalog);
+    assert.equal(found.length,1,'missing or ambiguous enemy: '+sector.rules);
+    assert.equal(found[0].kind,'enemy');
+    assert.equal(found[0].remote,true,'unbundled enemy must use remote on-demand importer');
+    assert.equal(found[0].parent,'lineage-of-logic');
+    assert.equal(returnDestination(found[0],catalog,[]).id,'lineage-of-logic');
+    assert.deepEqual(linksAtCell(puzzle,progress,at,catalog,'lineage-of-logic'),[],
+      'hidden enemy tile must not expose the link');
+    progress.visible[at]=true;
+    assert.deepEqual(linksAtCell(puzzle,progress,at,catalog,'lineage-of-logic')
+      .map(e=>e.id),[found[0].id]);
+    progress.visible[at]=false;
+  }
 });

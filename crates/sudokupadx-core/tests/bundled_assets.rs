@@ -8,8 +8,20 @@ fn all_bundled_scl_packages_decode() {
     let catalog=fs::read_to_string(root.join("catalog.json")).expect("catalog");
     let index:serde_json::Value=serde_json::from_str(&catalog).expect("catalog JSON");
     let entries=index["items"].as_array().expect("puzzle entries");
-    assert_eq!(entries.len(),116,"4 old adventure maps, 42 old links, 4 new hubs, 65 new links, and the Sudokuvania 2 prologue");
+    assert_eq!(entries.len(),143,"116 bundled packages and 27 optional enemy links");
+    assert_eq!(entries.iter().filter(|item|item["file"].is_string()).count(),116,
+        "the original offline SCL pack must stay intact");
+    assert_eq!(entries.iter().filter(|item|item["remote"]==true).count(),27,
+        "all 27 remote-only optional enemies must be enumerated");
     for item in entries {
+        if item["remote"]==true {
+            let id=item["id"].as_str().expect("enemy id");
+            let url=item["url"].as_str().expect("enemy URL");
+            assert!(id.starts_with("enemy-"));
+            assert!(url.starts_with("https://sudokupad.app/sudokuvania/enemy-"));
+            assert!(item["file"].is_null(),"remote enemies must not pretend to be bundled");
+            continue;
+        }
         let path=item["file"].as_str().expect("file");
         assert!(path.starts_with("puzzles/") && path.ends_with(".scl"));
         let file=root.join(path.trim_start_matches("puzzles/"));

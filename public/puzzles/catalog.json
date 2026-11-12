@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "FanFront/sodokupadAndroid/app/src/main/assets/offline",
-  "count": 115,
+  "count": 143,
   "items": [
     {
       "id": "digits-of-despair",
@@ -996,6 +996,249 @@
       "parent": "q2iuup56zb",
       "url": "https://sudokupad.app/eq5v9t3htw?setting-nogrid",
       "file": "puzzles/new-eq5v9t3htw.scl"
+    },
+    {
+      "id": "enemy-armored-guard",
+      "title": "可选敌人 · 铠甲守卫",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-armored-guard",
+      "remote": true
+    },
+    {
+      "id": "enemy-enchanted-armor",
+      "title": "可选敌人 · 附魔盔甲",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-enchanted-armor",
+      "remote": true
+    },
+    {
+      "id": "enemy-office-drone",
+      "title": "可选敌人 · 办公室杂兵",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-office-drone",
+      "remote": true
+    },
+    {
+      "id": "enemy-ornery-ivy",
+      "title": "可选敌人 · 暴躁藤蔓",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-ornery-ivy",
+      "remote": true
+    },
+    {
+      "id": "enemy-sum-prison-blues",
+      "title": "可选敌人 · 求和牢狱",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-sum-prison-blues",
+      "remote": true
+    },
+    {
+      "id": "enemy-clockwork-trap",
+      "title": "可选敌人 · 发条陷阱",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-clockwork-trap?setting-nogrid=1",
+      "remote": true
+    },
+    {
+      "id": "enemy-busy-busboys",
+      "title": "可选敌人 · 忙碌侍者",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-busy-busboys",
+      "remote": true
+    },
+    {
+      "id": "enemy-red-armored-guard",
+      "title": "可选敌人 · 红甲守卫",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-red-armored-guard",
+      "remote": true
+    },
+    {
+      "id": "enemy-dancebreaker",
+      "title": "可选敌人 · 舞步破坏者",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-dancebreaker",
+      "remote": true
+    },
+    {
+      "id": "enemy-waltz-the-worst-that-could-happen",
+      "title": "可选敌人 · 最糟糕的华尔兹",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-waltz-the-worst-that-could-happen",
+      "remote": true
+    },
+    {
+      "id": "enemy-tango-tough",
+      "title": "可选敌人 · 探戈难关",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-tango-tough",
+      "remote": true
+    },
+    {
+      "id": "enemy-sewage-surge",
+      "title": "可选敌人 · 污水激流",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-sewage-surge",
+      "remote": true
+    },
+    {
+      "id": "enemy-elite-guards",
+      "title": "可选敌人 · 精锐守卫",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-elite-guards",
+      "remote": true
+    },
+    {
+      "id": "enemy-jump-scare",
+      "title": "可选敌人 · 惊吓突袭",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-jump-scare",
+      "remote": true
+    },
+    {
+      "id": "enemy-whisper-wrangler",
+      "title": "可选敌人 · 低语驯服者",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-whisper-wrangler",
+      "remote": true
+    },
+    {
+      "id": "enemy-lock-boxer",
+      "title": "可选敌人 · 锁箱拳手",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-lock-boxer",
+      "remote": true
+    },
+    {
+      "id": "enemy-high-vaultage",
+      "title": "可选敌人 · 高压宝库",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-high-vaultage",
+      "remote": true
+    },
+    {
+      "id": "enemy-zero-sum-game",
+      "title": "可选敌人 · 零和游戏",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-zero-sum-game",
+      "remote": true
+    },
+    {
+      "id": "enemy-bull-dozer",
+      "title": "可选敌人 · 蛮牛推土机",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-bull-dozer?setting-nogrid=1",
+      "remote": true
+    },
+    {
+      "id": "enemy-skeletons",
+      "title": "可选敌人 · 骷髅兵",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-skeletons",
+      "remote": true
+    },
+    {
+      "id": "enemy-taking-attendants",
+      "title": "可选敌人 · 侍从",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-taking-attendants",
+      "remote": true
+    },
+    {
+      "id": "enemy-grill-interrupted",
+      "title": "可选敌人 · 烧烤受阻",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-grill-interrupted",
+      "remote": true
+    },
+    {
+      "id": "enemy-cram-session",
+      "title": "可选敌人 · 临时抱佛脚",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-cram-session",
+      "remote": true
+    },
+    {
+      "id": "enemy-contrarian-librarian",
+      "title": "可选敌人 · 唱反调的图书管理员",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-contrarian-librarian",
+      "remote": true
+    },
+    {
+      "id": "enemy-cable-management",
+      "title": "可选敌人 · 线缆整理",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-cable-management",
+      "remote": true
+    },
+    {
+      "id": "enemy-circular-reasoning",
+      "title": "可选敌人 · 循环推理",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-circular-reasoning",
+      "remote": true
+    },
+    {
+      "id": "enemy-chandeliers",
+      "title": "可选敌人 · 吊灯",
+      "group": "lineage-of-logic",
+      "parent": "lineage-of-logic",
+      "kind": "enemy",
+      "url": "https://sudokupad.app/sudokuvania/enemy-chandeliers",
+      "remote": true
     }
   ]
 }

@@ -59,7 +59,7 @@ export function getLinkedPuzzles(rules, catalog, group) {
       catch {return false;}
     });
     // A visible sector rule is the source of truth, even for cross-game links.
-    if (!entry || seen.has(entry.id)) continue;
+    if (!entry || (!entry.file && !entry.remote) || seen.has(entry.id)) continue;
     seen.add(entry.id);
     results.push(entry);
   }
@@ -308,6 +308,79 @@ export function drawPuzzleLines(ctx, lines, clip, layer='normal') {
     ctx.stroke();
     ctx.restore();
   }
+}
+
+/**
+ * SudokuMaker adventure maps use metadata.grids for their embedded boards.
+ * Their global "regions" array can be empty even when individual 6×6/9×9
+ * boards have normal Sudoku boxes. Draw those boards separately from the
+ * optional map-wide cell grid and the source-authored scene walls.
+ *
+ * Adjacent/overlapping boards contribute edges to the same map. Keep each
+ * edge once, at the strongest applicable weight (outer > box > cell), rather
+ * than painting duplicate lines through a shared area.
+ */
+export function drawEmbeddedSudokuGrids(ctx, sectors, clip) {
+  const edges=new Map();
+  const add=(x1,y1,x2,y2,weight)=>{
+    const key=[x1,y1,x2,y2].join(',');
+    const previous=edges.get(key);
+    if(!previous || previous.weight<weight)
+      edges.set(key,{x1,y1,x2,y2,weight});
+  };
+  for(const sector of sectors||[]) {
+    if(!sector || !((sector.width===6&&sector.height===6) ||
+                    (sector.width===9&&sector.height===9)))continue;
+    const {left,top,width,height}=sector;
+    if(!Number.isInteger(left)||!Number.isInteger(top)||left<0||top<0)continue;
+    const rules=typeof sector.rules==='string'?sector.rules:'';
+    // Narrative areas and side-puzzle markers are not automatically Sudoku.
+    if(!/数独|sudoku/i.test(rules))continue;
+    const x=left*CELL_SIZE,y=top*CELL_SIZE;
+    if(x>clip.right||y>clip.bottom||
+       x+width*CELL_SIZE<clip.left||y+height*CELL_SIZE<clip.top)continue;
+
+    // Irregular/jigsaw boxes are defined by their authored shapes, not by a
+    // guessed 3×3 partition. Still draw the board perimeter and fine cells.
+    const irregular=/不规则|irregular|jigsaw/i.test(rules);
+    // In this adventure 6×6 boards include both 3×2 and 2×3 houses,
+    // plus a Quattroquadri board with four 3×3 houses.
+    const dimensions=rules.match(/([23])\s*[×xX*]\s*([23])/);
+    const boxWidth=irregular?0:width===9?3:dimensions?Number(dimensions[1]):3;
+    const boxHeight=irregular?0:height===9?3:dimensions?Number(dimensions[2]):2;
+
+    for(let r=0;r<=height;r++)for(let c=0;c<width;c++) {
+      const weight=r===0||r===height?3:boxHeight&&r%boxHeight===0?2:1;
+      add(left+c,top+r,left+c+1,top+r,weight);
+    }
+    for(let c=0;c<=width;c++)for(let r=0;r<height;r++) {
+      const weight=c===0||c===width?3:boxWidth&&c%boxWidth===0?2:1;
+      add(left+c,top+r,left+c,top+r+1,weight);
+    }
+  }
+  if(!edges.size)return;
+  const styles=[
+    {weight:1,width:.65,color:'#bec7c9'},
+    {weight:2,width:2.6,color:'#3d566b'},
+    {weight:3,width:3.2,color:'#263c51'}
+  ];
+  ctx.save();
+  for(const style of styles) {
+    ctx.beginPath();
+    let count=0;
+    for(const edge of edges.values()) {
+      if(edge.weight!==style.weight)continue;
+      ctx.moveTo(edge.x1*CELL_SIZE,edge.y1*CELL_SIZE);
+      ctx.lineTo(edge.x2*CELL_SIZE,edge.y2*CELL_SIZE);
+      count++;
+    }
+    if(count) {
+      ctx.strokeStyle=style.color;
+      ctx.lineWidth=style.width;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 /** Frame scene/sector rectangles independently of the fine cell-grid toggle.

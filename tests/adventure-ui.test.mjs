@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isVisible,canSelectCell,getSectors,getLinkedPuzzles,drawFog,drawSectorBorders,focusInitialFog,puzzlePoint,drawDecorations,drawPuzzleLines,drawArrows,drawCages,dragCellIndices} from '../src/adventure-ui.js';
+import {readFileSync} from 'node:fs';
+import {isVisible,canSelectCell,getSectors,getLinkedPuzzles,drawFog,drawSectorBorders,drawEmbeddedSudokuGrids,focusInitialFog,puzzlePoint,drawDecorations,drawPuzzleLines,drawArrows,drawCages,dragCellIndices} from '../src/adventure-ui.js';
 
 test('fog limits visibility, not selection of covered cells',()=>{
   assert.equal(isVisible({visible:[true,false]},0),true);
@@ -39,8 +40,8 @@ test('select smallest overlapping sector and keep its rules separate',()=>{
 
 test('only imported puzzle ids referenced by rules become links',()=>{
   const catalog=[
-    {id:'boss-a',url:'https://sudokupad.app/abc',kind:'boss',group:'a',title:'Boss'},
-    {id:'boss-b',url:'https://sudokupad.app/xyz',kind:'boss',group:'b',title:'Hidden'}
+    {id:'boss-a',url:'https://sudokupad.app/abc',kind:'boss',group:'a',title:'Boss',file:'puzzles/boss-a.scl'},
+    {id:'boss-b',url:'https://sudokupad.app/xyz',kind:'boss',group:'b',title:'Hidden',file:'puzzles/boss-b.scl'}
   ];
   const rules='[Play](https://sudokupad.app/abc) and [Again](https://sudokupad.app/abc).';
   assert.deepEqual(getLinkedPuzzles(rules,catalog,'a').map(x=>x.id),['boss-a']);
@@ -284,4 +285,64 @@ test('underlay rectangles and numeric, long and colored text retain source geome
   assert.ok(Math.abs(number[2]-931.58)<.01);
   assert.ok(Math.abs(number[3]-513.76)<.01);
   assert.equal(number[5],'#ff2222');
+});
+
+function embeddedEdgeTrace(sectors) {
+  const drawn=[];
+  const ctx={
+    save(){},restore(){},beginPath(){this.path=[];},
+    moveTo(x,y){this.from=[x,y];},
+    lineTo(x,y){this.path.push([this.from[0],this.from[1],x,y]);},
+    stroke(){for(const p of this.path)drawn.push([...p,this.lineWidth]);}
+  };
+  drawEmbeddedSudokuGrids(ctx,sectors,{left:0,top:0,right:2600,bottom:2600});
+  return drawn;
+}
+const edgeAt=(edges,x1,y1,x2,y2,width)=>edges.filter(edge=>
+  edge[0]===x1*52&&edge[1]===y1*52&&
+  edge[2]===x2*52&&edge[3]===y2*52&&edge[4]===width
+);
+
+test('6x6 and 9x9 adventure Sudoku grids have independent cell, box and outer edges',()=>{
+  const edges=embeddedEdgeTrace([
+    {left:0,top:0,width:6,height:6,rules:'数独——3×2 宫'},
+    {left:10,top:0,width:9,height:9,rules:'Sudoku: 3x3 boxes'},
+    {left:22,top:0,width:9,height:9,rules:'不规则数独：每个不规则区域不能重复'},
+    {left:0,top:10,width:6,height:6,rules:'6×6 Quattroquadri 数独，四个 3×3 宫'},
+    {left:32,top:0,width:9,height:9,rules:'Story metadata only'}
+  ]);
+  assert.equal(edgeAt(edges,3,0,3,1,2.6).length,1,'6x6: vertical 3-column box boundary');
+  assert.equal(edgeAt(edges,0,2,1,2,2.6).length,1,'6x6: horizontal 2-row box boundary');
+  assert.equal(edgeAt(edges,0,0,1,0,3.2).length,1,'6x6: outer boundary');
+  assert.equal(edgeAt(edges,1,1,2,1,.65).length,1,'6x6: fine cells');
+  assert.equal(edgeAt(edges,13,0,13,1,2.6).length,1,'9x9: vertical 3-column box boundary');
+  assert.equal(edgeAt(edges,10,3,11,3,2.6).length,1,'9x9: horizontal 3-row box boundary');
+  assert.equal(edgeAt(edges,22,3,23,3,.65).length,1,
+    'irregular board must not invent classic 3x3 box boundaries');
+  assert.equal(edgeAt(edges,0,13,1,13,2.6).length,1,
+    'Quattroquadri uses four 3x3 houses, not 3x2');
+  assert.ok(!edges.some(edge=>edge[0]>=32*52&&edge[0]<41*52),
+    'non-Sudoku story metadata must not acquire a false board frame');
+});
+
+test('overlapping adventure boards deduplicate shared edges using strongest boundary',()=>{
+  const edges=embeddedEdgeTrace([
+    {left:0,top:0,width:6,height:6,rules:'数独——3×2 宫'},
+    {left:3,top:0,width:9,height:9,rules:'Sudoku: 3x3 boxes'},
+    {left:3,top:0,width:9,height:9,rules:'Sudoku: duplicate metadata'}
+  ]);
+  assert.equal(edgeAt(edges,3,0,3,1,3.2).length,1,
+    '9x9 outer wall outranks the overlapping 6x6 box separator');
+  assert.equal(edgeAt(edges,3,0,3,1,2.6).length,0);
+});
+
+test('adventure grid outlines are actually invoked beneath fog in the board renderer',()=>{
+  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+  const call='drawEmbeddedSudokuGrids(ctx,puzzle.sectors,clip);';
+  assert.match(main,/^  drawEmbeddedSudokuGrids\(ctx,puzzle\.sectors,clip\);$/m,
+    'the call must be executable JavaScript, not trapped in a // comment');
+  assert.ok(main.indexOf(call)<main.indexOf('  drawFog(ctx,puzzle,progress,clip);'),
+    'unrevealed board lines must be concealed by fog');
+  assert.match(main,/if\(showGridLines && regionMap\.some\(v=>v>=0\)\)/,
+    'ordinary imported region outlines must still obey the grid toggle');
 });

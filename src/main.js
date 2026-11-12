@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { installExternalLinkHandler } from './external-links.js';
 import {invokeBrowser} from './web-runtime.js';
-import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
+import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,drawEmbeddedSudokuGrids,getSectors,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {buildCenterCandidateUpdates} from './quick-notes.js';
@@ -25,7 +25,7 @@ import {describeHint} from './hints/format.js';
 import {buildHintPlusUpdates,buildClearRedPlusUpdates} from './hints/apply.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
-import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
+import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle,readOfflinePuzzle,cacheRemoteLinkedPuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
 import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
 import {bilingualTitle,displayBilingual,renderLinkedRules} from './bilingual.js';
@@ -500,10 +500,23 @@ async function openBundled(id,push=false,backState=null){
   if(fromHome)showGame();
   pending=true;
   try{
-    const response=await fetch(entry.file);
-    if(!response.ok)throw Error('缺少离线文件: '+entry.file);
-    const input=await response.text();
+    let input,needsCache=false;
+    if(entry.remote){
+      // Curated optional enemies are not included in the shipped SCL pack.
+      // Fetch them only on first play; subsequent visits use local IndexedDB.
+      const cached=await readOfflinePuzzle(entry.id).catch(()=>null);
+      needsCache=!cached;
+      input=cached||await fetchOnlinePuzzle({puzzleUrl:entry.url});
+    }else{
+      const response=await fetch(entry.file);
+      if(!response.ok)throw Error('缺少离线文件: '+entry.file);
+      input=await response.text();
+    }
     const result=await call('open_puzzle',{input,localization:localeZh[id]||null});
+    if(needsCache){
+      try {await cacheRemoteLinkedPuzzle(entry.id,input);}
+      catch(error){console.warn('无法缓存可选敌人谜题：',error);}
+    }
     currentEntry=entry;
     mainDictionary={};
     if(entry.kind==='main') {
@@ -861,7 +874,11 @@ function draw() {
       ctx.strokeStyle='#bec7c9';ctx.lineWidth=.65;ctx.strokeRect(x,y,CELL,CELL);
     }
   }
-  // Region boundaries follow the imported region membership, not a guessed 3×3 layout.
+  // Each 6×6/9×9 adventure board has its own fine grid, perimeter and
+  // 3×2 / 2×3 / 3×3 boxes; hiding the map-wide fine grid must not hide these.
+  // Draw under fog, without mistaking authored castle walls for Sudoku boxes.
+  drawEmbeddedSudokuGrids(ctx,puzzle.sectors,clip);
+  // Explicit imported regions keep their original grid-toggle behavior.
   if(showGridLines && regionMap.some(v=>v>=0)){
     ctx.strokeStyle='#3d566b';ctx.lineWidth=2.6;
     ctx.beginPath();
