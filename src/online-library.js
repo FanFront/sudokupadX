@@ -158,6 +158,17 @@ export function readOfflinePuzzle(id) {
     tx.objectStore('puzzles').get(id).onsuccess = e => done(e.target.result?.input || null);
   });
 }
+/** Cache an explicitly indexed story puzzle without adding it to the online
+ * download library. Once downloaded, its map link works completely offline. */
+export function cacheRemoteLinkedPuzzle(id, input) {
+  if (typeof id !== 'string' || !/^enemy-[a-z0-9-]+$/.test(id) ||
+      typeof input !== 'string' || !input.length || input.length > MAX_ONLINE_PUZZLE)
+    throw Error('无法缓存可选敌人谜题');
+  return transaction(['puzzles'], 'readwrite', tx => {
+    tx.objectStore('puzzles').put({id, input});
+  });
+}
+
 export function saveOfflinePuzzle(entry, input) {
   if (typeof input !== 'string' || !input.length || input.length > MAX_ONLINE_PUZZLE)
     throw Error('无法保存不完整的谜题');
