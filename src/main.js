@@ -27,7 +27,7 @@ import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
 import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
 import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
-import {bilingualTitle,displayBilingual} from './bilingual.js';
+import {bilingualTitle,displayBilingual,renderLinkedRules} from './bilingual.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -361,11 +361,23 @@ function updateSector() {
   const local=localeZh[currentEntry?.id];
   $('modalSectorTitle').textContent=sector?title:bilingualTitle(puzzle.title,local?.titleOriginal);
   $('nextSector').hidden=matchingSectors.length<2;
-  $('rulesPreview').textContent=rules;
-  displayBilingual($('fullRules'),rules,sector?null:local?.rulesOriginal,sector?null:local?.boardGlossary);
   // Links may be held by a larger underlying grid rather than the currently
   // displayed (smallest) overlapping story sector. Do not expose fogged links.
   activeLinkedPuzzles=eligible?linksAtCell(puzzle,progress,selected,catalog,currentEntry?.id):[];
+  // Markdown puzzle links should open the bundled puzzle, not the external
+  // website (which would lose the active Android board/WebView state).
+  const localAction=url=>{
+    let path;
+    try{path=new URL(url).pathname;}catch{return null;}
+    const entry=activeLinkedPuzzles.find(item=>{
+      try{return new URL(item.url).pathname===path;}
+      catch{return false;}
+    });
+    return entry?()=>openBundled(entry.id,true).catch(notify):null;
+  };
+  renderLinkedRules($('rulesPreview'),rules,localAction);
+  displayBilingual($('fullRules'),rules,sector?null:local?.rulesOriginal,
+    sector?null:local?.boardGlossary,localAction);
   renderSectorLinks($('sectorLinks'),activeLinkedPuzzles);
   renderSectorLinks($('modalLinks'),activeLinkedPuzzles);
   const entrance=$('linkedPuzzleButton');
