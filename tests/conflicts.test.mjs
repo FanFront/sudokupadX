@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import LZString from 'lz-string';
 import {buildConflictHouses,detectConflicts} from '../src/conflicts.js';
 
 function game(rows=9,cols=9) {
@@ -124,4 +126,99 @@ test('foggy killer clues do not leak through duplicate or candidate conflicts',(
   assert.equal(detectConflicts(puzzle,progress).noteSymbols[3*42+2].size,0);
   progress.visible[2*42+1]=true;
   assert.equal(detectConflicts(puzzle,progress).noteSymbols[3*42+2].has('4'),true);
+});
+
+
+// Use the original 15x15 SCL instead of a fabricated board: it contains
+// 6x6 Homestead, 9x9 Forest, their intersection, and many non-grid panels.
+function originalPrologue() {
+  const file=new URL('../public/puzzles/prologue-empty-house.scl',import.meta.url);
+  const packageText=readFileSync(file,'utf8').trim();
+  const source=JSON.parse(LZString.decompressFromBase64(packageText.slice(3)));
+  const {puzzle,progress}=game(source.cells.length,source.cells[0].length);
+  puzzle.sectors=source.metadata.grids;
+  puzzle.regions=source.regions||[];
+  return {puzzle,progress,at:(row,col)=>row*puzzle.cols+col};
+}
+
+test('prologue canvas rows and columns are not global Sudoku houses',()=>{
+  const {puzzle,progress,at}=originalPrologue();
+  assert.equal(puzzle.rows,15);
+  assert.equal(puzzle.cols,15);
+  const houses=buildConflictHouses(puzzle);
+  const share=(a,b)=>houses.some(house=>house.includes(a)&&house.includes(b));
+
+  // Same global row, but the left cell belongs ONLY to the Homestead
+  // and the right cell belongs ONLY to the Forest.
+  assert.equal(share(at(9,2),at(9,9)),false);
+  progress.cells[at(9,2)].value='5';
+  progress.cells[at(9,9)].value='5';
+
+  // Also sharing a global column does not connect two separate grids.
+  assert.equal(share(at(14,5),at(2,5)),false);
+  progress.cells[at(14,5)].value='8';
+  progress.cells[at(2,5)].value='8';
+  progress.cells[at(14,6)].center=['5'];
+
+  const result=detectConflicts(puzzle,progress,houses);
+  assert.equal(result.valueCells.size,0);
+  assert.equal(result.noteSymbols[at(14,6)].has('5'),false,
+    'unrelated global row/column must not turn center notes red');
+});
+
+test('a prologue overlap cell obeys both 6x6 and 9x9 row/column houses',()=>{
+  const {puzzle,progress,at}=originalPrologue();
+  const houses=buildConflictHouses(puzzle);
+  const shared=at(9,6),homePeer=at(9,2),forestPeer=at(4,6);
+  const share=(a,b)=>houses.some(house=>house.includes(a)&&house.includes(b));
+  assert.equal(share(shared,homePeer),true);
+  assert.equal(share(shared,forestPeer),true);
+  assert.equal(share(homePeer,forestPeer),false);
+
+  for(const cell of [shared,homePeer,forestPeer])
+    progress.cells[cell].value='6';
+  const result=detectConflicts(puzzle,progress,houses);
+  for(const cell of [shared,homePeer,forestPeer])
+    assert.equal(result.valueCells.has(cell),true,
+      'both overlapping Sudoku grids must report a repeated value');
+
+  progress.cells[shared].value=null;
+  progress.cells[shared].center=['6','2'];
+  const pencil=detectConflicts(puzzle,progress,houses);
+  assert.equal(pencil.noteSymbols[shared].has('6'),true);
+  assert.equal(pencil.noteSymbols[shared].has('2'),false);
+
+  // Hidden values are not used to reveal information through red marks.
+  progress.visible[forestPeer]=false;
+  progress.cells[homePeer].value=null;
+  assert.equal(detectConflicts(puzzle,progress,houses).noteSymbols[shared].size,0);
+});
+
+test('prologue also checks explicitly authored 3x2 and 3x3 local boxes',()=>{
+  const {puzzle,progress,at}=originalPrologue();
+  const houses=buildConflictHouses(puzzle);
+  const share=(a,b)=>houses.some(house=>house.includes(a)&&house.includes(b));
+  // These pairs have different local rows and columns: only a box
+  // makes them conflict, even though regions[] is empty in the SCL.
+  assert.equal(puzzle.regions.length,0);
+  assert.equal(share(at(9,2),at(10,3)),true,'Homestead 3x2 box');
+  assert.equal(share(at(2,5),at(3,6)),true,'Forest 3x3 box');
+  for(const index of [at(9,2),at(10,3)])
+    progress.cells[index].value='2';
+  for(const index of [at(2,5),at(3,6)])
+    progress.cells[index].value='9';
+  const result=detectConflicts(puzzle,progress,houses);
+  for(const index of [at(9,2),at(10,3),at(2,5),at(3,6)])
+    assert.equal(result.valueCells.has(index),true);
+});
+
+test('small standalone Sudoku keeps its global houses if story panels are not grids',()=>{
+  const {puzzle,progress}=game(9,9);
+  puzzle.sectors=[{left:0,top:0,width:4,height:4,title:'Information panel',
+    rules:'Read this story; no new Sudoku grid is defined.'}];
+  progress.cells[0].value='7';
+  progress.cells[8].value='7';
+  const result=detectConflicts(puzzle,progress);
+  assert.equal(result.valueCells.has(0),true);
+  assert.equal(result.valueCells.has(8),true);
 });
