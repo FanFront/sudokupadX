@@ -5,7 +5,7 @@ import {invokeBrowser} from './web-runtime.js';
 import {drawArrows,drawCages,drawPathMarks,drawFog,drawDecorations,drawPuzzleLines,drawSectorBorders,getSectors,isVisible,canSelectCell,dragCellIndices,focusInitialFog} from './adventure-ui.js';
 import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry,puzzleSlug} from './checkpoint.js';
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
-import {buildCenterCandidateUpdates,buildRedNoteRemovalUpdates} from './quick-notes.js';
+import {buildCenterCandidateUpdates} from './quick-notes.js';
 import {cellInk} from './cell-ink.js';
 import {TAP_MOVE_TOLERANCE,cellLargeValue,isHighlightedNumber,advanceNumberHighlight} from './number-highlight.js';
 import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
