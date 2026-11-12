@@ -13,7 +13,9 @@ const groups=new Set([
   'digits-of-despair','lineage-of-logic',
   'super-sudokoid-1','super-sudokoid-2'
 ]);
-const entries=catalog.items.filter(x=>groups.has(x.group));
+// Only packaged assets have a source-fingerprint-reviewed typed hint manifest.
+// Optional remote enemy puzzles are catalog links, not part of this offline pack.
+const entries=catalog.items.filter(x=>groups.has(x.group)&&typeof x.file==='string');
 test('every original adventure map and linked/Boss puzzle has a reviewed status',()=>{
   assert.equal(entries.length,47,'four main games, 42 authored links, plus the tutorial/prologue');
   assert.deepEqual(Object.keys(ADVENTURE_HINT_COVERAGE).sort(),
