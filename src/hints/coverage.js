@@ -14,6 +14,7 @@ const CERTIFIED=[
 const GAPS={
   'digits-of-despair':['全地图交互与剧情相关的动态解谜状态'],
   'lineage-of-logic':['全地图交互与剧情相关的动态解谜状态'],
+  'prologue-empty-house':['序章多阶段教学地图与动态迷雾相关的完整提示推理约束'],
   'super-sudokoid-1':['全地图关联线索、动态状态和特殊区域的完整一致性'],
   'super-sudokoid-2':['全地图关联线索、动态状态和特殊区域的完整一致性'],
   'boss-84lyno986x':['洞穴黑白区域连通','Akari 照明与提灯位置','灯笼邻格计数'],
