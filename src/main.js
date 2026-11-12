@@ -156,7 +156,7 @@ async function requestHint(applyAutomatically=false){
     $('hintDescription').textContent=data.description;
     $('hintCandidates').textContent=data.candidates;
     requestDraw();
-    if(!applyAutomatically||result.status!=='step')return;
+    if(!applyAutomatically||result.status!=='step'||!result.step)return;
     if(result.step.assumptionBased){
       toast('提示+ 不会自动执行尚未证明的条件式手记推理');
       return;
