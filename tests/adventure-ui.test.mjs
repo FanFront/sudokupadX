@@ -39,8 +39,8 @@ test('select smallest overlapping sector and keep its rules separate',()=>{
 
 test('only imported puzzle ids referenced by rules become links',()=>{
   const catalog=[
-    {id:'boss-a',url:'https://sudokupad.app/abc',kind:'boss',group:'a',title:'Boss'},
-    {id:'boss-b',url:'https://sudokupad.app/xyz',kind:'boss',group:'b',title:'Hidden'}
+    {id:'boss-a',url:'https://sudokupad.app/abc',kind:'boss',group:'a',title:'Boss',file:'puzzles/boss-a.scl'},
+    {id:'boss-b',url:'https://sudokupad.app/xyz',kind:'boss',group:'b',title:'Hidden',file:'puzzles/boss-b.scl'}
   ];
   const rules='[Play](https://sudokupad.app/abc) and [Again](https://sudokupad.app/abc).';
   assert.deepEqual(getLinkedPuzzles(rules,catalog,'a').map(x=>x.id),['boss-a']);
