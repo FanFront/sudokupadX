@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {isVisible,canSelectCell,getSectors,getLinkedPuzzles,drawFog,drawSectorBorders,drawEmbeddedSudokuGrids,focusInitialFog,puzzlePoint,drawDecorations,drawPuzzleLines,drawArrows,drawCages,dragCellIndices} from '../src/adventure-ui.js';
 
 test('fog limits visibility, not selection of covered cells',()=>{
@@ -333,4 +334,15 @@ test('overlapping adventure boards deduplicate shared edges using strongest boun
   assert.equal(edgeAt(edges,3,0,3,1,3.2).length,1,
     '9x9 outer wall outranks the overlapping 6x6 box separator');
   assert.equal(edgeAt(edges,3,0,3,1,2.6).length,0);
+});
+
+test('adventure grid outlines are actually invoked beneath fog in the board renderer',()=>{
+  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+  const call='drawEmbeddedSudokuGrids(ctx,puzzle.sectors,clip);';
+  assert.match(main,/^  drawEmbeddedSudokuGrids\(ctx,puzzle\.sectors,clip\);$/m,
+    'the call must be executable JavaScript, not trapped in a // comment');
+  assert.ok(main.indexOf(call)<main.indexOf('  drawFog(ctx,puzzle,progress,clip);'),
+    'unrevealed board lines must be concealed by fog');
+  assert.match(main,/if\(showGridLines && regionMap\.some\(v=>v>=0\)\)/,
+    'ordinary imported region outlines must still obey the grid toggle');
 });
