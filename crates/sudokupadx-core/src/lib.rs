@@ -964,7 +964,7 @@ mod tests {
         session.apply(2, "center", "4").unwrap();
         session.apply(3, "corner", "8").unwrap();
         let before = session.snapshot().cells;
-        let update = |index, corner: Vec<&str>, center: Vec<&str>, value| PencilUpdate {
+        let update = |index, corner: Vec<&str>, center: Vec<&str>, value: Option<&str>| PencilUpdate {
             index,
             corner: corner.into_iter().map(str::to_owned).collect(),
             center: center.into_iter().map(str::to_owned).collect(),
