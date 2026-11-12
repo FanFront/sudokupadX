@@ -15,20 +15,47 @@ export function buildConflictHouses(puzzle) {
       add(Array.from({length:height}, (_,i) => (top+i)*cols + c));
   };
 
-  // Small puzzles use their whole board as the standard Sudoku grid.
-  // Adventure maps contain unrelated grids on the same global row/column.
-  if (rows <= 16 && cols <= 16) {
-    addRowsAndColumns(0, 0, cols, rows);
-  } else {
-    for (const sector of puzzle.sectors || []) {
+  // Dimensions describe the canvas, not necessarily a Sudoku grid.
+  // Even a 15x15 canvas (Sudokuvania 2's prologue) can contain overlapping
+  // 6x6 and 9x9 puzzles. Cells in their intersection belong to BOTH grids,
+  // while cells that merely share a canvas row must not conflict.
+  const squareSectors = (puzzle.sectors || []).filter(sector => {
+    const {left,top,width,height} = sector || {};
+    return [left,top,width,height].every(Number.isInteger) &&
+      left >= 0 && top >= 0 && width === height && width >= 4 && width <= 16 &&
+      left + width <= cols && top + height <= rows;
+  });
+  // On standalone small boards a square story panel is not enough evidence
+  // to override the ordinary whole-board Sudoku. Look for an authored grid.
+  const localGrids = rows <= 16 && cols <= 16
+    ? squareSectors.filter(sector =>
+        /\bsudoku\b|数独/i.test(String(sector.rules || '')) ||
+        /\bgrid\b/i.test(String(sector.title || '')))
+    : squareSectors;
+  if (localGrids.length) {
+    for (const sector of localGrids) {
       const {left,top,width,height} = sector;
-      // Only a complete square Sudoku grid supplies row/column houses.
-      // Story sections and large map rectangles must not create conflicts.
-      if (![left,top,width,height].every(Number.isInteger) ||
-          left < 0 || top < 0 || width !== height || width < 4 || width > 16 ||
-          left + width > cols || top + height > rows) continue;
       addRowsAndColumns(left, top, width, height);
+
+      // Author-declared standard boxes are genuine houses too. Adventure
+      // SCLs often omit regions[] because their boxes are drawn as artwork.
+      // Never guess boxes for a grid with custom/unknown region rules.
+      const box = String(sector.rules || '').match(
+        /(\d{1,2})\s*[x×]\s*(\d{1,2})\s*(?:box(?:es)?|宫)/i
+      );
+      if (!box) continue;
+      const boxWidth = Number(box[1]), boxHeight = Number(box[2]);
+      if (!boxWidth || !boxHeight || boxWidth * boxHeight !== width ||
+          width % boxWidth || height % boxHeight) continue;
+      for (let r = top; r < top + height; r += boxHeight) {
+        for (let c = left; c < left + width; c += boxWidth) {
+          add(Array.from({length:boxWidth * boxHeight}, (_,i) =>
+            (r + Math.floor(i / boxWidth)) * cols + c + i % boxWidth));
+        }
+      }
     }
+  } else if (rows <= 16 && cols <= 16) {
+    addRowsAndColumns(0, 0, cols, rows);
   }
   const coordinates = pairs => pairs.map(pair => {
     if (!Array.isArray(pair) || pair.length < 2) return -1;
