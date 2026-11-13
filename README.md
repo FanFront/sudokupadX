@@ -34,7 +34,7 @@ The procedural generator now also creates a connected set of **4×4, 6×6 and 9�
 
 ### Web access to Logic Masters and WPF
 
-GitHub Pages cannot itself bypass cross-origin restrictions. Web searches and WPF PDF downloads use a restricted Cloudflare Worker hosted separately, configured via the non-secret `PUZZLE_PROXY_URL` GitHub Actions variable at build time. **The Worker must be deployed first.** See [Web CORS proxy deployment (Chinese)](docs/web-cors-proxy.zh-CN.md). Android retains its native Rust fetch commands.
+GitHub Pages cannot itself bypass cross-origin restrictions. Web searches and WPF PDF downloads use a restricted Cloudflare Worker hosted separately, configured via the non-secret `PUZZLE_PROXY_URL` GitHub Actions variable at build time. **The Worker must be deployed first.** See [Web CORS proxy deployment (Chinese)](docs/web-cors-proxy.zh-CN.md). For China-based players without a custom domain, an [experimental EdgeOne standalone Edge Function setup](docs/edgeone-no-domain-proxy.zh-CN.md) uses the same proxy API; check provider pricing and mainland-China fetch behavior before rolling it out. Android retains its native Rust fetch commands.
 
 ## Development
 
