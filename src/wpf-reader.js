@@ -219,7 +219,12 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
       try{
         let bytes;
         if(window.__TAURI_INTERNALS__){
-          bytes=new Uint8Array(await invoke('fetch_wpf_pdf',{url:pdfUrl}));
+          const encoded=await invoke('fetch_wpf_pdf',{url:pdfUrl});
+          if(typeof encoded!=='string'||encoded.length>MAX_WPF_PDF*4/3+16)
+            throw Error('PDF 传输数据格式不正确');
+          const binary=atob(encoded);
+          bytes=new Uint8Array(binary.length);
+          for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
         }else{
           const response=await fetch(pdfUrl,{cache:'no-store',credentials:'omit'});
           if(!response.ok)throw Error('HTTP '+response.status);
