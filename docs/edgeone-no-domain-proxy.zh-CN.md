@@ -53,7 +53,7 @@ console.log(r.status, r.headers.get('content-type'), (await r.text()).slice(0,12
 
 ## 限制、费用和以后正式公开部署
 
-- 此方案使用 EdgeOne **网站安全加速的边缘函数**，不等于 Makers Free 的「Edge Functions 每月免费调用额度」可直接用在这里。**确认实际套餐是否免费，避免误开付费资源。**
+- 此方案使用 EdgeOne **网站安全加速的边缘函数**，不等于 Makers Free 的额度。根据 [EdgeOne 官方套餐表](https://cloud.tencent.com.cn/document/product/1552/94165)，网站安全加速免费版为 **0 元/月、限量内测**，包含每月 300 万次边缘函数请求和 300 万毫秒 CPU 时间，超限时规则失效；如果开通[付费增值套件](https://cloud.tencent.com/document/product/1552/133025)则可能按量计费。先确认账号是否具备免费版资格、不要默认开通后付费功能。
 - 函数只能访问 `logic-masters.de`、`logic-puzzles.ropeko.ch` 和官方 `gp.worldpuzzle.org` PDF 目录；只接受 GET/OPTIONS，限制来源为 `https://fanfront.github.io`（加本地开发端口），拒绝重定向和超限内容。
 - 代理只解决浏览器跨域限制；上游网站不可用、EdgeOne 运行节点到源站的访问故障、平台默认域名风控等问题仍可能出现。
 - 由于默认域名的大陆地区特殊策略，适合**试验和小范围分享**。如果需要长期稳定公开，仍建议自有域名；国内加速节点还要求符合备案规定。
