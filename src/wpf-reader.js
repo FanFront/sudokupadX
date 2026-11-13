@@ -3,6 +3,7 @@ import {validatedWpfPdfUrl,isPdfData} from './wpf-catalog.js';
 import {MAX_WPF_PDF,readWpfDocument,saveWpfDocument,readWpfInk,saveWpfInk} from './wpf-storage.js';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import {fetchPuzzleProxy} from './puzzle-proxy.js';
+import {PDF_MIN_SCALE,PDF_MAX_SCALE,touchPair,gestureScale,anchoredPageScroll,draggedPageScroll} from './pdf-gestures.js';
 
 const PALETTE=['#e34b45','#1c80df','#21975c','#efab2c','#181818'];
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
@@ -19,6 +20,12 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
   let scale=1,penEnabled=true,eraser=false,color=PALETTE[0];
   let renderSequence=0,renderJob=null,activeStroke=null,activePointer=null;
   let history=[],future=[],drawingSize={width:0,height:0};
+  // Touches are tracked on the scroll viewport rather than the ink canvas:
+  // the second finger may land on the margin outside the PDF page.
+  const pointers=new Map();
+  let gestureMode='idle',panStart=null,pinchStart=null,strokeBefore=null;
+  let strokeChanged=false,previewActive=false;
+  let renderedScale=1,renderedSize={width:0,height:0};
   const status=message=>{$('wpfReaderStatus').textContent=message;};
   const strokes=()=>Array.isArray(pages[pageNumber]) ? pages[pageNumber] : [];
   function setStrokes(next){pages[pageNumber]=next;}
@@ -37,7 +44,8 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     for(const button of document.querySelectorAll('#wpfColors button[data-ink]'))
       button.setAttribute('aria-pressed',String(button.dataset.ink===color));
     ink.style.pointerEvents=penEnabled?'auto':'none';
-    ink.style.touchAction=penEnabled?'none':'auto';
+    // Touch gestures are handled by the viewport even when pen is enabled.
+    ink.style.touchAction='none';
   }
   function drawInk(){
     const {width,height}=drawingSize;
@@ -76,7 +84,14 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
   async function renderPage(){
     if(!doc||!dialog.open)return;
     const token=++renderSequence;
-    if(renderJob){try{renderJob.cancel();}catch{}renderJob=null;}
+    // Wait for the cancelled PDF.js task before reusing its canvas. Repeated
+    // quick pinches otherwise race with the previous render on Android.
+    const previous=renderJob;
+    if(previous){
+      try{previous.cancel();}catch{}
+      try{await previous.promise;}catch{}
+      if(renderJob===previous)renderJob=null;
+    }
     const page=await doc.getPage(pageNumber);
     if(token!==renderSequence)return;
     const base=page.getViewport({scale:1});
@@ -87,11 +102,13 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     const pxw=Math.max(1,Math.ceil(width*pixelRatio));
     const pxh=Math.max(1,Math.ceil(height*pixelRatio));
     for(const canvas of [paper,ink]){
+      canvas.style.transform='none';
       canvas.width=pxw;canvas.height=pxh;
       canvas.style.width=width+'px';canvas.style.height=height+'px';
     }
     sheet.style.width=width+'px';sheet.style.height=height+'px';
     drawingSize={width,height};
+    renderedScale=scale;renderedSize={width,height};previewActive=false;
     inkCtx.setTransform(1,0,0,1,0,0);
     drawInk();
     const context=paper.getContext('2d',{alpha:false});
@@ -102,11 +119,11 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     try{await renderJob.promise;}
     catch(error){if(error?.name!=='RenderingCancelledException')throw error;}
     finally{if(token===renderSequence)renderJob=null;}
-    if(token===renderSequence) status('第 '+pageNumber+' / '+doc.numPages+' 页 · 画笔自动保存');
+    if(token===renderSequence) status('第 '+pageNumber+' / '+doc.numPages+' 页 · 单指画笔 · 双指缩放/移动 · 自动保存');
   }
   async function navigate(next){
     if(!doc||!Number.isInteger(next)||next<1||next>doc.numPages){updateControls();return;}
-    activeStroke=null;activePointer=null;pageNumber=next;history=[];future=[];
+    clearPointers();pageNumber=next;history=[];future=[];
     updateControls();
     scroll.scrollTop=0;scroll.scrollLeft=0;
     try{await renderPage();}catch(error){notify('PDF 渲染失败：'+error.message);}
@@ -135,45 +152,168 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     if(next.length===strokes().length)return false;
     setStrokes(next);drawInk();return true;
   }
-  let changed=false;
-  ink.addEventListener('pointerdown',event=>{
-    if(!penEnabled||!doc||activePointer!==null||event.button>0)return;
-    event.preventDefault();activePointer=event.pointerId;ink.setPointerCapture(event.pointerId);
-    changed=false;pushHistory();
-    if(eraser){changed=eraseAt(point(event));}
+  function insidePage(event){
+    const rect=ink.getBoundingClientRect();
+    return event.clientX>=rect.left&&event.clientX<=rect.right&&
+      event.clientY>=rect.top&&event.clientY<=rect.bottom;
+  }
+  function abortInk(){
+    if(gestureMode!=='ink')return;
+    if(strokeBefore!==null)setStrokes(strokeBefore); // Restore erased marks.
+    activeStroke=null;activePointer=null;strokeBefore=null;strokeChanged=false;
+    drawInk();updateControls();
+  }
+  function beginInk(event){
+    gestureMode='ink';activePointer=event.pointerId;
+    strokeBefore=copy(strokes());strokeChanged=false;
+    if(eraser)strokeChanged=eraseAt(point(event));
     else {activeStroke={color,width:.0035,points:[point(event)]};drawInk();}
-  });
-  ink.addEventListener('pointermove',event=>{
-    if(event.pointerId!==activePointer)return;
-    event.preventDefault();
-    if(eraser){changed=eraseAt(point(event))||changed;}
+  }
+  function moveInk(event){
+    if(activePointer!==event.pointerId)return;
+    if(eraser)strokeChanged=eraseAt(point(event))||strokeChanged;
     else if(activeStroke){
       const p=point(event),last=activeStroke.points.at(-1);
-      if(Math.hypot((p[0]-last[0])*drawingSize.width,(p[1]-last[1])*drawingSize.height)>1){
+      if(Math.hypot((p[0]-last[0])*drawingSize.width,
+          (p[1]-last[1])*drawingSize.height)>1){
         activeStroke.points.push(p);drawInk();
       }
     }
-  });
-  const finish=event=>{
-    if(event.pointerId!==activePointer)return;
+  }
+  function finishInk(event,cancelled){
+    if(activePointer!==event.pointerId)return;
+    if(cancelled){abortInk();return;}
     if(!eraser&&activeStroke){
       activeStroke.points.push(point(event));
-      setStrokes([...strokes(),activeStroke]);
-      activeStroke=null;changed=true;
+      setStrokes([...strokes(),activeStroke]);activeStroke=null;
+      strokeChanged=true;
     }
-    activePointer=null;
-    if(!changed)history.pop();
+    if(strokeChanged){
+      history.push(strokeBefore);
+      if(history.length>70)history.shift();
+      future=[];
+      void writeInk();
+    }
+    strokeBefore=null;strokeChanged=false;activePointer=null;
     drawInk();updateControls();
-    if(changed)void writeInk();
-  };
-  ink.addEventListener('pointerup',finish);
-  ink.addEventListener('pointercancel',finish);
+  }
+  function beginPan(pointer){
+    gestureMode='pan';panStart={
+      startX:pointer.x,startY:pointer.y,
+      scrollLeft:scroll.scrollLeft,scrollTop:scroll.scrollTop
+    };
+    pinchStart=null;
+  }
+  function beginPinch(){
+    if(pointers.size<2)return;
+    abortInk();  // A second finger must never commit an accidental stroke.
+    const [first,second]=[...pointers.values()];
+    const pair=touchPair(first,second);
+    const rect=sheet.getBoundingClientRect();
+    gestureMode='pinch';panStart=null;
+    pinchStart={
+      scale,distance:pair.distance,
+      anchorX:(pair.x-rect.left)/Math.max(1,rect.width),
+      anchorY:(pair.y-rect.top)/Math.max(1,rect.height)
+    };
+  }
+  function previewPinch(){
+    if(!pinchStart||pointers.size<2)return;
+    const [first,second]=[...pointers.values()];
+    const pair=touchPair(first,second);
+    scale=gestureScale(pinchStart.scale,pinchStart.distance,pair.distance);
+    // Cheap CSS magnification while fingers move; PDF.js only rerenders
+    // at the final resolution once the gesture has finished.
+    const ratio=scale/renderedScale;
+    const width=Math.max(1,Math.floor(renderedSize.width*ratio));
+    const height=Math.max(1,Math.floor(renderedSize.height*ratio));
+    sheet.style.width=width+'px';sheet.style.height=height+'px';
+    for(const canvas of [paper,ink])canvas.style.transform='scale('+ratio+')';
+    previewActive=true;
+    const viewport=scroll.getBoundingClientRect();
+    const target=anchoredPageScroll({
+      offsetLeft:sheet.offsetLeft,offsetTop:sheet.offsetTop,
+      pageWidth:width,pageHeight:height,
+      anchorX:pinchStart.anchorX,anchorY:pinchStart.anchorY,
+      centerX:pair.x-viewport.left,centerY:pair.y-viewport.top
+    });
+    scroll.scrollLeft=target.left;scroll.scrollTop=target.top;
+    updateControls();
+  }
+  function finishPreview(){
+    if(!previewActive)return;
+    if(Math.abs(scale-renderedScale)<0.0001){
+      // Pure two-finger translation: the scroll offsets already contain
+      // the final pan, so don't do an unnecessary PDF.js render.
+      for(const canvas of [paper,ink])canvas.style.transform='none';
+      sheet.style.width=renderedSize.width+'px';
+      sheet.style.height=renderedSize.height+'px';
+      previewActive=false;
+    }else renderPage().catch(error=>notify('PDF 缩放失败：'+error.message));
+  }
+  function clearPointers(){
+    abortInk();
+    const ids=[...pointers.keys()];
+    pointers.clear(); // Ignore any ensuing lostpointercapture events.
+    for(const id of ids){
+      try{if(scroll.hasPointerCapture(id))scroll.releasePointerCapture(id);}catch{}
+    }
+    gestureMode='idle';panStart=null;pinchStart=null;
+    activePointer=null;activeStroke=null;
+  }
+  // Capture on the scrolling viewport instead of only the canvas so a second
+  // touch on the page margin can start a two-finger gesture. Mouse and stylus
+  // input retain ordinary single-pointer drawing/dragging behavior.
+  scroll.addEventListener('pointerdown',event=>{
+    if(!doc||!dialog.open||event.button!==0)return;
+    if(pointers.has(event.pointerId))return;
+    event.preventDefault();
+    pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+    try{scroll.setPointerCapture(event.pointerId);}catch{}
+    if(pointers.size>=2){beginPinch();return;}
+    if(penEnabled&&insidePage(event))beginInk(event);
+    else beginPan(pointers.get(event.pointerId));
+  });
+  scroll.addEventListener('pointermove',event=>{
+    if(!pointers.has(event.pointerId))return;
+    event.preventDefault();
+    const point={x:event.clientX,y:event.clientY};
+    pointers.set(event.pointerId,point);
+    if(gestureMode==='pinch'){previewPinch();return;}
+    if(gestureMode==='pan'&&panStart){
+      const target=draggedPageScroll(panStart,point);
+      scroll.scrollLeft=target.left;scroll.scrollTop=target.top;
+    }else if(gestureMode==='ink')moveInk(event);
+  });
+  function endPointer(event,cancelled=false){
+    if(!pointers.has(event.pointerId))return;
+    event.preventDefault();
+    if(gestureMode==='ink')finishInk(event,cancelled);
+    pointers.delete(event.pointerId);
+    if(gestureMode==='pinch'){
+      if(pointers.size>=2)beginPinch();
+      else if(pointers.size===1)beginPan([...pointers.values()][0]);
+      else {gestureMode='idle';pinchStart=null;finishPreview();}
+    }else if(gestureMode==='pan'&&!pointers.size){
+      gestureMode='idle';panStart=null;finishPreview();
+    }else if(gestureMode==='ink'&&!pointers.size){
+      gestureMode='idle';
+    }
+    try{if(scroll.hasPointerCapture(event.pointerId))
+      scroll.releasePointerCapture(event.pointerId);}catch{}
+  }
+  scroll.addEventListener('pointerup',event=>endPointer(event));
+  scroll.addEventListener('pointercancel',event=>endPointer(event,true));
+  scroll.addEventListener('lostpointercapture',event=>{
+    if(pointers.has(event.pointerId))endPointer(event,true);
+  });
   $('wpfPrevPage').addEventListener('click',()=>navigate(pageNumber-1));
   $('wpfNextPage').addEventListener('click',()=>navigate(pageNumber+1));
   $('wpfPageInput').addEventListener('change',()=>navigate(Number($('wpfPageInput').value)));
   for(const [id,delta] of [['wpfZoomIn',.25],['wpfZoomOut',-.25]]){
     $(id).addEventListener('click',()=>{
-      scale=clamp(Math.round((scale+delta)*100)/100,.5,3);
+      clearPointers();
+      scale=clamp(Math.round((scale+delta)*100)/100,PDF_MIN_SCALE,PDF_MAX_SCALE);
       updateControls();renderPage().catch(error=>notify(error.message));
     });
   }
@@ -204,12 +344,16 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
   });
   $('wpfReaderClose').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('close',()=>{
+    clearPointers();
     ++renderSequence;if(renderJob)try{renderJob.cancel();}catch{}
     const old=doc;doc=null;entry=null;activeStroke=null;activePointer=null;
     if(old)void old.destroy().catch(()=>{});
   });
   window.addEventListener('resize',()=>{
-    if(dialog.open&&doc)renderPage().catch(error=>notify(error.message));
+    if(dialog.open&&doc){
+      clearPointers();
+      renderPage().catch(error=>notify(error.message));
+    }
   });
   async function download(entryToOpen){
     const candidates=(entryToOpen.pdfUrls||[entryToOpen.pdfUrl])
@@ -256,7 +400,7 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     doc=loaded;entry=result;pages=await readWpfInk(entry.id);
     if(!pages||typeof pages!=='object'||Array.isArray(pages))pages={};
     pageNumber=1;scale=1;penEnabled=true;eraser=false;
-    history=[];future=[];activeStroke=null;activePointer=null;
+    clearPointers();history=[];future=[];activeStroke=null;activePointer=null;
     $('wpfReaderTitle').textContent=entry.title;
     $('wpfReaderSource').href=entry.pdfUrl;
     updateControls();dialog.showModal();
