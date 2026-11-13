@@ -104,7 +104,7 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     if(token===renderSequence) status('第 '+pageNumber+' / '+doc.numPages+' 页 · 画笔自动保存');
   }
   async function navigate(next){
-    if(!doc||next<1||next>doc.numPages)return;
+    if(!doc||!Number.isInteger(next)||next<1||next>doc.numPages){updateControls();return;}
     activeStroke=null;activePointer=null;pageNumber=next;history=[];future=[];
     updateControls();
     scroll.scrollTop=0;scroll.scrollLeft=0;
