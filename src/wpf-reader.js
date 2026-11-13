@@ -302,6 +302,9 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
   }
   scroll.addEventListener('pointerup',event=>endPointer(event));
   scroll.addEventListener('pointercancel',event=>endPointer(event,true));
+  scroll.addEventListener('lostpointercapture',event=>{
+    if(pointers.has(event.pointerId))endPointer(event,true);
+  });
   $('wpfPrevPage').addEventListener('click',()=>navigate(pageNumber-1));
   $('wpfNextPage').addEventListener('click',()=>navigate(pageNumber+1));
   $('wpfPageInput').addEventListener('change',()=>navigate(Number($('wpfPageInput').value)));
