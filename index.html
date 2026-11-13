@@ -235,6 +235,7 @@
         <button id="bundledLibraryTab" type="button" role="tab" aria-controls="bundledLibraryPanel" aria-selected="true">内置</button>
         <button id="onlineLibraryTab" type="button" role="tab" aria-controls="onlineLibraryPanel" aria-selected="false">在线索引</button>
         <button id="lmdLibraryTab" type="button" role="tab" aria-controls="lmdLibraryPanel" aria-selected="false">Logic Masters</button>
+        <button id="wpfLibraryTab" type="button" role="tab" aria-controls="wpfLibraryPanel" aria-selected="false">WPF PDF</button>
       </div>
       <div id="bundledLibraryPanel" role="tabpanel">
         <div class="bundled-filters">
@@ -339,6 +340,82 @@
           <a id="lmdDetailSource" class="source-link" target="_blank" rel="noopener noreferrer" hidden>查看 Logic Masters 原题与完整图示</a>
         </section>
       </section>
+      <section id="wpfLibraryPanel" class="wpf-panel" role="tabpanel" hidden>
+        <div class="library-section-heading">
+          <strong>WPF 赛事与题型 PDF</strong>
+          <span>检索 ropeko 的题型／赛事索引，在 WPF 官方 PDF 题册上直接画笔解题。PDF 与每页标注保存在本机。</span>
+        </div>
+        <div class="wpf-controls">
+          <label for="wpfScope">浏览来源
+            <select id="wpfScope" aria-label="WPF PDF 列表模式">
+              <option value="round">赛事题册</option><option value="type">按题型查找</option><option value="saved">我的离线 PDF</option>
+            </select>
+          </label>
+          <label for="wpfYear" class="wpf-filter"><span class="sr-only">比赛年份</span>
+            <select id="wpfYear" aria-label="筛选比赛年份"><option value="">所有年份</option></select>
+          </label>
+          <label for="wpfKind" class="wpf-filter"><span class="sr-only">赛事类型</span>
+            <select id="wpfKind" aria-label="筛选赛事类别">
+              <option value="">数独及逻辑</option><option value="sudoku">Sudoku GP</option><option value="puzzle">Puzzle GP</option>
+            </select>
+          </label>
+        </div>
+        <section id="wpfDiscoverView" class="wpf-view">
+          <form id="wpfSearchForm" class="lmd-input-row">
+            <input id="wpfSearch" type="search" placeholder="搜索赛事年份、轮次或题型名称" aria-label="搜索 WPF PDF 与题型" autocomplete="off">
+            <button type="submit" class="primary-btn">搜索</button>
+          </form>
+          <div class="wpf-list-meta">
+            <span id="wpfResultCount" aria-live="polite"></span>
+            <button id="wpfRefresh" type="button">更新索引</button>
+          </div>
+          <p id="wpfIndexStatus" role="status" aria-live="polite">进入后读取 WPF 索引。</p>
+          <div id="wpfResults" class="online-index-list" aria-label="WPF 搜索结果"></div>
+        </section>
+        <section id="wpfSavedView" class="wpf-view" hidden>
+          <strong id="wpfSavedCount">0 份离线 PDF</strong>
+          <div id="wpfSavedResults" class="online-index-list"></div>
+        </section>
+        <section id="wpfTypeDetailView" class="wpf-view" hidden>
+          <button id="wpfBackTypes" type="button">← 返回题型列表</button>
+          <strong id="wpfTypeTitle">题型</strong>
+          <p id="wpfTypeStatus" role="status" aria-live="polite"></p>
+          <div id="wpfTypeExamples" class="online-index-list"></div>
+        </section>
+        <a class="source-link" href="https://logic-puzzles.ropeko.ch/php/db/search.php" target="_blank" rel="noopener noreferrer">ropeko 题型与赛事索引（原站）</a>
+      </section>
+    </div>
+  </dialog>
+  <dialog id="wpfReaderDialog" class="wpf-reader-dialog" aria-labelledby="wpfReaderTitle">
+    <div class="wpf-reader-shell">
+      <header class="wpf-reader-header">
+        <strong id="wpfReaderTitle">WPF PDF</strong>
+        <button id="wpfReaderClose" type="button" aria-label="关闭 PDF">✕</button>
+      </header>
+      <div class="wpf-reader-toolbar">
+        <button id="wpfPrevPage" type="button" aria-label="上一页">‹</button>
+        <label class="wpf-page-label"><input id="wpfPageInput" type="number" min="1" value="1" aria-label="PDF 页码"><span id="wpfPageCount"></span></label>
+        <button id="wpfNextPage" type="button" aria-label="下一页">›</button>
+        <button id="wpfZoomOut" type="button" aria-label="缩小 PDF">−</button>
+        <span id="wpfZoomLabel" aria-live="polite">100%</span>
+        <button id="wpfZoomIn" type="button" aria-label="放大 PDF">＋</button>
+        <button id="wpfPenToggle" type="button" aria-pressed="true">画笔</button>
+        <button id="wpfEraserToggle" type="button" aria-pressed="false">橡皮</button>
+        <div id="wpfColors" class="wpf-ink-colors" aria-label="画笔颜色"></div>
+        <button id="wpfUndo" type="button">撤销</button>
+        <button id="wpfRedo" type="button">重做</button>
+        <button id="wpfClearPage" type="button">清本页</button>
+      </div>
+      <div id="wpfPageScroll" class="wpf-page-scroll">
+        <div id="wpfPageSheet" class="wpf-page-sheet">
+          <canvas id="wpfPdfCanvas" aria-label="WPF PDF 当前页"></canvas>
+          <canvas id="wpfInkCanvas" aria-label="PDF 页面画笔区域"></canvas>
+        </div>
+      </div>
+      <footer class="wpf-reader-footer">
+        <span id="wpfReaderStatus" role="status" aria-live="polite">正在载入 PDF…</span>
+        <a id="wpfReaderSource" target="_blank" rel="noopener noreferrer">官方 PDF</a>
+      </footer>
     </div>
   </dialog>
   <dialog id="lmdImageDialog" class="lmd-image-dialog" aria-label="Logic Masters 图片全屏预览">
