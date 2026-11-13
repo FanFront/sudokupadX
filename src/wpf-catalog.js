@@ -12,7 +12,7 @@ export function parseWpfIndex(html) {
     .replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/gi,' ')
     .replace(/&amp;/gi,'&').replace(/\s+/g,' ');
   const rounds = [], seen = new Set();
-  const pattern = /WPF\s+(Sudoku|Puzzle)\s+GP\s+(20\d{2})\s*-\s*(Round\s+\d+(?:\s+(?:[ABCX]|Casual|Competitive))?|Playoffs)\s*\((\d+)\)/gi;
+  const pattern = /WPF\s+(Sudoku|Puzzle)\s+GP\s+(20\d{2})\s*-\s*(Round\s+\d+(?:\s*[ABCX]|\s+(?:Casual|Competitive))?|Playoffs)\s*\((\d+)\)/gi;
   for (const match of text.matchAll(pattern)) {
     const kind = match[1].toLowerCase();
     const year = Number(match[2]), round = match[3].replace(/\s+/g,' ').trim();
@@ -69,11 +69,11 @@ export function validatedWpfPdfUrl(raw) {
 // Conventional WPF GP competition-booklet filenames. Some older rounds used
 // other names; those attempts fail closed (HTTP/magic bytes), never open HTML.
 export function wpfRoundPdfCandidates(entry) {
-  const n=/^Round\s+(\d+)(?:\s+([ABCX]|Casual|Competitive))?$/i.exec(entry.round||'');
+  const n=/^Round\s+(\d+)(?:\s*([ABCX])|\s+(Casual|Competitive))?$/i.exec(entry.round||'');
   if (!n || !Number.isInteger(entry.year) || entry.year<2014 || entry.year>2100 ||
       !['sudoku','puzzle'].includes(entry.kind)) return [];
   const stem=entry.year+'_'+(entry.kind==='sudoku'?'Sudoku':'Puzzle')+'Round'+n[1];
-  const suffix=n[2]||'';
+  const suffix=n[2]||n[3]||'';
   return [...new Set([
     ...(suffix?[stem+suffix,stem+'_'+suffix]:[]),stem
   ].map(file=>ROOT+entry.year+'/'+file+'.pdf'))].filter(validatedWpfPdfUrl);
