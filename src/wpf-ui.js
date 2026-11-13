@@ -9,8 +9,8 @@ import {fetchPuzzleProxy} from './puzzle-proxy.js';
 const $=id=>document.getElementById(id);
 const CACHE='sudokupadx:wpf-catalog:v1';
 
-// Only public site pages are fetched. The ropeko index is a reference
-// catalogue; PDF bytes always come from WPF's own official GP host.
+// The ropeko catalogue links to PDF files on several competition and author
+// domains. Native Android verifies their content before caching.
 export function setupWpfLibrary({notify}) {
   let catalog={rounds:[],types:[]},saved=[],loaded=false,busy=false,selectedType=null;
   const status=message=>{$('wpfIndexStatus').textContent=message;};
@@ -55,7 +55,7 @@ export function setupWpfLibrary({notify}) {
     const urls=wpfRoundPdfCandidates(round);
     return {...round,pdfUrl:urls[0]||'',pdfUrls:urls,sourceUrl:WPF_SEARCH_URL};
   }
-  function addPdfCard(container,entry,subtitle='WPF 官方比赛题面'){
+  function addPdfCard(container,entry,subtitle='WPF PDF'){
     const savedEntry=saved.find(item=>item.id===entry.id);
     const card=document.createElement('article');card.className='online-entry';
     const title=document.createElement('strong');title.textContent=entry.title;
@@ -154,7 +154,7 @@ export function setupWpfLibrary({notify}) {
       populateYears(next);
       try{localStorage.setItem(CACHE,JSON.stringify(catalog));}catch{}
       status('已索引 '+next.rounds.length+' 轮赛事、'+next.types.length+
-        ' 个题型。PDF 由 WPF 官方服务器提供，打开后自动离线缓存。');
+        ' 个题型。PDF 可能来自各赛事的不同站点，打开后自动离线缓存。');
       renderList();
     }catch(error){
       status((loaded?'使用已有本机索引。':'暂无本机索引。')+' 联网更新失败：'+errorText(error));
@@ -173,8 +173,8 @@ export function setupWpfLibrary({notify}) {
         {...pdf,id:'wpf:pdf:'+pdf.pdfUrl,sourceUrl:item.sourceUrl},
         '出自 ropeko 题型示例');
       $('wpfTypeStatus').textContent=examples.length?
-        '找到 '+examples.length+' 个官方 PDF 示例（整份比赛卷包含多道题）。':
-        '该题型目前没有收录 WPF 官方 PDF 示例，可尝试搜索其他题型。';
+        '找到 '+examples.length+' 个 PDF 链接（可能由各赛事或作者托管）。':
+        '该题型目前没有收录以 .pdf 结尾的示例链接，可尝试搜索其他题型。';
     }catch(error){$('wpfTypeStatus').textContent='读取失败：'+errorText(error);}
     finally{busy=false;}
   }
