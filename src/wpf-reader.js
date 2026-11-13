@@ -119,7 +119,7 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     try{await renderJob.promise;}
     catch(error){if(error?.name!=='RenderingCancelledException')throw error;}
     finally{if(token===renderSequence)renderJob=null;}
-    if(token===renderSequence) status('第 '+pageNumber+' / '+doc.numPages+' 页 · 画笔自动保存');
+    if(token===renderSequence) status('第 '+pageNumber+' / '+doc.numPages+' 页 · 单指画笔 · 双指缩放/移动 · 自动保存');
   }
   async function navigate(next){
     if(!doc||!Number.isInteger(next)||next<1||next>doc.numPages){updateControls();return;}
@@ -152,11 +152,6 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     if(next.length===strokes().length)return false;
     setStrokes(next);drawInk();return true;
   }
-  function pagePoint(event){
-    const rect=ink.getBoundingClientRect();
-    return [clamp((event.clientX-rect.left)/rect.width,0,1),
-      clamp((event.clientY-rect.top)/rect.height,0,1)];
-  }
   function insidePage(event){
     const rect=ink.getBoundingClientRect();
     return event.clientX>=rect.left&&event.clientX<=rect.right&&
@@ -171,14 +166,14 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
   function beginInk(event){
     gestureMode='ink';activePointer=event.pointerId;
     strokeBefore=copy(strokes());strokeChanged=false;
-    if(eraser)strokeChanged=eraseAt(pagePoint(event));
-    else {activeStroke={color,width:.0035,points:[pagePoint(event)]};drawInk();}
+    if(eraser)strokeChanged=eraseAt(point(event));
+    else {activeStroke={color,width:.0035,points:[point(event)]};drawInk();}
   }
   function moveInk(event){
     if(activePointer!==event.pointerId)return;
-    if(eraser)strokeChanged=eraseAt(pagePoint(event))||strokeChanged;
+    if(eraser)strokeChanged=eraseAt(point(event))||strokeChanged;
     else if(activeStroke){
-      const p=pagePoint(event),last=activeStroke.points.at(-1);
+      const p=point(event),last=activeStroke.points.at(-1);
       if(Math.hypot((p[0]-last[0])*drawingSize.width,
           (p[1]-last[1])*drawingSize.height)>1){
         activeStroke.points.push(p);drawInk();
@@ -189,7 +184,7 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
     if(activePointer!==event.pointerId)return;
     if(cancelled){abortInk();return;}
     if(!eraser&&activeStroke){
-      activeStroke.points.push(pagePoint(event));
+      activeStroke.points.push(point(event));
       setStrokes([...strokes(),activeStroke]);activeStroke=null;
       strokeChanged=true;
     }
