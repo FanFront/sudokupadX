@@ -2,6 +2,7 @@ import {invoke} from '@tauri-apps/api/core';
 import {validatedWpfPdfUrl,isPdfData} from './wpf-catalog.js';
 import {MAX_WPF_PDF,readWpfDocument,saveWpfDocument,readWpfInk,saveWpfInk} from './wpf-storage.js';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import {fetchPuzzleProxy} from './puzzle-proxy.js';
 
 const PALETTE=['#e34b45','#1c80df','#21975c','#efab2c','#181818'];
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
@@ -226,11 +227,8 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
           bytes=new Uint8Array(binary.length);
           for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
         }else{
-          const response=await fetch(pdfUrl,{cache:'no-store',credentials:'omit'});
-          if(!response.ok)throw Error('HTTP '+response.status);
-          if(Number(response.headers.get('content-length')||0)>MAX_WPF_PDF)
-            throw Error('PDF 超过 24 MiB');
-          bytes=new Uint8Array(await response.arrayBuffer());
+          bytes=await fetchPuzzleProxy('wpf-pdf',{url:pdfUrl},
+            {limit:MAX_WPF_PDF,binary:true});
         }
         if(bytes.byteLength>MAX_WPF_PDF||!isPdfData(bytes))throw Error('链接返回的不是 PDF');
         const found={...entryToOpen,pdfUrl};
@@ -240,7 +238,7 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
       }catch(error){lastError=error;}
     }
     throw Error('WPF PDF 下载失败：'+(lastError?.message||lastError)+
-      '。网页版如被 CORS 阻止，请使用安卓版或从官方站点下载。');
+      '。请检查跨域代理和官方 PDF 资源是否可用。');
   }
   async function open(entryToOpen,{offline=false}={}){
     if(dialog.open)dialog.close();
