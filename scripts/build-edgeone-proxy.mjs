@@ -8,7 +8,7 @@ if(end===-1||!input.includes('export async function handleRequest'))
   throw Error('Cloudflare Worker layout changed; update EdgeOne adapter manually');
 const body=input.slice(0,end).replace(/^export /gm,'').replace(
   /\n\s*cf:\{cacheTtl:0\}/,''
-);
+).replace('return new Response(bytes,{','return new Response(bytes.buffer,{');
 const header=[
   '// Tencent EdgeOne Edge Functions (independent/no-domain site) deployment.',
   '// Self-contained, paste directly in EdgeOne\'s Edge Function editor.',
