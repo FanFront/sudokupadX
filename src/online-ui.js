@@ -6,6 +6,7 @@ import {
 import {invoke} from '@tauri-apps/api/core';
 import {installLmdImageViewer} from './lmd-image-viewer.js';
 import {parsePenpaUrl} from './penpa-import.js';
+import {setupWpfLibrary} from './wpf-ui.js';
 import {
   logicMastersReference, parseLogicMastersPage, directPuzzleEntry,
   logicMastersSearchUrl, parseLogicMastersSearch, parseLogicMastersDetails,
@@ -17,6 +18,11 @@ import {
 // puzzle definitions are kept for offline play.
 export function setupOnlineLibrary({openPuzzle, notify}) {
   const $ = id => document.getElementById(id);
+  const wpf = setupWpfLibrary({notify});
+  const hideWpf = () => {
+    $('wpfLibraryPanel').hidden = true;
+    $('wpfLibraryTab').setAttribute('aria-selected','false');
+  };
   let entries = [];
   let saved = new Map();
   let indexSource = '';
@@ -234,6 +240,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     await lmdAction(resolveLmdReference);
   }
   async function activateLmd() {
+    hideWpf();
     active = false;
     lmdActive = true;
     $('bundledLibraryPanel').hidden = true;
@@ -530,6 +537,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
 
   let started = false;
   async function activate() {
+    hideWpf();
     lmdActive = false;
     $('lmdLibraryPanel').hidden = true;
     $('lmdLibraryTab').setAttribute('aria-selected','false');
@@ -551,6 +559,7 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     }
   }
   function showBundled() {
+    hideWpf();
     active = false;
     lmdActive = false;
     $('lmdLibraryPanel').hidden = true;
@@ -560,6 +569,18 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
     $('bundledLibraryTab').setAttribute('aria-selected','true');
     $('onlineLibraryTab').setAttribute('aria-selected','false');
   }
+  async function activateWpf() {
+    active=false;lmdActive=false;
+    $('bundledLibraryPanel').hidden=true;
+    $('onlineLibraryPanel').hidden=true;
+    $('lmdLibraryPanel').hidden=true;
+    for(const id of ['bundledLibraryTab','onlineLibraryTab','lmdLibraryTab'])
+      $(id).setAttribute('aria-selected','false');
+    $('wpfLibraryPanel').hidden=false;
+    $('wpfLibraryTab').setAttribute('aria-selected','true');
+    await wpf.activate();
+  }
+  $('wpfLibraryTab').addEventListener('click',()=>activateWpf().catch(notify));
   $('onlineLibraryTab').addEventListener('click', () => activate().catch(notify));
   $('lmdLibraryTab').addEventListener('click', () => activateLmd().catch(notify));
   $('bundledLibraryTab').addEventListener('click', showBundled);

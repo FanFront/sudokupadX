@@ -819,3 +819,67 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 @media(orientation:landscape) and (max-height:520px) and (min-width:540px) and (max-width:850px){
   #app .hint-panel{position:static;max-height:none;overflow:visible;box-shadow:none}
 }
+
+
+/* WPF competition PDF discovery and page-relative pencil annotations. */
+#libraryDialog #wpfLibraryPanel{display:flex;flex:1;min-height:0;overflow:hidden;flex-direction:column;gap:12px}
+#wpfLibraryPanel[hidden],.wpf-view[hidden],.wpf-filter select[hidden]{display:none!important}
+.wpf-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:end;flex-shrink:0}
+.wpf-controls label{display:flex;align-items:center;gap:6px;color:#b9d4e3;font-size:12px}
+.wpf-controls select{height:38px;min-width:96px;max-width:180px;border-radius:8px;
+ border:1px solid #456b80;background:#142c40;color:#e9f6ff;padding:0 9px}
+#wpfLibraryPanel .wpf-view{flex:1;min-height:0;display:flex;flex-direction:column;gap:9px}
+#wpfLibraryPanel .wpf-view[hidden]{display:none!important}
+#wpfSearchForm{margin:0;flex-shrink:0}
+.wpf-list-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ font-size:12px;color:#aacbd9}
+.wpf-list-meta button{min-height:32px;font-size:12px;padding:0 9px}
+#wpfIndexStatus,#wpfTypeStatus{font-size:12px;color:#b3cfdd;line-height:1.4;margin:0}
+#wpfResults,#wpfSavedResults,#wpfTypeExamples{flex:1;min-height:0;overflow:auto;max-height:none;
+ display:flex;flex-direction:column;gap:8px;padding:3px 3px 8px}
+#wpfTypeDetailView>button{align-self:flex-start;min-height:34px;padding:0 10px}
+#wpfTypeDetailView>strong{font-size:16px}
+#wpfLibraryPanel>.source-link{flex-shrink:0;font-size:11px}
+#wpfLibraryPanel .lmd-result-button small{color:#99b8cc;font-size:11px}
+
+.wpf-reader-dialog{width:min(98vw,1100px);height:min(96dvh,1020px);max-width:none;max-height:none;
+ margin:auto;padding:0;border:1px solid #40627b;border-radius:14px;background:#102035;
+ color:#eaf6ff;box-shadow:0 20px 80px #000a;overflow:hidden}
+.wpf-reader-dialog::backdrop{background:#060e17e8}
+.wpf-reader-shell{height:100%;display:flex;flex-direction:column;min-height:0}
+.wpf-reader-header{min-height:46px;padding:6px 12px;display:flex;justify-content:space-between;
+ gap:10px;align-items:center;background:#152c42;border-bottom:1px solid #344f68}
+.wpf-reader-header strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.wpf-reader-header button{min-height:34px;min-width:39px}
+.wpf-reader-toolbar{display:flex;gap:5px;flex-wrap:wrap;padding:7px 9px;background:#102338;
+ border-bottom:1px solid #35516a;align-items:center;justify-content:center}
+.wpf-reader-toolbar button{min-height:35px;padding:0 9px;font-size:12px;white-space:nowrap}
+.wpf-reader-toolbar button[aria-pressed="true"]{background:#b9e4d6;color:#153445;border-color:#b9e4d6}
+.wpf-page-label{display:flex;gap:5px;align-items:center;white-space:nowrap;color:#a5c7d8;font-size:12px}
+.wpf-page-label input{width:47px;height:35px;text-align:center;border:1px solid #456b80;
+ border-radius:8px;background:#0d2033;color:#eaf6ff;font-size:13px}
+#wpfZoomLabel{font-size:12px;min-width:40px;text-align:center;color:#aac7d8}
+.wpf-ink-colors{display:flex;gap:4px}
+.wpf-ink-colors button{min-height:32px;min-width:30px;width:30px;
+ background:var(--ink);border:2px solid #344b63;border-radius:8px;padding:0}
+.wpf-ink-colors button[aria-pressed="true"]{outline:2px solid white;outline-offset:1px}
+.wpf-page-scroll{flex:1;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;
+ background:#687582;padding:12px;display:block;text-align:center;touch-action:pan-x pan-y}
+.wpf-page-sheet{position:relative;display:block;width:1px;height:1px;background:white;
+ box-shadow:0 4px 22px #0005;margin:0 auto}
+#wpfPdfCanvas{display:block;position:absolute;inset:0}
+#wpfInkCanvas{position:absolute;inset:0;cursor:crosshair}
+.wpf-reader-footer{min-height:30px;display:flex;justify-content:space-between;align-items:center;
+ gap:10px;padding:5px 12px;font-size:11px;background:#152c42;color:#a8cbd9}
+.wpf-reader-footer a{color:#b9e4d6}
+@media(max-width:650px){
+ .wpf-reader-dialog{width:100vw;height:calc(100dvh - var(--app-top-inset) - var(--app-bottom-inset));
+  border-radius:0;margin:var(--app-top-inset) 0 var(--app-bottom-inset)}
+ .wpf-reader-header{min-height:40px}
+ .wpf-reader-toolbar{justify-content:flex-start;gap:4px;padding:5px}
+ .wpf-reader-toolbar button{min-height:32px;padding:0 7px;font-size:11px}
+ .wpf-ink-colors button{width:25px;min-width:25px;min-height:29px}
+ .wpf-page-scroll{padding:6px}
+ #wpfLibraryPanel .library-section-heading{gap:2px}
+ .wpf-controls select{min-width:80px;max-width:145px}
+}
