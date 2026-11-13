@@ -382,7 +382,8 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
       }catch(error){lastError=error;}
     }
     throw Error('WPF PDF 下载失败：'+(lastError?.message||lastError)+
-      '。请检查跨域代理和官方 PDF 资源是否可用。');
+      (window.__TAURI_INTERNALS__ ? '。请检查 PDF 链接及网络。' :
+        '。网页版代理可能不支持该 PDF 来源；Android 版可直接下载公开 PDF。'));
   }
   async function open(entryToOpen,{offline=false}={}){
     if(dialog.open)dialog.close();

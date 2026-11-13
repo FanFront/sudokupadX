@@ -1,8 +1,7 @@
 // The ropeko database indexes puzzle types and WPF competition references.
 // A competition reference is not an individual puzzle file: GP PDFs contain
-// multiple puzzles. Always verify the official PDF response before opening it.
+// multiple puzzles. Validate the URL and verify PDF magic bytes on download.
 export const WPF_SEARCH_URL = 'https://logic-puzzles.ropeko.ch/php/db/search.php';
-export const WPF_PDF_HOST = 'gp.worldpuzzle.org';
 const ROOT = 'https://gp.worldpuzzle.org/sites/default/files/Puzzles/';
 
 export function parseWpfIndex(html) {
@@ -54,14 +53,25 @@ export function filterWpfIndex(items,{search='',year='',kind=''}={}) {
       .some(part=>String(part||'').toLocaleLowerCase().includes(needle))));
 }
 
+// WPF puzzle-type references can point to PDF files hosted by authors,
+// national federations or historical archives, not only WPF's GP directory.
+// Accept absolute public HTTP(S) URLs whose final path suffix is ".pdf".
+// Keep URL-level guardrails; native Android verifies PDF bytes on download.
 export function validatedWpfPdfUrl(raw) {
+  if (typeof raw!=='string' || !raw || raw.length>2048 ||
+      raw.trim()!==raw || /[\x00-\x1f\x7f]/.test(raw) ||
+      !/\.pdf$/i.test(raw) || /%2f|%5c|%2e/i.test(raw)) return null;
   try {
     const url=new URL(raw);
-    if (url.protocol!=='https:' || url.host!==WPF_PDF_HOST ||
+    const host=url.hostname.toLowerCase().replace(/\.$/,'');
+    if (!['http:','https:'].includes(url.protocol) || !host ||
         url.username || url.password || url.port || url.search || url.hash ||
-        !url.pathname.startsWith('/sites/default/files/Puzzles/') ||
-        !/\.pdf$/i.test(url.pathname) || url.href.length>500 ||
-        /%2f|%5c|\.\./i.test(url.pathname)) return null;
+        !/\.pdf$/i.test(url.pathname) || url.href.length>2048 ||
+        // Reject loopback, literal IPs and private network hostnames.
+        host.startsWith('[') || /^\d+\.\d+\.\d+\.\d+$/.test(host) ||
+        /(?:^|\.)(?:localhost|local|internal|test|invalid)$/.test(host) ||
+        /(?:^|\/)(?:\.\.?)(?:\/|$)/.test(url.pathname))
+      return null;
     return url.href;
   } catch { return null; }
 }

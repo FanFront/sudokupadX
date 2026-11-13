@@ -203,9 +203,9 @@ async fn search_logic_masters(query: String, start: u32, sort: String) -> Result
 }
 
 
-// WPF/ropeko is public metadata, but the UI must never turn this into an
-// unrestricted proxy. Only two fixed ropeko paths and the official GP PDF
-// directory are allowed. Redirects, credentials and oversized responses fail.
+// WPF/ropeko metadata uses two fixed endpoints. PDF links, however, may
+// point to public historical archives outside gp.worldpuzzle.org.
+// Keep no redirects, no credentials and a strict download size limit.
 async fn read_wpf_url(url: reqwest::Url, limit: usize) -> Result<Vec<u8>, String> {
     let client=reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
@@ -245,22 +245,80 @@ async fn fetch_wpf_type(puzzle_id:u16) -> Result<String,String> {
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
-#[tauri::command]
-async fn fetch_wpf_pdf(url:String) -> Result<String,String> {
-    let url=reqwest::Url::parse(&url).map_err(|_|"WPF PDF 地址无效".to_owned())?;
-    if url.scheme()!="https" || url.host_str()!=Some("gp.worldpuzzle.org") ||
+// Match the client-side URL rules, but independently validate inside the
+// Android native command. This is a downloader, not a generic network proxy.
+// Accept URLs ending in .pdf from public HTTP(S) domains, including older
+// WPF reference hosts outside the GP archive.
+fn parse_wpf_pdf_url(raw:&str) -> Result<reqwest::Url,String> {
+    let lower=raw.to_ascii_lowercase();
+    if raw.is_empty() || raw.len()>2048 || raw.trim()!=raw ||
+       raw.bytes().any(|b|b.is_ascii_control()) ||
+       !lower.ends_with(".pdf") ||
+       ["%2f","%5c","%2e"].iter().any(|part|lower.contains(part)) {
+        return Err("仅支持以 .pdf 结尾的公开 HTTP(S) 链接".into());
+    }
+    let url=reqwest::Url::parse(raw).map_err(|_|"WPF PDF 地址无效".to_owned())?;
+    let host=url.host_str().ok_or("PDF 地址缺少有效主机名")?;
+    let hostname=host.trim_end_matches('.').to_ascii_lowercase();
+    let local=matches!(hostname.as_str(),"localhost"|"local"|"internal"|"test"|"invalid") ||
+        [".localhost",".local",".internal",".test",".invalid"]
+            .iter().any(|suffix|hostname.ends_with(suffix));
+    if !matches!(url.scheme(),"https"|"http") || local ||
+       hostname.starts_with('[') || hostname.parse::<std::net::IpAddr>().is_ok() ||
        url.port().is_some() || !url.username().is_empty() || url.password().is_some() ||
        url.query().is_some() || url.fragment().is_some() ||
-       !url.path().starts_with("/sites/default/files/Puzzles/") ||
-       !url.path().to_ascii_lowercase().ends_with(".pdf") ||
-       url.path().contains("..") || url.path().len()>450 {
-        return Err("仅允许下载 WPF 官方 GP PDF".into());
+       !url.path().to_ascii_lowercase().ends_with(".pdf") {
+        return Err("仅支持以 .pdf 结尾的公开 HTTP(S) 链接".into());
     }
+    Ok(url)
+}
+
+#[tauri::command]
+async fn fetch_wpf_pdf(url:String) -> Result<String,String> {
+    let url=parse_wpf_pdf_url(&url)?;
     let bytes=read_wpf_url(url,24*1024*1024).await?;
     if !bytes.starts_with(b"%PDF-") {return Err("WPF 链接返回的不是 PDF 文件".into());}
     // Base64 avoids transferring a very large JSON array of byte integers
     // through the Android JS/Rust IPC bridge for multi-page competition PDFs.
     Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
+}
+
+#[cfg(test)]
+mod wpf_pdf_url_tests {
+    use super::parse_wpf_pdf_url;
+
+    #[test]
+    fn any_public_pdf_host_and_folder_are_accepted() {
+        for input in [
+            "https://gp.worldpuzzle.org/sites/default/files/Puzzles/2025/2025_SudokuRound4.pdf",
+            "https://files.some-federation.org/archive/2020/sudoku.pdf",
+            "https://example.org/competition/PUZZLE.PDF",
+            "http://archive.example.net/old%20contest.pdf",
+        ] {
+            assert_eq!(parse_wpf_pdf_url(input).unwrap().as_str(),input);
+        }
+    }
+
+    #[test]
+    fn invalid_or_private_resource_urls_are_rejected() {
+        for input in [
+            "file:///data/local/puzzle.pdf",
+            "ftp://example.org/puzzle.pdf",
+            "https://example.org/puzzle.pdf?download=1",
+            "https://example.org/puzzle.pdf#page=2",
+            "https://example.org/not-a-pdf.png",
+            "https://example.org/puzzle.pdf/other",
+            "https://localhost/test.pdf",
+            "http://127.0.0.1/test.pdf",
+            "http://192.168.1.2/test.pdf",
+            "https://[::1]/test.pdf",
+            "https://example.org:8443/test.pdf",
+            "https://user:pass@example.org/test.pdf",
+            "https://example.org/%2e%2e/private.pdf",
+        ] {
+            assert!(parse_wpf_pdf_url(input).is_err(),"{input}");
+        }
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
