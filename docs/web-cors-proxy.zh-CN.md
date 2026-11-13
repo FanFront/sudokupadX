@@ -14,7 +14,7 @@ Worker 只允许 GET、固定路径、受限参数、官方 PDF 路径，禁止�
 
 ## 一次性部署
 
-1. 创建或使用现有的 Cloudflare 账户，在 Worker 设置中启用 `workers.dev` 子域名。
+1. **先将包含此工作流的 PR 合并到 main**，或者自行在本地使用 Wrangler 部署；然后创建或使用现有的 Cloudflare 账户，在 Worker 设置中启用 `workers.dev` 子域名。
 2. 在 GitHub 仓库的 **Settings → Secrets and variables → Actions → Secrets** 中增加 `CLOUDFLARE_API_TOKEN`（权限 Workers Scripts: Edit）和 `CLOUDFLARE_ACCOUNT_ID`。
 3. 在 GitHub Actions 里手动运行 **Deploy puzzle-source CORS relay**，它执行 `npx wrangler@4 deploy --config worker/wrangler.toml`。记录返回的 `https://sudokupadx-puzzle-proxy.<你的子域>.workers.dev` URL。
 4. 在仓库 **Settings → Secrets and variables → Actions → Variables** 中新增 `PUZZLE_PROXY_URL`，值为上一步的完整 HTTPS URL。**这是公开配置，不是秘密。**
