@@ -201,13 +201,73 @@ async fn search_logic_masters(query: String, start: u32, sort: String) -> Result
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
+
+// WPF/ropeko is public metadata, but the UI must never turn this into an
+// unrestricted proxy. Only two fixed ropeko paths and the official GP PDF
+// directory are allowed. Redirects, credentials and oversized responses fail.
+async fn read_wpf_url(url: reqwest::Url, limit: usize) -> Result<Vec<u8>, String> {
+    let client=reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .redirect(reqwest::redirect::Policy::none())
+        .build().map_err(|e| format!("WPF HTTPS 客户端失败: {e}"))?;
+    let mut response=client.get(url).send().await
+        .map_err(|e| format!("请求 WPF 失败: {e}"))?;
+    if !response.status().is_success() {
+        return Err(format!("WPF 服务器返回 HTTP {}",response.status()));
+    }
+    if response.content_length().is_some_and(|len|len>limit as u64) {
+        return Err("WPF 数据超过大小限制".into());
+    }
+    let mut bytes=Vec::new();
+    while let Some(chunk)=response.chunk().await.map_err(|e| format!("读取 WPF 文件失败: {e}"))? {
+        if bytes.len()+chunk.len()>limit {return Err("WPF 数据超过大小限制".into());}
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
+}
+
+#[tauri::command]
+async fn fetch_wpf_index() -> Result<String,String> {
+    let url=reqwest::Url::parse("https://logic-puzzles.ropeko.ch/php/db/search.php")
+        .map_err(|e|e.to_string())?;
+    let bytes=read_wpf_url(url,4*1024*1024).await?;
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+#[tauri::command]
+async fn fetch_wpf_type(puzzle_id:u16) -> Result<String,String> {
+    if puzzle_id==0||puzzle_id>2000 {return Err("WPF 题型编号无效".into());}
+    let url=reqwest::Url::parse(&format!(
+        "https://logic-puzzles.ropeko.ch/php/db/puzzle.php?id={puzzle_id}"
+    )).map_err(|e|e.to_string())?;
+    let bytes=read_wpf_url(url,1024*1024).await?;
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+#[tauri::command]
+async fn fetch_wpf_pdf(url:String) -> Result<Vec<u8>,String> {
+    let url=reqwest::Url::parse(&url).map_err(|_|"WPF PDF 地址无效".to_owned())?;
+    if url.scheme()!="https" || url.host_str()!=Some("gp.worldpuzzle.org") ||
+       url.port().is_some() || !url.username().is_empty() || url.password().is_some() ||
+       url.query().is_some() || url.fragment().is_some() ||
+       !url.path().starts_with("/sites/default/files/Puzzles/") ||
+       !url.path().to_ascii_lowercase().ends_with(".pdf") ||
+       url.path().contains("..") || url.path().len()>450 {
+        return Err("仅允许下载 WPF 官方 GP PDF".into());
+    }
+    let bytes=read_wpf_url(url,24*1024*1024).await?;
+    if !bytes.starts_with(b"%PDF-") {return Err("WPF 链接返回的不是 PDF 文件".into());}
+    Ok(bytes)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            open_puzzle, update_cell, update_cells, update_notes, check_progress, hint_step, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters
+            open_puzzle, update_cell, update_cells, update_notes, check_progress, hint_step, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters,
+            fetch_wpf_index, fetch_wpf_type, fetch_wpf_pdf
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start SudokuPad X");
