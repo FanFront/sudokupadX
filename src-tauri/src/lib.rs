@@ -1,4 +1,5 @@
 use serde::Serialize;
+use base64::Engine as _;
 use std::sync::Mutex;
 use sudokupadx_core::{EditResult, InputCell, PencilUpdate, ProgressCheck, Puzzle, Session, Snapshot};
 use tauri::State;
@@ -245,7 +246,7 @@ async fn fetch_wpf_type(puzzle_id:u16) -> Result<String,String> {
 }
 
 #[tauri::command]
-async fn fetch_wpf_pdf(url:String) -> Result<Vec<u8>,String> {
+async fn fetch_wpf_pdf(url:String) -> Result<String,String> {
     let url=reqwest::Url::parse(&url).map_err(|_|"WPF PDF 地址无效".to_owned())?;
     if url.scheme()!="https" || url.host_str()!=Some("gp.worldpuzzle.org") ||
        url.port().is_some() || !url.username().is_empty() || url.password().is_some() ||
@@ -257,7 +258,9 @@ async fn fetch_wpf_pdf(url:String) -> Result<Vec<u8>,String> {
     }
     let bytes=read_wpf_url(url,24*1024*1024).await?;
     if !bytes.starts_with(b"%PDF-") {return Err("WPF 链接返回的不是 PDF 文件".into());}
-    Ok(bytes)
+    // Base64 avoids transferring a very large JSON array of byte integers
+    // through the Android JS/Rust IPC bridge for multi-page competition PDFs.
+    Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
