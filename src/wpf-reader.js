@@ -62,10 +62,15 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
       }else inkCtx.stroke();
     }
   }
-  async function writeInk(){
-    if(!entry)return;
-    try{await saveWpfInk(entry.id,pages);}
-    catch(error){status('画笔保存失败：'+(error?.message||error));}
+  // Serialise autosaves: a slow IndexedDB write must not overwrite a later
+  // stroke, even if the user changes pages or closes the reader immediately.
+  let inkSaveQueue=Promise.resolve();
+  function writeInk(){
+    if(!entry)return inkSaveQueue;
+    const id=entry.id,snapshot=copy(pages);
+    inkSaveQueue=inkSaveQueue.catch(()=>{}).then(()=>saveWpfInk(id,snapshot))
+      .catch(error=>{status('画笔保存失败：'+(error?.message||error));});
+    return inkSaveQueue;
   }
   async function renderPage(){
     if(!doc||!dialog.open)return;
