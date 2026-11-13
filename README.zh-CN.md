@@ -41,7 +41,7 @@ Android 用户可通过上方链接下载并安装 **APK 文件**（支持 Andro
 
 ## 网页版 Logic Masters / WPF 跨域检索
 
-GitHub Pages 是静态托管，无法在浏览器中直接绕过第三方网站的 CORS。网页版统一通过白名单 Cloudflare Worker 请求 Logic Masters 搜索／详情、WPF 索引／题型和官方 PDF；Android 仍使用 Rust 原生接口。**必须先部署 Worker，并在 GitHub Actions 中配置 `PUZZLE_PROXY_URL` 公开仓库变量，才能在正式网页版启用检索。** 具体操作参见 [部署教程](docs/web-cors-proxy.zh-CN.md)。
+GitHub Pages 是静态托管，无法在浏览器中直接绕过第三方网站的 CORS。网页版统一通过白名单 Cloudflare Worker 请求 Logic Masters 搜索／详情、WPF 索引／题型和官方 PDF；Android 仍使用 Rust 原生接口。**必须先部署 Worker，并在 GitHub Actions 中配置 `PUZZLE_PROXY_URL` 公开仓库变量，才能在正式网页版启用检索。** 具体操作参见 [Cloudflare 部署教程](docs/web-cors-proxy.zh-CN.md)。**没有自有域名且需要在中国大陆分享？** 可尝试 [EdgeOne 独立边缘函数「无域名接入」方案](docs/edgeone-no-domain-proxy.zh-CN.md)，复用原有五个 API；需先按文档在大陆网络用 `fetch` 验证，不能直接把 EdgeOne Pages 默认域名当成可用的稳定代理。
 
 ## 开发与构建
 
