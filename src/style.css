@@ -864,11 +864,13 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
  background:var(--ink);border:2px solid #344b63;border-radius:8px;padding:0}
 .wpf-ink-colors button[aria-pressed="true"]{outline:2px solid white;outline-offset:1px}
 .wpf-page-scroll{flex:1;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;
- background:#687582;padding:12px;display:block;text-align:center;touch-action:pan-x pan-y}
+ background:#687582;padding:12px;display:block;position:relative;text-align:center;touch-action:none}
 .wpf-page-sheet{position:relative;display:block;width:1px;height:1px;background:white;
  box-shadow:0 4px 22px #0005;margin:0 auto}
 #wpfPdfCanvas{display:block;position:absolute;inset:0}
-#wpfInkCanvas{position:absolute;inset:0;cursor:crosshair}
+#wpfInkCanvas{position:absolute;inset:0;cursor:crosshair;touch-action:none}
+#wpfPdfCanvas,#wpfInkCanvas{transform-origin:top left;user-select:none;-webkit-user-select:none}
+.wpf-page-sheet{touch-action:none}
 .wpf-reader-footer{min-height:30px;display:flex;justify-content:space-between;align-items:center;
  gap:10px;padding:5px 12px;font-size:11px;background:#152c42;color:#a8cbd9}
 .wpf-reader-footer a{color:#b9e4d6}
