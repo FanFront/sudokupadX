@@ -1,0 +1,7 @@
+name = "sudokupadx-puzzle-proxy"
+main = "remote-proxy.js"
+compatibility_date = "2026-11-13"
+workers_dev = true
+
+# Optional: add extra exact Origins through Cloudflare Worker settings:
+# EXTRA_ALLOWED_ORIGINS = "https://example.org,https://another.example.org"
