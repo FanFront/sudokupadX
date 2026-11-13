@@ -7,6 +7,7 @@ import {invoke} from '@tauri-apps/api/core';
 import {installLmdImageViewer} from './lmd-image-viewer.js';
 import {parsePenpaUrl} from './penpa-import.js';
 import {setupWpfLibrary} from './wpf-ui.js';
+import {fetchPuzzleProxy} from './puzzle-proxy.js';
 import {
   logicMastersReference, parseLogicMastersPage, directPuzzleEntry,
   logicMastersSearchUrl, parseLogicMastersSearch, parseLogicMastersDetails,
@@ -109,19 +110,16 @@ export function setupOnlineLibrary({openPuzzle, notify}) {
   }
   async function fetchLmdHtml(url, nativeCommand, args) {
     if (window.__TAURI_INTERNALS__) return invoke(nativeCommand,args);
-    let response;
-    try {
-      response = await fetch(url,{cache:'no-store',credentials:'omit'});
-    } catch {
-      throw Error('Logic Masters 网站未允许浏览器跨域访问（CORS）。请使用 SudokuPadX 安卓版检索；网页版可从题目页复制 SudokuPad 链接手动导入。');
-    }
-    if (!response.ok) throw Error('Logic Masters 请求失败：HTTP ' + response.status);
-    if (Number(response.headers.get('content-length') || 0) > 1024*1024)
-      throw Error('Logic Masters 页面超过 1 MiB 大小限制');
-    const html = await response.text();
-    if (html.length > 1024*1024) throw Error('Logic Masters 页面超过大小限制');
-    return html;
+    // Both search and detail use the same allowlisted relay on GitHub Pages.
+    // Do not fetch the third-party origin directly: its CORS policy blocks it.
+    if(nativeCommand==='search_logic_masters')
+      return fetchPuzzleProxy('lmd-search',
+        {q:args.query,start:args.start,sort:args.sort},{limit:1024*1024});
+    if(nativeCommand==='fetch_logic_masters_page')
+      return fetchPuzzleProxy('lmd-puzzle',{id:args.puzzleId},{limit:1024*1024});
+    throw Error('不支持的 Logic Masters 页面请求');
   }
+
   async function searchLmd(query, offset = 0, sort = $('lmdSort').value) {
     if (actionId) return;
     const keyword = query.trim();
