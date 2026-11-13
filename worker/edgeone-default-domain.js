@@ -145,7 +145,7 @@ async function handleRequest(request,env={},fetcher=fetch) {
     if(route.pdf && (bytes.byteLength<5 ||
         bytes[0]!==37||bytes[1]!==80||bytes[2]!==68||bytes[3]!==70||bytes[4]!==45))
       return failure('Upstream response was not a PDF',502,origin,env);
-    return new Response(bytes,{
+    return new Response(bytes.buffer,{
       headers:{
         ...corsHeaders(origin,env),
         'Content-Type':route.pdf?'application/pdf':'text/plain; charset=utf-8',
