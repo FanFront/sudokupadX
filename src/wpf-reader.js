@@ -253,10 +253,12 @@ export function setupWpfReader({notify,onSaved=()=>{}}) {
   }
   function clearPointers(){
     abortInk();
-    for(const id of pointers.keys()){
+    const ids=[...pointers.keys()];
+    pointers.clear(); // Ignore any ensuing lostpointercapture events.
+    for(const id of ids){
       try{if(scroll.hasPointerCapture(id))scroll.releasePointerCapture(id);}catch{}
     }
-    pointers.clear();gestureMode='idle';panStart=null;pinchStart=null;
+    gestureMode='idle';panStart=null;pinchStart=null;
     activePointer=null;activeStroke=null;
   }
   // Capture on the scrolling viewport instead of only the canvas so a second
