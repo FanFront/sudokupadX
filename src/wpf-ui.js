@@ -5,6 +5,7 @@ import {
 } from './wpf-catalog.js';
 import {listWpfDocuments,deleteWpfDocument} from './wpf-storage.js';
 import {setupWpfReader} from './wpf-reader.js';
+import {fetchPuzzleProxy} from './puzzle-proxy.js';
 const $=id=>document.getElementById(id);
 const CACHE='sudokupadx:wpf-catalog:v1';
 
@@ -125,19 +126,9 @@ export function setupWpfLibrary({notify}) {
       return path==='index'?invoke('fetch_wpf_index'):
         invoke('fetch_wpf_type',{puzzleId:typeId});
     }
-    const url=path==='index'?WPF_SEARCH_URL:
-      'https://logic-puzzles.ropeko.ch/php/db/puzzle.php?id='+typeId;
-    try {
-      const response=await fetch(url,{cache:'no-store',credentials:'omit'});
-      if(!response.ok)throw Error('HTTP '+response.status);
-      if(Number(response.headers.get('content-length')||0)>4*1024*1024)
-        throw Error('索引超出大小限制');
-      const text=await response.text();
-      if(text.length>4*1024*1024)throw Error('索引超出大小限制');
-      return text;
-    }catch(error){
-      throw Error('网页版访问 WPF 索引失败（可能是 CORS 限制），请使用安卓版。'+errorText(error));
-    }
+    return path==='index'?
+      fetchPuzzleProxy('wpf-index',{}, {limit:4*1024*1024}):
+      fetchPuzzleProxy('wpf-type',{id:typeId},{limit:1024*1024});
   }
   function populateYears(source){
     const years=[...new Set(source.rounds.map(item=>item.year))].sort((a,b)=>b-a);
