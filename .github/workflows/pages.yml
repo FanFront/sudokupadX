@@ -44,6 +44,8 @@ jobs:
       - name: Compile shared Rust core to WebAssembly and build Pages assets
         env:
           GITHUB_PAGES: 'true'
+          # Public, non-secret Cloudflare Worker URL. GitHub Pages is static.
+          VITE_PUZZLE_PROXY_URL: ${{ vars.PUZZLE_PROXY_URL }}
         run: npm run build:web
       - name: Verify deployed asset paths
         run: |

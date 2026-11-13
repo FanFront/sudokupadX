@@ -39,6 +39,10 @@ Android 用户可通过上方链接下载并安装 **APK 文件**（支持 Andro
 
 生成题的 `logicProfile.education` 保存**最低可通关技巧等级**、实际使用的技巧及其对应格子和候选数变化。求解器只通过逻辑排除完成题目；回溯只用于独立验证唯一解，不会当作玩家必需步骤。
 
+## 网页版 Logic Masters / WPF 跨域检索
+
+GitHub Pages 是静态托管，无法在浏览器中直接绕过第三方网站的 CORS。网页版统一通过白名单 Cloudflare Worker 请求 Logic Masters 搜索／详情、WPF 索引／题型和官方 PDF；Android 仍使用 Rust 原生接口。**必须先部署 Worker，并在 GitHub Actions 中配置 `PUZZLE_PROXY_URL` 公开仓库变量，才能在正式网页版启用检索。** 具体操作参见 [部署教程](docs/web-cors-proxy.zh-CN.md)。
+
 ## 开发与构建
 
 需要 Node.js、Rust，以及对应平台的 [Tauri 2 开发环境](https://v2.tauri.app/start/prerequisites/)。

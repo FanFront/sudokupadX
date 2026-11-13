@@ -32,6 +32,10 @@ Run `python3 scripts/generate_adventure.py` to create a seeded offline adventure
 
 The procedural generator now also creates a connected set of **4×4, 6×6 and 9×9** offline puzzles. Across the chapters, the generator supports killer sums, thermometers, white/black Kropki, Renban, arrows, XV pairs, region-sum lines, and 9×9 German whispers; the 6×6/9×9 puzzles also include entropic, modular and Between lines. These are active deduction rules: puzzles require a verified no-guess logical solution and a unique answer. The 9×9 chapter deliberately builds a three-chain white-Kropki deduction that partitions 1–9 into three consecutive triples. New cross-rule motifs transfer Killer sums across region lines, intersect entropic/modular classes, and combine Between interiors with Renban intervals; the human proof can also use hidden subsets and X-Wings. The rule vocabulary is shared across the chapters, and their rule panels link to one another. Players can learn these deductions through the [Chinese solving-technique guide with worked examples](docs/techniques.zh-CN.md). The generator also handles naked/hidden quads, X-Wing through Squirmbag, Finned X-Wing, 2-String Kite, W-Wing, Remote Pairs, Simple Coloring, bounded X/XY-Chains and ALS-XZ, with no-guess proofs and curriculum tiers. See the [Chinese Sudopedia advanced reference](docs/sudopedia-catalog.zh-CN.md) for worked examples and the exact supported/excluded method list. See [variant generation](docs/variant-generation.md) for constraints, generation criteria and limitations.
 
+### Web access to Logic Masters and WPF
+
+GitHub Pages cannot itself bypass cross-origin restrictions. Web searches and WPF PDF downloads use a restricted Cloudflare Worker hosted separately, configured via the non-secret `PUZZLE_PROXY_URL` GitHub Actions variable at build time. **The Worker must be deployed first.** See [Web CORS proxy deployment (Chinese)](docs/web-cors-proxy.zh-CN.md). Android retains its native Rust fetch commands.
+
 ## Development
 
 Requires Node.js, Rust, and the relevant [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/).
