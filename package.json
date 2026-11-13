@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@tauri-apps/plugin-opener": "^2.0.0",
-    "@sudokupad/penpa-to-scl": "0.0.1-preview.2"
+    "@sudokupad/penpa-to-scl": "0.0.1-preview.2",
+    "pdfjs-dist": "6.5.438"
   }
 }
