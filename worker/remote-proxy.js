@@ -152,4 +152,10 @@ export async function handleRequest(request,env={},fetcher=fetch) {
   }
 }
 
-export default {fetch:handleRequest};
+export default {
+  fetch(request,env,context) {
+    // Cloudflare passes ExecutionContext as the third argument, not a fetcher.
+    return handleRequest(request,env,
+      typeof context === 'function' ? context : fetch);
+  }
+};
