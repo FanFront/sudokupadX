@@ -59,18 +59,18 @@ export function filterWpfIndex(items,{search='',year='',kind=''}={}) {
 // Keep URL-level guardrails; native Android verifies PDF bytes on download.
 export function validatedWpfPdfUrl(raw) {
   if (typeof raw!=='string' || !raw || raw.length>2048 ||
-      raw.trim()!==raw || /[\\x00-\\x1f\\x7f]/.test(raw) ||
-      !/\\.pdf$/i.test(raw) || /%2f|%5c|%2e/i.test(raw)) return null;
+      raw.trim()!==raw || /[\x00-\x1f\x7f]/.test(raw) ||
+      !/\.pdf$/i.test(raw) || /%2f|%5c|%2e/i.test(raw)) return null;
   try {
     const url=new URL(raw);
-    const host=url.hostname.toLowerCase().replace(/\\.$/,'');
+    const host=url.hostname.toLowerCase().replace(/\.$/,'');
     if (!['http:','https:'].includes(url.protocol) || !host ||
         url.username || url.password || url.port || url.search || url.hash ||
-        !/\\.pdf$/i.test(url.pathname) || url.href.length>2048 ||
+        !/\.pdf$/i.test(url.pathname) || url.href.length>2048 ||
         // Reject loopback, literal IPs and private network hostnames.
-        host.startsWith('[') || /^\\d+\\.\\d+\\.\\d+\\.\\d+$/.test(host) ||
-        /(?:^|\\.)(?:localhost|local|internal|test|invalid)$/.test(host) ||
-        /(?:^|\\/)(?:\\.\\.?)(?:\\/|$)/.test(new URL(raw).pathname))
+        host.startsWith('[') || /^\d+\.\d+\.\d+\.\d+$/.test(host) ||
+        /(?:^|\.)(?:localhost|local|internal|test|invalid)$/.test(host) ||
+        /(?:^|\/)(?:\.\.?)(?:\/|$)/.test(url.pathname))
       return null;
     return url.href;
   } catch { return null; }
