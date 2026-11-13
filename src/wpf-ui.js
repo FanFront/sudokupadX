@@ -139,12 +139,19 @@ export function setupWpfLibrary({notify}) {
       throw Error('网页版访问 WPF 索引失败（可能是 CORS 限制），请使用安卓版。'+errorText(error));
     }
   }
+  function populateYears(source){
+    const years=[...new Set(source.rounds.map(item=>item.year))].sort((a,b)=>b-a);
+    const selected=$('wpfYear').value;
+    $('wpfYear').replaceChildren(new Option('所有年份',''),
+      ...years.map(year=>new Option(String(year),String(year))));
+    if(years.includes(Number(selected)))$('wpfYear').value=selected;
+  }
   async function loadCatalog(force=false){
     if(loaded&&!force)return;
     if(!force){
       try{
         const cached=JSON.parse(localStorage.getItem(CACHE));
-        if(cached?.rounds?.length){catalog=cached;loaded=true;renderList();
+        if(cached?.rounds?.length){catalog=cached;loaded=true;populateYears(cached);renderList();
           status('已读取本机缓存的 WPF 赛事与题型索引。');}
       }catch{}
     }
@@ -153,11 +160,7 @@ export function setupWpfLibrary({notify}) {
       const next=parseWpfIndex(await fetchHtml('index'));
       if(!next.rounds.length)throw Error('未找到 WPF GP 赛事索引');
       catalog=next;loaded=true;
-      const years=[...new Set(next.rounds.map(item=>item.year))].sort((a,b)=>b-a);
-      const previousYear=$('wpfYear').value;
-      $('wpfYear').replaceChildren(new Option('所有年份',''),
-        ...years.map(year=>new Option(String(year),String(year))));
-      if(years.includes(Number(previousYear)))$('wpfYear').value=previousYear;
+      populateYears(next);
       try{localStorage.setItem(CACHE,JSON.stringify(catalog));}catch{}
       status('已索引 '+next.rounds.length+' 轮赛事、'+next.types.length+
         ' 个题型。PDF 由 WPF 官方服务器提供，打开后自动离线缓存。');
