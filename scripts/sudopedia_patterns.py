@@ -13,7 +13,7 @@ def _box(n, cell):
     return r // height * (n // width) + c // width
 
 
-def generalized_fish(n, masks, units, reduce, maximum=3, budget=3600):
+def generalized_fish(n, masks, units, reduce, maximum=3, budget=450):
     """Franken/Mutant fish from disjoint *arbitrary* Sudoku houses.
 
     k pairwise-disjoint base houses each require one occurrence of d.
@@ -121,6 +121,12 @@ def extended_finned_fish(n, masks, reduce, maximum=4):
                 for base_set in combinations(range(n), size):
                     if any(not positions[b] or len(positions[b]) > size + 3
                            for b in base_set):
+                        continue
+                    # At most three fin axes can sit outside the selected
+                    # k covers. Skip impossible dense patterns *before*
+                    # trying all cover combinations.
+                    all_axes = set().union(*(positions[b] for b in base_set))
+                    if len(all_axes) > size + 3:
                         continue
                     for covers in combinations(range(n), size):
                         core = [positions[b] & set(covers) for b in base_set]
@@ -241,7 +247,7 @@ def sue_de_coq(n, masks, units, reduce):
     return changed
 
 
-def kraken_fish(n, masks, units, reduce, maximum=3, budget=5500):
+def kraken_fish(n, masks, units, reduce, maximum=3, budget=650):
     """A fish with fin-to-target *indirect* weak inferences.
 
     If the fins are absent, k base lines in k cover lines form a basic
@@ -253,6 +259,8 @@ def kraken_fish(n, masks, units, reduce, maximum=3, budget=5500):
         return False
     from sudopedia_inference import inference_graph, _weak
     strong, _ = inference_graph(n, masks, units)
+    if not strong:
+        return False
     peers = peer_sets(n)
     memo = {}
 
