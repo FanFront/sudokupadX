@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
-import {createLessonPractice} from '../src/lesson-puzzles.js';
+import {LESSON_IDS} from '../src/lesson-data.js';
 
 const root=process.env.WEB_SMOKE_URL || 'http://127.0.0.1:4173/sudokupadX/';
 const cases=[
@@ -46,15 +46,14 @@ try{
   assert.equal(await page.locator('.topbar').count(),0);
   await page.screenshot({path:'artifacts/web/android-home.png'});
   // The offline Chinese guide must be a real, touch-friendly application
-  // page with all 25 lessons and working practice, not an external URL.
+  // page with the original 25 lessons plus Sudopedia catalog, not an external URL.
   await page.locator('#lessonButton').click();
   await page.locator('#lessonList .lesson-entry').first().waitFor();
   assert.equal(await page.locator('#lessonScreen').isVisible(),true);
   assert.equal(await page.locator('#homeScreen').isHidden(),true);
-  assert.equal(await page.locator('#lessonList .lesson-entry').count(),25);
+  assert.equal(await page.locator('#lessonList .lesson-entry').count(),LESSON_IDS.length);
   await page.locator('#lessonFilters button[data-stage="patterns"]').click();
   assert.equal(await page.locator('#lessonList .lesson-entry').count(),6);
-  const lesson7=createLessonPractice(7);
   await page.locator('#lessonList [data-id="7"]').click();
   assert.match(await page.locator('#lessonTitle').textContent(),/X-Wing/);
   assert.match(await page.locator('#lessonReading').textContent(),/第 2 行和第 7 行/);
@@ -66,13 +65,19 @@ try{
   assert.equal(await page.locator('#gameScreen').isVisible(),true);
   assert.match(await page.locator('#puzzleTitle').textContent(),/技巧练习/);
   assert.equal(await page.locator('#modeBar [data-mode="center"]').getAttribute('aria-pressed'),'true');
-  assert.equal(await page.locator('#selectionLabel').textContent(),lesson7.goalLabel);
-  await page.locator('#keypad button[data-symbol="'+lesson7.goal.digit+'"]').click();
+  // The board is now randomized, so read its current proof instead of
+  // presuming the hard-coded fixture still has the same cell or digit.
+  await page.locator('#lessonPracticeHint').click();
+  const hint=await page.locator('#lessonPracticeStatus').textContent();
+  const elimination=hint.match(/(R\\d+C\\d+)\\s+可以排除\\s+(\\d+)/);
+  assert.ok(elimination,'randomized lesson must expose its current deduction');
+  assert.equal(await page.locator('#selectionLabel').textContent(),elimination[1]);
+  await page.locator('#keypad button[data-symbol="'+elimination[2]+'"]').click();
   await page.waitForFunction(()=>document.querySelector('#lessonPracticeStatus')?.textContent?.includes('推理正确'));
   await page.screenshot({path:'artifacts/web/chinese-lesson-real-board.png'});
   await page.locator('#lessonPracticeReturn').click();
   assert.equal(await page.locator('#lessonScreen').isVisible(),true);
-  assert.match(await page.locator('#lessonProgressText').textContent(),/1 \/ 25/);
+  assert.match(await page.locator('#lessonProgressText').textContent(),new RegExp('1 \\/ '+LESSON_IDS.length));
   await page.locator('#lessonNext').click();
   assert.match(await page.locator('#lessonTitle').textContent(),/Swordfish/);
   await page.screenshot({path:'artifacts/web/chinese-lessons.png'});
@@ -96,7 +101,7 @@ try{
   await page.locator('#lessonButton').click();
   assert.match(await page.locator('#lessonTitle').textContent(),/Swordfish/,
     'Last lesson must survive leaving and returning');
-  assert.match(await page.locator('#lessonProgressText').textContent(),/1 \/ 25/,
+  assert.match(await page.locator('#lessonProgressText').textContent(),new RegExp('1 \\/ '+LESSON_IDS.length),
     'Mastered progress must survive leaving and returning');
   await page.locator('#lessonBack').click();
   console.log('Chinese lesson board uses Rust/WASM pencilmarks, completion and preserved puzzle state.');
