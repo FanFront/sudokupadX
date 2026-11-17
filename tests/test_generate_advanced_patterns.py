@@ -80,7 +80,7 @@ class SudopediaAdvancedPatternsTests(unittest.TestCase):
 
     def test_sashimi_swordfish(self):
         domains = [set(DIGITS) for _ in range(81)]
-        for row, covers in ((1, (2,5)), (4, (7,9)), (7, (5,8))):
+        for row, covers in ((1, (2,5,8)), (4, (7,9)), (7, (2,5,8))):
             for col in range(1, 10):
                 if col not in covers:
                     domains[index(row, col)].discard(5)
