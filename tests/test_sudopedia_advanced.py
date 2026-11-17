@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 
 from variant_logic import houses, deduce
 from generate_variants import make_solution
-from sudopedia_patterns import (generalized_fish, extended_finned_fish,
+from sudopedia_patterns import (generalized_fish, extended_finned_fish, kraken_fish,
                                 wxyz_wings, sue_de_coq)
 from sudopedia_inference import (alternating_inference_chains,
                                  medusa_3d, multi_colors, empty_rectangles)
@@ -24,7 +24,7 @@ METHODS_WITH_UNITS = (generalized_fish, sue_de_coq,
                       alternating_inference_chains, medusa_3d,
                       multi_colors, empty_rectangles, als_xy_wings,
                       als_xy_chains, death_blossoms)
-ALL = (generalized_fish, extended_finned_fish, wxyz_wings, sue_de_coq,
+ALL = (kraken_fish, generalized_fish, extended_finned_fish, wxyz_wings, sue_de_coq,
        alternating_inference_chains, medusa_3d, multi_colors, empty_rectangles,
        als_xy_wings, als_xy_chains, death_blossoms)
 
@@ -139,6 +139,21 @@ class SudopediaAdvancedTests(unittest.TestCase):
         self.assertTrue(any(s['method'] == 'finned_swordfish'
                             for s in steps))
 
+    def test_kraken_fish_indirect_fin_implication(self):
+        masks = blank()
+        # R1/R4 fish in C2/C6, fin F=R4C9. F forces R2C9!=6,
+        # conjugate R2C9=R2C6 then removes T=R8C6.
+        only(masks, 6, houses(9)[0], {1, 5})
+        only(masks, 6, houses(9)[3], {28, 32, 35})
+        only(masks, 6, houses(9)[1], {14, 17})
+        steps = execute_until(kraken_fish, masks, 68, 6)
+        self.assertNotIn(6, masks[68])
+        matches = [s for s in steps if s['method'] == 'kraken_fish'
+                   and s['cell'] == 68]
+        self.assertTrue(matches)
+        self.assertTrue(any(len(chain) == 4
+                            for chain in matches[0]['source']['chains']))
+
     def test_aic_propagates_across_digits(self):
         masks = blank()
         masks[0] = {1, 2, 3}
@@ -197,7 +212,7 @@ class SudopediaAdvancedTests(unittest.TestCase):
         methods = ('franken_fish', 'mutant_fish', 'sashimi_fish',
                    'finned_swordfish', 'finned_jellyfish', 'wxyz_wing',
                    'sue_de_coq', 'aic', 'medusa_wrap', 'medusa_trap',
-                   'multi_colors', 'empty_rectangle', 'als_xy_wing',
+                   'multi_colors', 'empty_rectangle', 'kraken_fish', 'als_xy_wing',
                    'als_xy_chain', 'death_blossom')
         for method in methods:
             self.assertIn(method, METHODS)
