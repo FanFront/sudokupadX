@@ -23,34 +23,60 @@ test('ropeko reference list is indexed by year, category and round',()=>{
   assert.equal(wpfRoundPdfCandidates(parsed.rounds.find(item=>item.round==='Playoffs')).length,0);
 });
 
-test('PDF URLs must come from the official competition-PDF directory',()=>{
-  const accepted='https://gp.worldpuzzle.org/sites/default/files/Puzzles/2018/2018_SudokuRound4.pdf';
-  assert.equal(validatedWpfPdfUrl(accepted),accepted);
+test('Android accepts any public HTTP(S) URL with a .pdf suffix, not just GP PDFs',()=>{
+  const allowed=[
+    'https://gp.worldpuzzle.org/sites/default/files/Puzzles/2018/2018_SudokuRound4.pdf',
+    'https://files.some-federation.org/events/sudoku.pdf',
+    'https://example.org/unrelated/directory/Puzzle.PDF',
+    'http://archive.example.net/old%20puzzles.pdf',
+    'https://example.org/国際数独.pdf'
+  ];
+  for(const url of allowed)
+    assert.equal(validatedWpfPdfUrl(url),new URL(url).href,url);
   for(const uri of [
-    'http://gp.worldpuzzle.org/sites/default/files/Puzzles/2018/x.pdf',
-    'https://gp.worldpuzzle.org.evil.example/sites/default/files/Puzzles/2018/x.pdf',
-    'https://gp.worldpuzzle.org/content/competition-puzzles',
-    'https://gp.worldpuzzle.org/sites/default/files/Puzzles/2018/x.pdf?download=1',
-    'https://gp.worldpuzzle.org/sites/default/files/Puzzles/2018/%2Fadmin.pdf',
-    'https://other.org/sites/default/files/Puzzles/2018/x.pdf'
+    'ftp://example.org/a.pdf',
+    'file:///tmp/a.pdf',
+    'data:application/pdf,a.pdf',
+    'https://example.org/test.html',
+    'https://example.org/test.pdf/other',
+    'https://example.org/a.pdf?download=1',
+    'https://example.org/a.pdf#page=3',
+    'https://example.org/%2e%2e/private.pdf',
+    'https://example.org/a%2fb.pdf',
+    'https://user:password@example.org/a.pdf',
+    'https://example.org:8443/a.pdf',
+    'http://127.0.0.1/a.pdf',
+    'http://192.168.1.2/a.pdf',
+    'http://localhost/a.pdf',
+    'https://host.local/a.pdf',
+    'https://[::1]/a.pdf',
   ])assert.equal(validatedWpfPdfUrl(uri),null,uri);
   assert.equal(isPdfData(new TextEncoder().encode('%PDF-1.7\n')),true);
   assert.equal(isPdfData(new TextEncoder().encode('<html>not a pdf</html>')),false);
 });
 
-test('WPF type details only expose official PDF links, never arbitrary URLs',()=>{
+test('WPF type links accept external PDF hosts, while filtering unsafe/non-PDF links',()=>{
   const old=globalThis.DOMParser;
   globalThis.DOMParser=class{
     parseFromString(){return {querySelectorAll:()=>[
       {getAttribute:()=> 'https://gp.worldpuzzle.org/sites/default/files/Puzzles/2024/a.pdf',textContent:'Example A'},
-      {getAttribute:()=> 'https://evil.example/a.pdf',textContent:'Injected'},
-      {getAttribute:()=> 'https://gp.worldpuzzle.org/sites/default/files/Puzzles/2024/a.pdf',textContent:'Duplicate'}
+      {getAttribute:()=> 'https://puzzledb.example.org/2024/set.pdf',textContent:'Federation booklet'},
+      {getAttribute:()=> 'http://archive.example.org/older/b.pdf',textContent:'Old archive'},
+      {getAttribute:()=> 'https://example.org/not-a-pdf.html',textContent:'Not a PDF'},
+      {getAttribute:()=> 'https://localhost/secret.pdf',textContent:'Local secret'},
+      {getAttribute:()=> 'https://puzzledb.example.org/2024/set.pdf',textContent:'Duplicate'}
     ]};}
   };
   try{
     const data=parseWpfTypePdfs('<html>examples</html>');
-    assert.equal(data.length,1);
-    assert.equal(data[0].title,'Example A');
+    assert.equal(data.length,3);
+    assert.deepEqual(data.map(entry=>entry.title),
+      ['Example A','Federation booklet','Old archive']);
+    assert.deepEqual(data.map(entry=>entry.pdfUrl),[
+      'https://gp.worldpuzzle.org/sites/default/files/Puzzles/2024/a.pdf',
+      'https://puzzledb.example.org/2024/set.pdf',
+      'http://archive.example.org/older/b.pdf'
+    ]);
   }finally{if(old===undefined)delete globalThis.DOMParser;else globalThis.DOMParser=old;}
 });
 

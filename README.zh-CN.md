@@ -10,7 +10,7 @@
 
 - **冒险数独：** 内置 Sudokuvania 1、2 和 Super Sudokoid 1、2，以及关联的支线谜题和首领谜题。
 - **谜题库：** 支持检索内置的 [Sudoku Index](https://stefanlobbenmeier.github.io/sudoku-index/index.json) 索引和 Logic Masters Deutschland 谜题，打开兼容 SudokuPad 格式的题目，并下载以供离线游玩。
-- **WPF PDF 题库：** 在谜题库的「WPF PDF」页签检索 [ropeko 的题型与赛事索引](https://logic-puzzles.ropeko.ch/php/db/search.php)，直接阅读 WPF 官方比赛题册 PDF，并用多色画笔、橡皮擦、撤销／重做在纸面标注。PDF 和逐页画笔笔迹均保存本机，断网可继续。Android 内置受限官方 PDF 下载接口；网页版能否访问取决于来源站点 CORS。历史赛事中非标准命名的 PDF 不一定能自动找到。
+- **WPF PDF 题库：** 在谜题库的「WPF PDF」页签检索 [ropeko 的题型与赛事索引](https://logic-puzzles.ropeko.ch/php/db/search.php)，直接阅读 WPF 官方比赛题册 PDF，并用多色画笔、橡皮擦、撤销／重做在纸面标注。PDF 和逐页画笔笔迹均保存本机，断网可继续。Android 内置 PDF 下载接口，允许从公开 HTTP(S) 站点下载以 .pdf 结尾的链接（不限于 WPF 官方 GP 目录），并检查文件内容、大小和重定向；网页版代理仍限制为官方 GP 目录。历史赛事中非标准命名的 PDF 不一定能自动找到。
 - **游戏操作：** 大型棋盘平移与缩放、战争迷雾、区域规则、关联谜题跳转、候选数、涂色、撤销/重做和自动保存进度。
 - **中文支持：** 为有对应翻译的谜题显示中文规则和说明，同时保留原文。
 - **存档互通：** 通过 JSON 导入、导出单个谜题的进度，在 Android、网页和已更新的 `sodokupadAndroid` 应用之间转移存档。
