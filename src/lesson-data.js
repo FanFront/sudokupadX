@@ -91,9 +91,9 @@ export function parseTechniqueEntries(markdown) {
   const sections=parseTechniqueAtlas(markdown);
   const entries=[];
   for(const section of sections){
-    for(const line of section.content.split('\\n')){
+    for(const line of section.content.split('\n')){
       if(!/^\\s*\\|/.test(line))continue;
-      const fields=line.trim().replace(/^\\||\\|$/g,'')
+      const fields=line.trim().replace(/^\||\|$/g,'')
         .split('|').map(field=>field.trim());
       if(fields.length!==3||!/^[✓≈○×]/u.test(fields[2]))continue;
       const [title,description,status]=fields;
