@@ -70,10 +70,15 @@ def alternating_inference_chains(n, masks, units, reduce,
         return False
     peers = peer_sets(n)
     active = sorted(strong)
-    weak_graph = {node: {other for other in active
-                         if _weak(node, other, peers)} for node in active}
-    all_literals = [(cell, digit) for cell, domain in enumerate(masks)
-                    for digit in sorted(domain)]
+    active_set = set(active)
+    # Indexed weak links avoid scanning every candidate for every chain.
+    weak_full = {
+        node: ({(node[0], d) for d in masks[node[0]] if d != node[1]} |
+               {(cell, node[1]) for cell in peers[node[0]]
+                if node[1] in masks[cell]})
+        for node in active
+    }
+    weak_graph = {node: weak_full[node] & active_set for node in active}
     changed = False
     total = 0
     for start in active:
@@ -94,13 +99,11 @@ def alternating_inference_chains(n, masks, units, reduce,
                 # Endpoints are strongly linked; any literal excluding
                 # both endpoints is false. This also supports multi-digit
                 # AIC deductions, which X-Chain alone cannot find.
-                for target, digit in all_literals:
-                    literal = (target, digit)
-                    if literal in path or digit not in masks[target]:
+                for target, digit in sorted(weak_full[start] & weak_full[node]):
+                    if (target, digit) in path or digit not in masks[target]:
                         continue
-                    if _weak(literal, start, peers) and _weak(literal, node, peers):
-                        if reduce(target, masks[target] - {digit}, 'aic', source):
-                            return True
+                    if reduce(target, masks[target] - {digit}, 'aic', source):
+                        return True
             if edge_count >= max_links:
                 continue
             next_nodes = strong[node] if edge_count % 2 == 0 else weak_graph[node]
