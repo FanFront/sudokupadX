@@ -20,7 +20,7 @@ from sudopedia_inference import (alternating_inference_chains,
 from sudopedia_als import (als_xy_wings, als_xy_chains, death_blossoms)
 from technique_catalog import METHODS, ADVANCED_METHODS, lesson_profile
 
-METHODS_WITH_UNITS = (generalized_fish, sue_de_coq,
+METHODS_WITH_UNITS = (kraken_fish, generalized_fish, sue_de_coq,
                       alternating_inference_chains, medusa_3d,
                       multi_colors, empty_rectangles, als_xy_wings,
                       als_xy_chains, death_blossoms)
