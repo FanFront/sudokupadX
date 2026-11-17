@@ -254,9 +254,9 @@ export function setupLessonPage({showHome,showGame,launchPractice,
         ' · 技巧 '+(atlasIndex+1)+' / '+atlas.length;
       renderLessonContent(
         '**所属分类：** '+section.chapterTitle+
-        '\\n\\n**逻辑说明：** '+section.description+
-        '\\n\\n**求解器状态：** '+section.status+
-        '\\n\\n---\\n\\n'+section.content,$('lessonReading'));
+        '\n\n**逻辑说明：** '+section.description+
+        '\n\n**求解器状态：** '+section.status+
+        '\n\n---\n\n'+section.content,$('lessonReading'));
       $('lessonComplete').hidden=true;
       $('lessonPrev').disabled=atlasIndex===0;
       $('lessonNext').disabled=atlasIndex===atlas.length-1;
