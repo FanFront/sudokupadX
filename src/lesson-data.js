@@ -84,13 +84,13 @@ const GROUP_SECTION={single:1,intersection:2,subset:3,fish:4,
 export function buildLessonCatalog(base,advancedGuide=''){
   if(!Array.isArray(base))throw TypeError('需要原始基础课程');
   const sections=new Map();
-  const pieces=String(advancedGuide).split(/(?=^##\\s+\\d+\\.\\s)/m);
+  const pieces=String(advancedGuide).split(/(?=^##\s+\d+\.\s)/m);
   for(const piece of pieces){
-    const match=piece.match(/^##\\s+(\\d+)\\.\\s/);
+    const match=piece.match(/^##\s+(\d+)\.\s/);
     if(match)sections.set(Number(match[1]),piece.trim());
   }
   return [...base,...SUDOPEDIA_TECHNIQUES.map(item=>({
-    ...item,content:item.content+'\\n\\n'+
+    ...item,content:item.content+'\n\n'+
       (sections.get(GROUP_SECTION[item.group])||'')
   }))];
 }
