@@ -13,7 +13,7 @@ ADVANCED_METHODS = frozenset({
     "two_string_kite", "w_wing", "remote_pairs", "color_trap",
     "color_wrap", "xy_chain", "x_chain", "als_xz",
     "finned_x_wing", "squirmbag",
-    "franken_fish", "mutant_fish", "sashimi_fish", "finned_swordfish", "finned_jellyfish", "wxyz_wing", "sue_de_coq", "aic", "medusa_wrap", "medusa_trap", "multi_colors", "empty_rectangle", "als_xy_wing", "als_xy_chain", "death_blossom",
+    "franken_fish", "mutant_fish", "sashimi_fish", "kraken_fish", "finned_swordfish", "finned_jellyfish", "wxyz_wing", "sue_de_coq", "aic", "medusa_wrap", "medusa_trap", "multi_colors", "empty_rectangle", "als_xy_wing", "als_xy_chain", "death_blossom",
 })
 
 # (Chinese name, curriculum tier). Every solver method is accounted for.
@@ -66,6 +66,7 @@ METHODS = {
     "sashimi_fish": ("Sashimi Fish 生鱼片鱼形", 4),
     "finned_swordfish": ("Finned Swordfish 鳍形剑鱼", 4),
     "finned_jellyfish": ("Finned Jellyfish 鳍形水母", 4),
+    "kraken_fish": ("Kraken Fish 海怪鱼形", 4),
     "wxyz_wing": ("WXYZ-Wing 四格翼", 4),
     "sue_de_coq": ("Sue de Coq 双扇区数组", 4),
     "aic": ("AIC 交替推理链", 4),
