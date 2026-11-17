@@ -1,4 +1,5 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
+import atlasMarkdown from '../docs/sudopedia-catalog.zh-CN.md?raw';
 import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS} from './lesson-data.js';
 import {hasVerifiedLessonPractice} from './lesson-puzzles.js';
 
@@ -114,6 +115,18 @@ export function renderLessonContent(markdown, root) {
   return root;
 }
 
+// Keep the entire Sudopedia reference locally browsable, without pretending
+// a catalogue entry has a practice board until a real solver trace exists.
+export function parseTechniqueAtlas(markdown) {
+  const matches=[...markdown.matchAll(/^##\\s+(\\d+)\\.\\s+(.+)$/gm)];
+  return matches.map((match,i)=>({
+    id:Number(match[1]),title:match[2].trim(),
+    content:markdown.slice(
+      match.index+match[0].length,
+      i+1<matches.length?matches[i+1].index:markdown.length).trim()
+  })).filter(entry=>entry.title&&entry.content);
+}
+
 function getCompleted(storage) {
   try {
     const value=JSON.parse(storage.getItem(PROGRESS_KEY)||'[]');
@@ -126,6 +139,9 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   const $=id=>document.getElementById(id);
   const all=parseLessonGuide(guideMarkdown);
   if(all.length!==25)throw new Error('中文课程必须包含完整的 25 节');
+  const atlas=parseTechniqueAtlas(atlasMarkdown);
+  if(atlas.length<15)throw new Error('Sudopedia 中文百科专题不完整');
+  let atlasIndex=0;
   const completed=getCompleted(storage);
   let selected=all[0];
   let filter='all',query='', origin='home',practiceLoading=false;
@@ -149,7 +165,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   function renderFilters(){
     const root=$('lessonFilters');
     root.replaceChildren();
-    const options=[{id:'all',title:'全部'},...STAGES.map(s=>({id:s.id,title:s.short}))];
+    const options=[{id:'all',title:'全部'},...STAGES.map(s=>({id:s.id,title:s.short})),{id:'atlas',title:'Sudopedia 百科'}];
     for(const stage of options){
       const button=element('button','lesson-filter',stage.title);
       button.type='button';button.dataset.stage=stage.id;
@@ -159,6 +175,27 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   }
   function renderList(){
     const root=$('lessonList');root.replaceChildren();
+    if(filter==='atlas'){
+      const q=query.trim().toLocaleLowerCase('zh-CN');
+      const matched=atlas.filter(section=>
+        !q||[section.title,section.content].join(' ')
+          .toLocaleLowerCase('zh-CN').includes(q));
+      $('lessonResultCount').textContent=matched.length+' 类技巧专题';
+      for(const section of matched){
+        const button=element('button','lesson-entry');
+        button.type='button';
+        button.dataset.atlas=String(atlas.indexOf(section));
+        button.setAttribute('aria-current',String(
+          atlas[atlasIndex]===section));
+        button.append(
+          element('span','lesson-entry-index',String(section.id).padStart(2,'0')),
+          element('span','lesson-entry-copy',section.title));
+        root.append(button);
+      }
+      if(!matched.length)root.append(
+        element('p','lesson-empty','百科中没有匹配的技巧，可搜索英文名称。'));
+      return;
+    }
     const filtered=filterLessons(all,query,filter);
     $('lessonResultCount').textContent=filtered.length+' 节课程';
     if(!filtered.length){
@@ -181,6 +218,11 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   function renderExercise(){
     const root=$('lessonExercise');
     root.replaceChildren();
+    if(filter==='atlas'){
+      root.append(element('p','lesson-exercise-context',
+        '这里展示 Sudopedia 全量分类、中文原理与实现状态。只有已具备真实候选推理证据的内置课程才开放棋盘练习；未支持的条目不会生成虚假题面。切换回课程即可进行实战。'));
+      return;
+    }
     if(!LESSON_IDS.includes(selected.id))return;
     const verified=hasVerifiedLessonPractice(selected.id);
     const heading=element('div','lesson-exercise-heading');
@@ -214,6 +256,20 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   }
 
   function renderDetail(){
+    if(filter==='atlas'){
+      const section=atlas[atlasIndex];
+      $('lessonStage').textContent='Sudopedia 中文技巧百科';
+      $('lessonTitle').textContent=section.id+'. '+section.title;
+      $('lessonSummary').textContent='专题 '+section.id+' / '+atlas.length+
+        ' · 已实现与待实现状态见正文';
+      renderLessonContent(section.content,$('lessonReading'));
+      $('lessonComplete').hidden=true;
+      $('lessonPrev').disabled=atlasIndex===0;
+      $('lessonNext').disabled=atlasIndex===atlas.length-1;
+      renderExercise();renderCounts();
+      return;
+    }
+    $('lessonComplete').hidden=false;
     $('lessonStage').textContent=stageLabel(selected);
     $('lessonTitle').textContent=selected.id+'. '+selected.title;
     $('lessonSummary').textContent='第 '+selected.id+' 课 / 共 '+all.length+' 课';
@@ -257,15 +313,30 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     const button=event.target.closest('button[data-stage]');
     if(!button)return;
     filter=button.dataset.stage;
-    renderFilters();renderList();
+    renderFilters();renderList();renderDetail();
+    $('lessonDetail').scrollTop=0;
   });
   $('lessonList').addEventListener('click',event=>{
     const button=event.target.closest('button[data-id]');
     if(button)select(button.dataset.id);
+    const section=event.target.closest('button[data-atlas]');
+    if(section){
+      atlasIndex=Number(section.dataset.atlas);
+      renderList();renderDetail();
+      $('lessonDetail').scrollTop=0;
+    }
   });
-  $('lessonPrev').addEventListener('click',()=>select(selected.id-1));
-  $('lessonNext').addEventListener('click',()=>select(selected.id+1));
+  function navigateLesson(direction){
+    if(filter==='atlas'){
+      atlasIndex=Math.max(0,Math.min(atlas.length-1,atlasIndex+direction));
+      renderList();renderDetail();
+      $('lessonDetail').scrollTop=0;
+    }else select(selected.id+direction);
+  }
+  $('lessonPrev').addEventListener('click',()=>navigateLesson(-1));
+  $('lessonNext').addEventListener('click',()=>navigateLesson(1));
   $('lessonComplete').addEventListener('click',()=>{
+    if(filter==='atlas')return;
     if(completed.has(selected.id))completed.delete(selected.id);
     else completed.add(selected.id);
     saveProgress();renderList();renderDetail();
