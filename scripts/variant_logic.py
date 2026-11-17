@@ -21,6 +21,8 @@ from technique_catalog import technique_tier
 from chain_techniques import (two_string_kites, w_wings, simple_colors,
                               remote_pairs, xy_chains, x_chains)
 from als_techniques import als_xz
+from advanced_patterns import (finned_fish, empty_rectangles,
+                               wxyz_wings, als_xy_wings)
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
@@ -257,6 +259,17 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
             changed |= x_chains(n, masks, units, reduce)
         if not changed and (max_tier is None or max_tier >= 4):
             changed |= als_xz(n, masks, units, reduce)
+
+        # Higher Sudopedia patterns run only after simple propagation stalls.
+        # Each emits a source-backed elimination; none tries a candidate.
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= empty_rectangles(n, masks, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= finned_fish(n, masks, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= wxyz_wings(n, masks, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= als_xy_wings(n, masks, units, reduce)
 
         if not changed:
             break
