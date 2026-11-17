@@ -57,7 +57,12 @@ export const TECHNIQUES=[
   ['sashimi_swordfish','刺身剑鱼',4],
   ['sashimi_jellyfish','刺身水母鱼',4],
   ['empty_rectangle','空矩形',4],
-  ['wxyz_wing','WXYZ-Wing',4]
+  ['wxyz_wing','WXYZ-Wing',4],
+  ['two_string_kite','双线风筝',3],
+  ['w_wing','W-Wing',3],
+  ['remote_pairs','远程数对',3],
+  ['color_trap','颜色陷阱',4],
+  ['color_wrap','颜色包围',4]
 ];
 export function availableVariants(size){
   return VARIANTS.filter(([, ,sizes])=>sizes.includes(Number(size)));
