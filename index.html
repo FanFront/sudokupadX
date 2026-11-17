@@ -104,7 +104,13 @@
         </div>
         <div id="boardFrame" class="board-frame">
           <canvas id="boardCanvas" tabindex="0" aria-label="棋盘：画线模式可以斜向连线；点格子画圆圈，点格线画叉号；双指移动缩放"></canvas>
-          <div class="board-hud"><span id="selectionLabel">选择一个格子</span><span id="zoomLabel">100%</span></div>
+          <div class="board-hud">
+            <span id="selectionLabel">选择一个格子</span>
+            <div class="board-hud-actions">
+              <button id="selectionModeButton" type="button" aria-pressed="false" aria-label="单选模式，点击切换为多选" title="单选：点击新格子替换选区，拖拽可选择多个格子">单选</button>
+              <span id="zoomLabel">100%</span>
+            </div>
+          </div>
           <div class="zoom-tools">
             <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
             <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
