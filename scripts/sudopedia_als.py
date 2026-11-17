@@ -53,7 +53,7 @@ def _targets(nodes, ends, z, masks, peers):
                   set().union(*(set(nodes[index][0]) for index in ends)))
 
 
-def als_xy_wings(n, masks, units, reduce, maximum=140, budget=8500):
+def als_xy_wings(n, masks, units, reduce, maximum=75, budget=1600):
     """ALS-XY-Wing: A -(X)- B -(Y)- C forces a shared Z in A or C."""
     nodes = _nodes(n, masks, units, maximum)
     peers = peer_sets(n)
@@ -80,7 +80,7 @@ def als_xy_wings(n, masks, units, reduce, maximum=140, budget=8500):
     return False
 
 
-def als_xy_chains(n, masks, units, reduce, maximum=110, budget=8500):
+def als_xy_chains(n, masks, units, reduce, maximum=75, budget=1600):
     """Four-ALS chain with three explicit pairwise RCD links.
 
     If A lacks Z it contains X, so B lacks X and contains Y,
@@ -120,7 +120,7 @@ def als_xy_chains(n, masks, units, reduce, maximum=110, budget=8500):
     return False
 
 
-def death_blossoms(n, masks, units, reduce, maximum=150, petal_limit=10):
+def death_blossoms(n, masks, units, reduce, maximum=100, petal_limit=7):
     """A three-candidate stem with three different RCD petal ALS nodes.
 
     Whichever of the stem's digits is true, its matching petal excludes
