@@ -92,7 +92,7 @@ export function parseTechniqueEntries(markdown) {
   const entries=[];
   for(const section of sections){
     for(const line of section.content.split('\n')){
-      if(!/^\\s*\\|/.test(line))continue;
+      if(!/^\s*\|/.test(line))continue;
       const fields=line.trim().replace(/^\||\|$/g,'')
         .split('|').map(field=>field.trim());
       if(fields.length!==3||!/^[✓≈○×]/u.test(fields[2]))continue;
