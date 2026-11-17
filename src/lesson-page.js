@@ -1,5 +1,6 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
-import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS} from './lesson-data.js';
+import advancedGuideMarkdown from '../docs/sudopedia-catalog.zh-CN.md?raw';
+import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS,buildLessonCatalog} from './lesson-data.js';
 import {hasVerifiedLessonPractice} from './lesson-puzzles.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
@@ -117,15 +118,16 @@ export function renderLessonContent(markdown, root) {
 function getCompleted(storage) {
   try {
     const value=JSON.parse(storage.getItem(PROGRESS_KEY)||'[]');
-    return new Set(Array.isArray(value)?value.filter(x=>Number.isInteger(x)&&x>=1&&x<=25):[]);
+    return new Set(Array.isArray(value)?value.filter(x=>Number.isInteger(x)&&LESSON_IDS.includes(x)):[]);
   } catch {return new Set();}
 }
 
 export function setupLessonPage({showHome,showGame,launchPractice,
                                  storage=localStorage}={}) {
   const $=id=>document.getElementById(id);
-  const all=parseLessonGuide(guideMarkdown);
-  if(all.length!==25)throw new Error('中文课程必须包含完整的 25 节');
+  const original=parseLessonGuide(guideMarkdown);
+  if(original.length!==25)throw new Error('原有中文课程必须保留完整的 25 节');
+  const all=buildLessonCatalog(original,advancedGuideMarkdown);
   const completed=getCompleted(storage);
   let selected=all[0];
   let filter='all',query='', origin='home',practiceLoading=false;
@@ -185,9 +187,9 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     const verified=hasVerifiedLessonPractice(selected.id);
     const heading=element('div','lesson-exercise-heading');
     heading.append(element('strong','',
-      verified?'进入真实棋盘练习':'练习验证中'));
+      verified?'随机实战训练':'练习验证中'));
     heading.append(element('span','',
-      verified?'来自求解器实际推理步骤':'未发布不可靠的候选数示例'));
+      verified?'每次进入都基于已验证证明随机变换棋盘':'未发布不可靠的候选数示例'));
     const body=element('div','lesson-exercise-body');
     if(verified){
       body.append(element('p','lesson-exercise-context',
@@ -195,7 +197,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
       body.append(element('p','lesson-exercise-context',
         '请在棋盘中完成一次真实的填数或候选删除；遇到困难时可查看推理讲解。'));
       const start=element('button','lesson-start-practice',
-        practiceLoading?'正在准备训练棋盘…':'进入练习棋盘');
+        practiceLoading?'正在准备训练棋盘…':'生成随机训练棋盘');
       start.id='lessonStartPractice';
       start.type='button';
       start.disabled=practiceLoading;
@@ -220,8 +222,9 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     renderLessonContent(selected.content,$('lessonReading'));
     $('lessonComplete').textContent=completed.has(selected.id)?'✓ 已掌握 · 点击取消':'标记为已掌握';
     $('lessonComplete').setAttribute('aria-pressed',String(completed.has(selected.id)));
-    $('lessonPrev').disabled=selected.id===all[0].id;
-    $('lessonNext').disabled=selected.id===all[all.length-1].id;
+    const position=all.findIndex(item=>item.id===selected.id);
+    $('lessonPrev').disabled=position===0;
+    $('lessonNext').disabled=position===all.length-1;
     renderExercise();
     renderCounts();
   }
@@ -263,8 +266,14 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     const button=event.target.closest('button[data-id]');
     if(button)select(button.dataset.id);
   });
-  $('lessonPrev').addEventListener('click',()=>select(selected.id-1));
-  $('lessonNext').addEventListener('click',()=>select(selected.id+1));
+  $('lessonPrev').addEventListener('click',()=>{
+    const position=all.findIndex(item=>item.id===selected.id);
+    if(position>0)select(all[position-1].id);
+  });
+  $('lessonNext').addEventListener('click',()=>{
+    const position=all.findIndex(item=>item.id===selected.id);
+    if(position+1<all.length)select(all[position+1].id);
+  });
   $('lessonComplete').addEventListener('click',()=>{
     if(completed.has(selected.id))completed.delete(selected.id);
     else completed.add(selected.id);
