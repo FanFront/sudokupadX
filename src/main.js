@@ -7,6 +7,7 @@ import {createCheckpoint,inspectCheckpoint,verifyCheckpoint,matchingCatalogEntry
 import {buildConflictHouses,detectConflicts} from './conflicts.js';
 import {buildCenterCandidateUpdates} from './quick-notes.js';
 import {cellInk} from './cell-ink.js';
+import {SELECTION_MODE_KEY,readSelectionMode,switchSelectionMode,selectionAfterModeChange,tapSelection,dragSelection} from './selection-mode.js';
 import {TAP_MOVE_TOLERANCE,cellLargeValue,isHighlightedNumber,advanceNumberHighlight} from './number-highlight.js';
 import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
 import {linksAtCell,returnDestination} from './linked-navigation.js';
@@ -43,6 +44,7 @@ let puzzle = null;
 let progress = null;
 let selected = -1;
 let selectedCells = [];
+let selectionMode = readSelectionMode(localStorage);
 let highlightedNumber = null;
 let lastBoardTap = null;
 let currentHint = null;
@@ -706,7 +708,15 @@ function updateControls() {
     el.setAttribute('aria-pressed',String(el.dataset.penGrid===penGrid));
   });
   board.classList.toggle('pen-active',mode==='pen');
-  board.setAttribute('aria-label',mode==='pen'?'棋盘：单指拖动画线，点击格子画圆圈，点击格线画叉号，双指平移缩放':'棋盘：单指滑选格子，双击数字高亮相同数字，再双击取消，双指平移缩放');
+  const selectionButton=$('selectionModeButton');
+  const multi=selectionMode==='multiple';
+  selectionButton.textContent=multi?'多选':'单选';
+  selectionButton.setAttribute('aria-pressed',String(multi));
+  selectionButton.setAttribute('aria-label',multi?'多选模式，点击切换为单选':'单选模式，点击切换为多选');
+  selectionButton.title=multi?'多选：点击格子可选择或反选，拖拽追加选区':'单选：点击新格子替换选区，拖拽可选择多个格子';
+  board.setAttribute('aria-label',mode==='pen'?'棋盘：单指拖动画线，点击格子画圆圈，点击格线画叉号，双指平移缩放':
+    multi?'棋盘：点击格子可追加或取消选择，拖拽追加多格，双指平移缩放':
+      '棋盘：单指滑选格子，双击数字高亮相同数字，再双击取消，双指平移缩放');
   document.querySelectorAll('[data-mode]').forEach(el=>{
     el.classList.toggle('active',el.dataset.mode===mode);
     el.setAttribute('aria-pressed',String(el.dataset.mode===mode));
@@ -746,13 +756,13 @@ function updateSelection() {
     return;
   }
   if (!puzzle||selected<0) {
-    $('selectionLabel').textContent='选择一个格子'+highlightLabel;
+    $('selectionLabel').textContent=(selectionMode==='multiple'?'多选 · 选择格子':'选择一个格子')+highlightLabel;
     if(puzzle)updateSector();
     return;
   }
   const row=Math.floor(selected/puzzle.cols)+1,col=selected%puzzle.cols+1;
   const fogged=!isVisible(progress,selected);
-  $('selectionLabel').textContent='R'+row+'C'+col+
+  $('selectionLabel').textContent=(selectionMode==='multiple'?'多选 · ':'')+'R'+row+'C'+col+
     (selectedCells.length>1?' · 已选 '+selectedCells.length+' 格':
       fogged?' · 迷雾':puzzle.cells[selected].given!==null?' · 提示':'')+highlightLabel;
   updateSector();
@@ -1204,7 +1214,7 @@ board.addEventListener('pointerdown',event=>{
   if(pointers.size===1){
     const panMouse=event.pointerType==='mouse' &&
       (event.button===1||event.button===2||event.shiftKey||event.altKey);
-    if(panMouse||mode==='pen')lastBoardTap=null;
+    if(panMouse||mode==='pen'||selectionMode==='multiple')lastBoardTap=null;
     if(!panMouse&&mode==='pen'){
       gesture={kind:'pen',start:p,last:p,samples:[p],dragged:false,
         node:penNodeAt(p,camera,CELL,puzzle,penGrid),grid:penGrid,
@@ -1214,8 +1224,9 @@ board.addEventListener('pointerdown',event=>{
       const oldSelection=[...selectedCells];
       const startIndex=gridIndex(p.x,p.y);
       gesture={kind:panMouse?'mouse-pan':'select',start:p,last:p,moved:false,
-        tapMoved:false,startIndex,oldSelection,highlightBeforeTap};
-      if(!panMouse)select(startIndex);
+        tapMoved:false,dragStarted:false,startIndex,oldSelection,highlightBeforeTap,
+        selectionMode};
+      if(!panMouse&&selectionMode==='single')select(startIndex);
     }
   }else if(pointers.size===2){
     lastBoardTap=null;
@@ -1224,7 +1235,7 @@ board.addEventListener('pointerdown',event=>{
       penMarks=gesture.beforeMarks;
       requestDraw();
     }
-    if(gesture?.kind==='select'&&!gesture.moved)setSelection(gesture.oldSelection);
+    if(gesture?.kind==='select')setSelection(gesture.oldSelection);
     const [a,b]=[...pointers.values()];
     gesture={kind:'transform',lastCenter:pointerCenter(a,b),lastDistance:pointerDistance(a,b)};
   }else {lastBoardTap=null;gesture={kind:'ignore'};}
@@ -1249,7 +1260,14 @@ board.addEventListener('pointermove',event=>{
   }else if(pointers.size===1&&gesture.kind==='select'){
     if(pointerDistance(p,gesture.last)>0.5)gesture.moved=true;
     if(pointerDistance(p,gesture.start)>TAP_MOVE_TOLERANCE)gesture.tapMoved=true;
-    extendSelection(dragCellIndices(previous,p,camera,puzzle));
+    if(gesture.selectionMode==='multiple'){
+      if(gesture.tapMoved){
+        const from=gesture.dragStarted?gesture.last:gesture.start;
+        setSelection(dragSelection('multiple',selectedCells,gesture.startIndex,
+          dragCellIndices(from,p,camera,puzzle)));
+        gesture.dragStarted=true;
+      }
+    }else extendSelection(dragCellIndices(previous,p,camera,puzzle));
     gesture.last=p;
   }else if(pointers.size===1&&gesture.kind==='pen'){
     if(gesture.samples.length<4000)gesture.samples.push(p);
@@ -1262,7 +1280,19 @@ function endPointer(event){
     finishPenGesture(gesture,locationInFrame(event),event.type==='pointercancel');
   if(pointers.size===1&&gesture?.kind==='select'){
     const p=locationInFrame(event),index=gridIndex(p.x,p.y);
-    if(event.type==='pointerup' && !gesture.tapMoved &&
+    if(event.type==='pointercancel'){
+      setSelection(gesture.oldSelection);
+      lastBoardTap=null;
+    }else if(gesture.selectionMode==='multiple'){
+      if(gesture.tapMoved){
+        const from=gesture.dragStarted?gesture.last:gesture.start;
+        setSelection(dragSelection('multiple',selectedCells,gesture.startIndex,
+          dragCellIndices(from,p,camera,puzzle)));
+      }else if(index>=0 && index===gesture.startIndex){
+        setSelection(tapSelection('multiple',gesture.oldSelection,index));
+      }
+      lastBoardTap=null;
+    }else if(event.type==='pointerup' && !gesture.tapMoved &&
        pointerDistance(p,gesture.start)<=TAP_MOVE_TOLERANCE &&
        index>=0 && index===gesture.startIndex &&
        selectedCells.length===1 && selected===index){
@@ -1468,6 +1498,13 @@ $('continueButton').addEventListener('click',async()=>{
     try{localStorage.removeItem(RESUME_KEY);}catch{}
     updateHomeCard();
   }finally{$('continueButton').disabled=false;}
+});
+$('selectionModeButton').addEventListener('click',()=>{
+  selectionMode=switchSelectionMode(selectionMode);
+  setSelection(selectionAfterModeChange(selectionMode,selectedCells));
+  clearNumberHighlight();
+  try{localStorage.setItem(SELECTION_MODE_KEY,selectionMode);}catch{}
+  updateControls();
 });
 $('fitButton').addEventListener('click',()=>{fit();save();});
 $('gridButton').addEventListener('click',()=>{
