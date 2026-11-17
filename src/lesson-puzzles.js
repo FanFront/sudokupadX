@@ -5,6 +5,56 @@ import {LESSON_FIXTURES} from './lesson-fixtures.js';
 
 const baseCell=()=>({value:null,corner:[],center:[],color:null});
 
+/**
+ * A relabelling of 1–9 is a Sudoku automorphism only for *classic* puzzles.
+ * Never relabel digits on Killer, Thermo, Kropki or other variants: their
+ * arithmetic and order rules would immediately become false.
+ *
+ * The witness, candidates and answer are all relabelled together, so the
+ * generated exercise remains the same proven implication on a fresh board.
+ */
+export function randomizeClassicLesson(fixture, random=Math.random) {
+  const puzzle=fixture?.puzzle;
+  if(!puzzle||fixture.n!==9||
+     ['cages','lines','arrows','overlays','underlays'].some(
+       field=>Array.isArray(puzzle[field])&&puzzle[field].length)||
+     puzzle.metadata?.solverRules?.length||puzzle.metadata?.variantTypes?.length){
+    return fixture;
+  }
+  const digits=Array.from({length:9},(_,i)=>i+1);
+  for(let i=8;i>0;i--){
+    const value=Number(random());
+    const j=Math.max(0,Math.min(i,Math.floor(value*(i+1))));
+    [digits[i],digits[j]]=[digits[j],digits[i]];
+  }
+  if(digits.every((digit,i)=>digit===i+1)){
+    digits.push(digits.shift());
+  }
+  const remap=digit=>digits[Number(digit)-1];
+  const copy=structuredClone(fixture);
+  copy.puzzle.cells.forEach(row=>row.forEach(cell=>{
+    if(cell.value)cell.value=String(remap(cell.value));
+  }));
+  copy.puzzle.metadata.solution=[...copy.puzzle.metadata.solution]
+    .map(digit=>String(remap(digit))).join('');
+  copy.masks=copy.masks.map(values=>values.map(remap).sort((a,b)=>a-b));
+  copy.goal.digit=String(remap(copy.goal.digit));
+  copy.proof.removed=copy.proof.removed.map(remap).sort((a,b)=>a-b);
+  copy.proof.remaining=copy.proof.remaining.map(remap).sort((a,b)=>a-b);
+  const digitFields=new Set(['digit','digits','pair','restricted']);
+  const renameSource=(item,key='')=>{
+    if(Array.isArray(item))return item.map(value=>renameSource(value,key));
+    if(item&&typeof item==='object'){
+      return Object.fromEntries(Object.entries(item).map(
+        ([k,v])=>[k,renameSource(v,k)]));
+    }
+    if(typeof item==='number'&&digitFields.has(key))return remap(item);
+    return item;
+  };
+  copy.proof.source=renameSource(copy.proof.source);
+  return copy;
+}
+
 export function availableLessonPracticeIds(){
   return Object.keys(LESSON_FIXTURES).map(Number).sort((a,b)=>a-b);
 }
@@ -13,8 +63,9 @@ export function hasVerifiedLessonPractice(id){
   return Object.prototype.hasOwnProperty.call(LESSON_FIXTURES,String(id));
 }
 
-export function createLessonPractice(id) {
-  const fixture=LESSON_FIXTURES[id];
+export function createLessonPractice(id,{randomize=false,random=Math.random}={}) {
+  const base=LESSON_FIXTURES[id];
+  const fixture=randomize&&base?randomizeClassicLesson(base,random):base;
   if(!fixture){
     throw Error('本课暂无通过唯一解和逻辑推理验证的练习棋盘，已拒绝加载未经证明的候选数。');
   }
