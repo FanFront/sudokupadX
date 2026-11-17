@@ -95,12 +95,14 @@ impl Solver {
                     for left in [0,3,6] {
                         let rows: Vec<_> = (top..top+3).collect();
                         let cols: Vec<_> = (left..left+3).collect();
-                        let positions: Vec<(usize,usize)> = rows.iter()
-                            .flat_map(|&r| cols.iter().filter_map(move |&c|
+                        let mut positions: Vec<(usize,usize)> = Vec::new();
+                        for &r in &rows {
+                            for &c in &cols {
                                 if self.masks[at(axis,r,c)] & bit(digit) != 0 {
-                                    Some((r,c))
-                                } else {None}))
-                            .collect();
+                                    positions.push((r,c));
+                                }
+                            }
+                        }
                         if positions.len() < 2 {continue;}
                         for &r in &rows {
                             for &c in &cols {
