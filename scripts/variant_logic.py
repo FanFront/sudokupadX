@@ -21,7 +21,7 @@ from technique_catalog import technique_tier
 from chain_techniques import (two_string_kites, w_wings, simple_colors,
                               remote_pairs, xy_chains, x_chains)
 from als_techniques import als_xz
-from sudopedia_patterns import (generalized_fish, extended_finned_fish,
+from sudopedia_patterns import (kraken_fish, generalized_fish, extended_finned_fish,
                                 wxyz_wings, sue_de_coq)
 from sudopedia_inference import (alternating_inference_chains, medusa_3d,
                                  multi_colors, empty_rectangles)
@@ -287,6 +287,8 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
             changed |= death_blossoms(n, masks, units, reduce)
         if not changed and (max_tier is None or max_tier >= 4):
             changed |= generalized_fish(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= kraken_fish(n, masks, units, reduce)
 
         if not changed:
             break
