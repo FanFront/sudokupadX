@@ -18,6 +18,9 @@ ADVANCED_METHODS = frozenset({
 # (Chinese name, curriculum tier). Every solver method is accounted for.
 METHODS = {
     "peer_elimination": ("同行同列同宫排除", 1),
+    "full_house": ("满宫最后一格 Full House", 1),
+    "last_digit": ("某数字最后一个位置 Last Digit", 1),
+    "naked_single": ("显性唯一数 Naked Single", 1),
     "hidden_single": ("隐性唯一数", 1),
     "killer_sum": ("杀手笼组合", 1),
     "thermo": ("温度计递增", 1),
