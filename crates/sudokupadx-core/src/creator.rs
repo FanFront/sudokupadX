@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 mod advanced;
+mod als_advanced;
 
 const DIGITS: usize = 9;
 type Mask = u16;
@@ -92,7 +93,8 @@ fn level_of(method: &str) -> u8 {
         "x_wing"|"swordfish"|"xy_wing"|"skyscraper" => 3,
         "jellyfish"|"xyz_wing"|"xy_chain"|
         "aic"|"medusa_wrap"|"medusa_trap"|"franken_fish"|
-        "mutant_fish"|"empty_rectangle"|"wxyz_wing"|"sue_de_coq" => 4,
+        "mutant_fish"|"empty_rectangle"|"wxyz_wing"|"sue_de_coq"|
+        "als_xy_wing"|"als_xy_chain"|"death_blossom" => 4,
         _ => 1,
     }
 }
@@ -107,7 +109,8 @@ fn allowed_focus(method: &str) -> bool {
         "x_wing"|"swordfish"|"xy_wing"|"skyscraper"|
         "jellyfish"|"xyz_wing"|"xy_chain"|
         "aic"|"medusa_wrap"|"medusa_trap"|"franken_fish"|
-        "mutant_fish"|"empty_rectangle"|"wxyz_wing"|"sue_de_coq")
+        "mutant_fish"|"empty_rectangle"|"wxyz_wing"|"sue_de_coq"|
+        "als_xy_wing"|"als_xy_chain"|"death_blossom")
 }
 
 struct Solver {
@@ -707,6 +710,7 @@ impl Solver {
                 if !changed{changed|=self.xyz_wing()?;}
                 if !changed{changed|=self.xy_chains()?;}
                 if !changed{changed|=self.advanced_patterns()?;}
+                if !changed{changed|=self.als_advanced()?;}
             }
             if !changed{break;}
             if iteration==149{return Err("无猜测求解步数超出安全限制".into());}
