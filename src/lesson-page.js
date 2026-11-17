@@ -1,6 +1,6 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
 import atlasMarkdown from '../docs/sudopedia-catalog.zh-CN.md?raw';
-import {STAGES, parseLessonGuide, parseTechniqueAtlas, filterLessons, LESSON_IDS} from './lesson-data.js';
+import {STAGES, parseLessonGuide, parseTechniqueAtlas, parseTechniqueEntries, filterLessons, LESSON_IDS} from './lesson-data.js';
 import {hasVerifiedLessonPractice} from './lesson-puzzles.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
@@ -127,8 +127,10 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   const $=id=>document.getElementById(id);
   const all=parseLessonGuide(guideMarkdown);
   if(all.length!==25)throw new Error('中文课程必须包含完整的 25 节');
-  const atlas=parseTechniqueAtlas(atlasMarkdown);
-  if(atlas.length<15)throw new Error('Sudopedia 中文百科专题不完整');
+  const atlasSections=parseTechniqueAtlas(atlasMarkdown);
+  const atlas=parseTechniqueEntries(atlasMarkdown);
+  if(atlasSections.length<15||atlas.length<55)
+    throw new Error('Sudopedia 中文技巧百科不完整');
   let atlasIndex=0;
   const completed=getCompleted(storage);
   let selected=all[0];
@@ -168,7 +170,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
       const matched=atlas.filter(section=>
         !q||[section.title,section.content].join(' ')
           .toLocaleLowerCase('zh-CN').includes(q));
-      $('lessonResultCount').textContent=matched.length+' 类技巧专题';
+      $('lessonResultCount').textContent=matched.length+' 项技巧';
       for(const section of matched){
         const button=element('button','lesson-entry');
         button.type='button';
@@ -176,8 +178,8 @@ export function setupLessonPage({showHome,showGame,launchPractice,
         button.setAttribute('aria-current',String(
           atlas[atlasIndex]===section));
         button.append(
-          element('span','lesson-entry-index',String(section.id).padStart(2,'0')),
-          element('span','lesson-entry-copy',section.title));
+          element('span','lesson-entry-index',String(atlas.indexOf(section)+1).padStart(2,'0')),
+          element('span','lesson-entry-copy',section.title+' · '+section.status));
         root.append(button);
       }
       if(!matched.length)root.append(
@@ -208,7 +210,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     root.replaceChildren();
     if(filter==='atlas'){
       root.append(element('p','lesson-exercise-context',
-        '这里展示 Sudopedia 全量分类、中文原理与实现状态。只有已具备真实候选推理证据的内置课程才开放棋盘练习；未支持的条目不会生成虚假题面。切换回课程即可进行实战。'));
+        '这里收录 Sudopedia 各技巧条目、中文原理与实现状态。只有已具备真实推理证据的内置课程才开放棋盘练习；未支持的条目不会生成虚假题面。切换回课程即可进行实战。'));
       return;
     }
     if(!LESSON_IDS.includes(selected.id))return;
@@ -247,10 +249,14 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     if(filter==='atlas'){
       const section=atlas[atlasIndex];
       $('lessonStage').textContent='Sudopedia 中文技巧百科';
-      $('lessonTitle').textContent=section.id+'. '+section.title;
-      $('lessonSummary').textContent='专题 '+section.id+' / '+atlas.length+
-        ' · 已实现与待实现状态见正文';
-      renderLessonContent(section.content,$('lessonReading'));
+      $('lessonTitle').textContent=section.title;
+      $('lessonSummary').textContent=section.chapterTitle+
+        ' · 技巧 '+(atlasIndex+1)+' / '+atlas.length;
+      renderLessonContent(
+        '**所属分类：** '+section.chapterTitle+
+        '\\n\\n**逻辑说明：** '+section.description+
+        '\\n\\n**求解器状态：** '+section.status+
+        '\\n\\n---\\n\\n'+section.content,$('lessonReading'));
       $('lessonComplete').hidden=true;
       $('lessonPrev').disabled=atlasIndex===0;
       $('lessonNext').disabled=atlasIndex===atlas.length-1;
