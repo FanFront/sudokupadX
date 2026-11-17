@@ -11,7 +11,7 @@
 - **○ 学习材料／待实现**：介绍原理与识别特征，但目前不保证生成器能主动识别或生成专项题。
 - **× 不纳入人类解题门槛**：需要题目「唯一解」的外部假设，或依赖对假设数字进行分叉、矛盾探索、穷举。
 
-**新扩展说明：** Rust 的 Android／Web 提示引擎已接入 AIC、3D Medusa、Franken／Mutant Fish、Empty Rectangle、Sue de Coq 与 WXYZ-Wing；Python 离线无猜测求解器另外支持复杂鳍形鱼、Multi-Colors、ALS-XY-Wing／Chain 和 Death Blossom。上述技巧均需候选数证据，缺少可认证训练盘面时仍不开放专项练习。\n\n「已实现」**不代表每一粒种子都能生成以该技巧为必要突破的题**；教程模式只有在禁用目标技巧后、其他已实现方法不能解完题时才会接受。若找不到满足条件的几何布局，生成器明确失败而不造假。完整的图案编辑和自动构造专项题仍是需要持续优化的部分。
+**新扩展说明：** Rust 的 Android／Web 提示引擎已接入 AIC、3D Medusa、Franken／Mutant Fish、Empty Rectangle、Sue de Coq 与 WXYZ-Wing；Python 离线无猜测求解器另外支持复杂鳍形鱼、Kraken Fish（间接 W-S-W）、Multi-Colors、ALS-XY-Wing／Chain 和 Death Blossom；Rust 已补充 ALS-XY-Wing／Chain 和 Death Blossom 的有界实现。上述技巧均需候选数证据，缺少可认证训练盘面时仍不开放专项练习。\n\n「已实现」**不代表每一粒种子都能生成以该技巧为必要突破的题**；教程模式只有在禁用目标技巧后、其他已实现方法不能解完题时才会接受。若找不到满足条件的几何布局，生成器明确失败而不造假。完整的图案编辑和自动构造专项题仍是需要持续优化的部分。
 
 ## 1. Singles｜基础唯一数
 
@@ -57,7 +57,7 @@
 | Sashimi X-Wing / Swordfish / Jellyfish | 一个核心鱼形位置可缺失，由鳍补上逻辑关系 | ✓（Python） |
 | Franken Fish | 基准／覆盖单位中包含宫，而不只是行列 | ✓（Python／Rust） |
 | Mutant Fish | 混合行、列、宫组成鱼形 | ✓（Python／Rust） |
-| Kraken Fish | 鳍与删除目标之间还有额外关联链 | ○ |
+| Kraken Fish | 鳍与删除目标之间还有额外关联链 | ✓（Python，W-S-W 间接链；Rust 待补） |
 | Finned/Skewed Fish、Grouped Turbot Fish | 鱼形的特殊变体与混合形态 | ○ |
 
 ### 新例题 A：Squirmbag（五行鱼）
