@@ -53,7 +53,7 @@ fish|Sashimi Fish|生鱼片鱼形|sashimi_fish|带鳍但主体鱼形缺少一个
 fish|Sashimi X-Wing|生鱼片 X 翼|sashimi_fish|两线生鱼片鱼形的特殊情况。
 fish|Franken Fish|Franken 混合鱼|franken_fish|基础单位允许使用宫与行列混合。
 fish|Mutant Fish|Mutant 变异鱼|mutant_fish|基准和覆盖约束可以同时混合行、列与宫。
-fish|Kraken Fish|Kraken 关联鱼||通过鳍与目标候选之间的间接推理链实施删除。
+fish|Kraken Fish|Kraken 关联鱼|kraken_fish|通过鳍与目标候选之间的间接推理链实施删除。
 single-digit|Skyscraper|摩天楼|skyscraper|两个平行的双候选强关联，一侧互斥使另一侧至少一真。
 single-digit|2-String Kite|双线风筝|two_string_kite|一条行强关联、一条列强关联在宫中形成互斥。
 single-digit|Empty Rectangle|空矩形|empty_rectangle|一个宫内候选限制在十字行列上，接外部强关联实现排除。
