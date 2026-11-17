@@ -11,7 +11,7 @@
 - **○ 学习材料／待实现**：介绍原理与识别特征，但目前不保证生成器能主动识别或生成专项题。
 - **× 不纳入人类解题门槛**：需要题目「唯一解」的外部假设，或依赖对假设数字进行分叉、矛盾探索、穷举。
 
-「已实现」**不代表每一粒种子都能生成以该技巧为必要突破的题**；教程模式只有在禁用目标技巧后、其他已实现方法不能解完题时才会接受。若找不到满足条件的几何布局，生成器明确失败而不造假。完整的图案编辑和自动构造专项题仍是需要持续优化的部分。
+**新扩展说明：** Rust 的 Android／Web 提示引擎已接入 AIC、3D Medusa、Franken／Mutant Fish、Empty Rectangle、Sue de Coq 与 WXYZ-Wing；Python 离线无猜测求解器另外支持复杂鳍形鱼、Kraken Fish（间接 W-S-W）、Multi-Colors、ALS-XY-Wing／Chain 和 Death Blossom；Rust 已补充 ALS-XY-Wing／Chain 和 Death Blossom 的有界实现。上述技巧均需候选数证据，缺少可认证训练盘面时仍不开放专项练习。\n\n「已实现」**不代表每一粒种子都能生成以该技巧为必要突破的题**；教程模式只有在禁用目标技巧后、其他已实现方法不能解完题时才会接受。若找不到满足条件的几何布局，生成器明确失败而不造假。完整的图案编辑和自动构造专项题仍是需要持续优化的部分。
 
 ## 1. Singles｜基础唯一数
 
@@ -53,11 +53,11 @@
 | Jellyfish | 四条基准线限制在四条覆盖线 | ✓ |
 | Squirmbag | 五条基准线限制在五条覆盖线 | ✓ |
 | Finned X-Wing | 双线鱼形之外多出的候选（鳍）被限制在一个宫 | ✓ |
-| Finned Swordfish / Finned Jellyfish | 鳍形的三线、四线扩展 | ○ |
-| Sashimi X-Wing / Swordfish / Jellyfish | 一个核心鱼形位置可缺失，由鳍补上逻辑关系 | ○ |
-| Franken Fish | 基准／覆盖单位中包含宫，而不只是行列 | ○ |
-| Mutant Fish | 混合行、列、宫组成鱼形 | ○ |
-| Kraken Fish | 鳍与删除目标之间还有额外关联链 | ○ |
+| Finned Swordfish / Finned Jellyfish | 鳍形的三线、四线扩展 | ✓（Python） |
+| Sashimi X-Wing / Swordfish / Jellyfish | 一个核心鱼形位置可缺失，由鳍补上逻辑关系 | ✓（Python） |
+| Franken Fish | 基准／覆盖单位中包含宫，而不只是行列 | ✓（Python／Rust） |
+| Mutant Fish | 混合行、列、宫组成鱼形 | ✓（Python／Rust） |
+| Kraken Fish | 鳍与删除目标之间还有额外关联链 | ✓（Python，W-S-W 间接链；Rust 待补） |
 | Finned/Skewed Fish、Grouped Turbot Fish | 鱼形的特殊变体与混合形态 | ○ |
 
 ### 新例题 A：Squirmbag（五行鱼）
@@ -93,7 +93,7 @@
 | --- | --- | --- |
 | Skyscraper（摩天楼） | 两条相平行的强关联共用一侧，另一侧至少有一个候选为真 | ✓ |
 | 2-String Kite（双线风筝） | 一条行强关联与一条列强关联在宫内形成弱关联 | ✓ |
-| Empty Rectangle（空矩形） | 一个宫的候选限制在十字行列上，再连接外部强关联 | ○ |
+| Empty Rectangle（空矩形） | 一个宫的候选限制在十字行列上，再连接外部强关联 | ✓（Python／Rust） |
 | Turbot Fish（涡轮鱼） | 用两个强关联和中间弱关联概括摩天楼、双线风筝等 | ≈ |
 | Grouped Turbot Fish | 允许一个端点代表同宫多个候选位置 | ○ |
 
@@ -116,9 +116,9 @@
 | Simple Colors / Coloring（简单双染色） | 每条同数字强关联两端用不同颜色标记 | ✓ |
 | Color Trap（颜色陷阱） | 某格看见同一染色链的两种颜色，候选可删除 | ✓ |
 | Color Wrap（颜色包围） | 同色两候选互见，那种颜色整体为假 | ✓ |
-| Multi-Colors / Color Wing | 两个或多个染色簇之间推导删除 | ○ |
+| Multi-Colors / Color Wing | 两个或多个染色簇之间推导删除 | ✓（Python） |
 | Weak Colors / X-Colors | 加入弱边或染色假设的进一步推理 | ○ |
-| 3D Medusa | 多个数字之间联动的候选染色 | ○ |
+| 3D Medusa | 多个数字之间联动的候选染色 | ✓（Python／Rust） |
 | Grouped Coloring | 用候选组代替单格的染色节点 | ○ |
 | Supercoloring / Ultracoloring | 更广义的染色系统 | ○ |
 
@@ -148,7 +148,7 @@ R2C2（蓝）== R2C5（橙） == R5C5（蓝） == R6C6（橙）
 | XY-Chain（双候选链） | 每个格只有两个候选，接力传递候选互斥关系 | ✓（限六格） |
 | Remote Pairs（远程数对） | 相同双候选的偶数格链，两端占用相反的两个数字 | ✓ |
 | Fishy Cycle / X-Cycle | 单数字强弱边组成闭合环 | ○ |
-| Nice Loops / Alternating Inference Chain (AIC) | 广义交替推理链，可混合不同数字 | ○ |
+| Nice Loops / Alternating Inference Chain (AIC) | 广义交替推理链，可混合不同数字 | ≈（AIC 7 边内已实现；Nice Loops 仍缺专项） |
 | Double Implication Chain | 两端相互蕴涵或两个方向都能形成必然结论 | ○ |
 | XY-Cycle | XY 链闭环的特殊形式 | ○ |
 | Broken Wing | 奇数长度环带来的候选删除 | ○ |
@@ -199,7 +199,7 @@ R2C2 == R3C3 -- R3C5 == R8C5 -- R8C8 == R9C9
 | XY-Wing | `{X,Y}` 的中心与 `{X,Z}`、`{Y,Z}` 两翼 | ✓ |
 | XYZ-Wing | `{X,Y,Z}` 中心和两个包含 Z 的双候选翼 | ✓ |
 | W-Wing | 两个相同双候选格，经另一数字的强关联串起 | ✓ |
-| WXYZ-Wing | 四格、多候选翼形，带有限定可放数字 | ○ |
+| WXYZ-Wing | 四格、多候选翼形，带有限定可放数字 | ✓（Python／Rust） |
 | Skewed XY-Wing | 斜向／变形条件下的翼形 | ○ |
 
 ### 新例题 I：W-Wing
@@ -218,9 +218,9 @@ R2C2 == R3C3 -- R3C5 == R8C5 -- R8C8 == R9C9
 | --- | --- | --- |
 | Almost Locked Set（ALS 基础定义） | 一个单位中 N 格具有 N+1 种候选数 | ✓ |
 | ALS-XZ | 两个 ALS 有受限制的共同数字 X，可删除另一共同候选 Z | ✓（每组最多三格） |
-| ALS-XY-Wing | 三个 ALS 之间用两个受限共数连接 | ○ |
-| ALS-XY-Chain | 使用 ALS 作为链节点的延伸 | ○ |
-| Death Blossom（死亡绽放） | 一个多候选中心与多组 ALS 连接 | ○ |
+| ALS-XY-Wing | 三个 ALS 之间用两个受限共数连接 | ✓（Python） |
+| ALS-XY-Chain | 使用 ALS 作为链节点的延伸 | ✓（Python，限四组） |
+| Death Blossom（死亡绽放） | 一个多候选中心与多组 ALS 连接 | ✓（Python，限三分支） |
 | Almost ALS | 候选数量比普通 ALS 更多的近似结构 | ○ |
 
 ### 新例题 J：ALS-XZ
@@ -253,7 +253,7 @@ R2C2 == R3C3 -- R3C5 == R8C5 -- R8C8 == R9C9
 
 | 技巧 | 原理 | 覆盖 |
 | --- | --- | --- |
-| Sue de Coq | 行／宫交集的互补数组互相锁定，形成跨单位删候选 | ○ |
+| Sue de Coq | 行／宫交集的互补数组互相锁定，形成跨单位删候选 | ✓（Python／Rust，双扇区数对型） |
 | Subset Counting / Extended Subset Principle | 用格子数与候选数的容量限制推断 | ○ |
 | Braid Analysis / Traveling Pairs | 研究同一宫带／列带内的数对分布 | ○ |
 | Constraint Subsets | 用统一的数学语言概括数组与鱼形 | ≈ |

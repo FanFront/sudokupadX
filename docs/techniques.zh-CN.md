@@ -6,6 +6,7 @@
 
 [返回数独规则工坊说明](variant-generation.md) ·
 [继续学习：Sudopedia 完整分类、中文进阶例题与实现状态](sudopedia-catalog.zh-CN.md) ·
+[全部 Sudopedia 技巧索引及随机训练的认证条件](sudopedia-training.zh-CN.md) ·
 [Sudopedia 技巧总目录（英文）](https://sudopedia.sudocue.net/index.php?title=Solving_technique)
 
 ## 如何读例题

@@ -1351,7 +1351,7 @@ function practiceBanner(active){
 }
 async function beginLessonPractice(id){
   if(pending||lessonPractice)throw Error('当前正在载入另一道谜题');
-  const practice=createLessonPractice(id);
+  const practice=createLessonPractice(id,{randomize:true});
   if(puzzle)save();
   const previous=snapshotForLesson();
   lessonPractice={...practice,previous,completed:false};

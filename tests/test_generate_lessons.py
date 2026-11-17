@@ -12,7 +12,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from generate_lessons import (LESSON_METHODS, anchor_examples,
                               anchored_line_examples, anchored_classic_examples,
-                              collect_report_examples, make_fixture)
+                              collect_report_examples, make_fixture,
+                              certified_single_examples, clue_domains, given_values)
 from variant_logic import houses
 
 
@@ -81,6 +82,40 @@ class VerifiedLessonsTests(unittest.TestCase):
                     fixture["goal"]["index"]]), fixture["proof"]["removed"])
         self.assertEqual(examples[4]["proof"]["source"]["size"], 3)
         self.assertEqual(examples[11]["proof"]["method"], "xyz_wing")
+
+    def test_sudopedia_simple_topics_have_specific_proved_patterns(self):
+        examples = certified_single_examples()
+        self.assertEqual(set(examples), {"full_house", "last_digit", "naked_single"})
+        for method, fixture in examples.items():
+            self.assertEqual(fixture["method"], method)
+            self.assertEqual(fixture["goal"]["kind"], "fill")
+            self.assertTrue(fixture["proof"]["removed"])
+            self.assertEqual(fixture["goal"]["digit"], str(
+                fixture["puzzle"]["metadata"]["solution"][fixture["goal"]["index"]]))
+            n = fixture["n"]
+            self.assertEqual(n, 9)
+            givens = [cell.get("value") for row in fixture["puzzle"]["cells"]
+                      for cell in row]
+            target = fixture["goal"]["index"]
+            if method == "full_house":
+                self.assertEqual(sum(not givens[i] for i in range(36,45)), 1)
+            if method == "last_digit":
+                digit = fixture["goal"]["digit"]
+                self.assertEqual(sum(v == digit for v in givens), 8)
+            if method == "naked_single":
+                self.assertEqual(
+                    clue_domains(n, given_values(fixture["puzzle"]))[target],
+                    {int(fixture["goal"]["digit"])})
+
+    def test_sudopedia_method_proofs_are_collected_from_real_steps(self):
+        lessons, methods = collect_report_examples(with_methods=True)
+        self.assertTrue(lessons)
+        self.assertIn("naked_subset", methods)
+        for key, fixture in methods.items():
+            self.assertEqual(key.split(":")[0], fixture["method"])
+            self.assertTrue(fixture["proof"]["removed"])
+            self.assertTrue(fixture["focus"])
+            self.assertIn(fixture["goal"]["index"], fixture["focus"])
 
     def test_impossible_eight_cell_128_row_cannot_be_exported(self):
         lesson = anchor_examples()[2]

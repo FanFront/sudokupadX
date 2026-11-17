@@ -119,7 +119,8 @@ def make_fixture(id_, puzzle, masks, step, step_index=0, constraints=()):
         raise ValueError("Not a naked pair")
     if id_ == 4 and step["source"].get("size") != 3:
         raise ValueError("Not a naked triple")
-    kind = "fill" if step["method"] == "hidden_single" else "remove"
+    kind = "fill" if step["method"] in ("hidden_single", "full_house",
+                "last_digit", "naked_single") else "remove"
     if kind == "fill":
         remaining = list(step["remaining"])
         if len(remaining) != 1:
@@ -156,9 +157,10 @@ def matching_example(id_, step):
     return True
 
 
-def collect_report_examples():
+def collect_report_examples(with_methods=False):
     report = json.loads((SOURCE / "validation.json").read_text(encoding="utf-8"))
     examples = {}
+    method_examples = {}
     for detail in report["puzzles"]:
         puzzle = json.loads((SOURCE / (detail["id"] + ".json"))
                             .read_text(encoding="utf-8"))
@@ -177,6 +179,23 @@ def collect_report_examples():
         for cell, digit in givens.items():
             masks[cell] = {digit}
         for index, step in enumerate(trace):
+            # The public Sudopedia curriculum can reuse a proof only when
+            # its exact named method was executed on this same grid.
+            # Generic subset methods also preserve their exact cardinality.
+            if step["cell"] not in givens and len(masks[step["cell"]]) > 1:
+                method = step["method"]
+                source = step.get("source")
+                size = source.get("size") if isinstance(source, dict) else None
+                keys = [method] + ([f"{method}:{size}"] if
+                                   isinstance(size, int) else [])
+                if any(key not in method_examples for key in keys):
+                    try:
+                        fixture = make_fixture(0, puzzle, masks, step, index,
+                                               detail["constraints"])
+                        for key in keys:
+                            method_examples.setdefault(key, fixture)
+                    except ValueError:
+                        pass
             for id_, method in LESSON_METHODS.items():
                 if id_ in (1, 2) or id_ in examples:
                     continue
@@ -198,7 +217,7 @@ def collect_report_examples():
             masks[cell].difference_update(removed)
             if sorted(masks[cell]) != step["remaining"]:
                 raise ValueError("Mismatched trace replay")
-    return examples
+    return (examples, method_examples) if with_methods else examples
 
 
 # A deterministic, independently unique standard Sudoku with a genuine
@@ -453,11 +472,72 @@ def anchored_classic_examples():
 
 
 
+def certified_single_examples():
+    """Generate three *different named* basic deductions from a complete
+    solution. They are real uniquely solvable puzzles, not impossible masks:
+    the full house, global last digit and naked single conditions are checked
+    from the givens independently of any solution value being guessed.
+    """
+    solution = list(map(int, SOLUTION))
+    n = 9
+    target = 4*n+6
+    companion = 4*n+2
+    regions = [[[(r+dr), (c+dc)] for dr in range(3) for dc in range(3)]
+               for r in (0,3,6) for c in (0,3,6)]
+    result = {}
+    for method, holes in (
+            ("full_house", {target}),
+            ("last_digit", {target, companion}),
+            ("naked_single", {target, companion})):
+        givens = {i: digit for i, digit in enumerate(solution) if i not in holes}
+        if count_solutions(n, givens, []) != 1:
+            raise ValueError("A basic lesson pattern is not unique")
+        if method == "full_house":
+            if sum(i not in givens for i in range(4*n,5*n)) != 1:
+                raise ValueError("Not a full house")
+        if method == "last_digit":
+            if sum(value == solution[target] for value in givens.values()) != 8:
+                raise ValueError("Not a global last digit")
+        if method == "naked_single":
+            if clue_domains(n, givens)[target] != {solution[target]}:
+                raise ValueError("Not a naked single")
+        puzzle = {
+            "cells": [[{"value":str(givens[r*n+c])} if r*n+c in givens
+                       else {} for c in range(n)] for r in range(n)],
+            "regions":regions,"cages":[],"lines":[],"arrows":[],
+            "overlays":[],"underlays":[],
+            "metadata":{"solution":SOLUTION,"rules":
+                        "标准数独：每行、每列和每个 3×3 宫恰好有 1–9。"}
+        }
+        masks = clue_domains(n, givens)
+        # Show the target before deductions; the target candidate set still
+        # contains 1–9, as at the start of a normal candidate-clearing trace.
+        masks[target] = set(range(1,n+1))
+        digit = solution[target]
+        step = {"method":method,"cell":target,
+                "removed":[d for d in range(1,n+1) if d != digit],
+                "remaining":[digit],
+                "source":{"house":4, "cells":sorted(holes)}}
+        fixture = make_fixture(0, puzzle, masks, step)
+        result[method] = fixture
+    return result
+
+
 def generate():
-    examples = collect_report_examples()
+    examples, method_examples = collect_report_examples(with_methods=True)
     examples.update(anchor_examples())
     examples.update(anchored_line_examples())
     examples.update(anchored_classic_examples())
+    # Prefer the existing independently certified class examples to broad
+    # workshop traces for the same method, but don't overwrite size 2/3.
+    for fixture in examples.values():
+        method = fixture["method"]
+        method_examples.setdefault(method, fixture)
+        source = fixture["proof"].get("source")
+        size = source.get("size") if isinstance(source, dict) else None
+        if isinstance(size, int):
+            method_examples.setdefault(f"{method}:{size}", fixture)
+    method_examples.update(certified_single_examples())
     for id_, fixture in examples.items():
         if fixture["method"] != LESSON_METHODS[id_]:
             raise ValueError("Mismatched lesson technique")
@@ -465,6 +545,8 @@ def generate():
         "// Generated by scripts/generate_lessons.py; do not edit.\n"
         "export const LESSON_FIXTURES = Object.freeze(" +
         json.dumps(examples, ensure_ascii=False, separators=(",", ":")) +
+        ");\nexport const TECHNIQUE_FIXTURES = Object.freeze(" +
+        json.dumps(method_examples, ensure_ascii=False, separators=(",", ":")) +
         ");\n", encoding="utf-8")
     print(f"Generated {len(examples)}/25 proof-backed lesson boards. "
           f"Unavailable (never faked): {sorted(set(LESSON_METHODS) - set(examples))}")

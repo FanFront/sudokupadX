@@ -9,8 +9,8 @@ const lessons=parseLessonGuide(guide);
 
 test('all twenty-five lessons come directly from the bundled Chinese guide',()=>{
   assert.deepEqual(lessons.map(lesson=>lesson.id),Array.from({length:25},(_,i)=>i+1));
-  assert.equal(STAGES.length,4);
-  assert.deepEqual(STAGES.map(stage=>lessons.filter(l=>l.stage===stage.id).length),
+  assert.equal(STAGES.length,8);
+  assert.deepEqual(STAGES.slice(0,4).map(stage=>lessons.filter(l=>l.stage===stage.id).length),
     [2,4,6,13]);
   assert.ok(lessons.every(l=>l.title&&l.content.length>80));
   assert.match(lessons[6].title,/X-Wing/);
@@ -28,12 +28,13 @@ test('search and category filtering return the right lessons',()=>{
 });
 
 test('only genuinely verified lesson boards are playable and every state remains satisfiable',()=>{
-  assert.equal(LESSON_IDS.length,25);
+  assert.ok(LESSON_IDS.length>100);
   const available=availableLessonPracticeIds();
-  assert.equal(available.length,25,'all lessons must have verified boards');
+  assert.ok(available.length>=25,'the original lessons must have verified boards');
   assert.ok(available.includes(1),'peer elimination must be playable');
   assert.ok(available.includes(2),'hidden single must be playable');
-  assert.ok(available.every(id=>id>=1&&id<=25));
+  assert.ok(available.every(id=>LESSON_IDS.includes(id)));
+  assert.ok(available.some(id=>id>25),'Sudopedia methods must use real proof-backed drills');
   for(const lesson of lessons){
     if(!hasVerifiedLessonPractice(lesson.id)){
       assert.throws(()=>createLessonPractice(lesson.id),/暂无通过唯一解/);
@@ -108,7 +109,7 @@ test('lesson two is a real hidden single, not the impossible 128/369 row',()=>{
 test('variant lesson boards preserve their original rule geometry and recorded method',()=>{
   for(const id of availableLessonPracticeIds()){
     const task=createLessonPractice(id);
-    if(id<=12)continue;
+    if(id<=12||id>25)continue;
     const puzzle=task.puzzle;
     assert.ok(puzzle.cages.length+puzzle.lines.length+
       puzzle.overlays.length+puzzle.arrows.length>0,
@@ -116,7 +117,7 @@ test('variant lesson boards preserve their original rule geometry and recorded m
     assert.equal(typeof task.proof.method,'string');
     assert.ok(task.proof.removed.length>0);
   }
-  assert.throws(()=>createLessonPractice(26),/暂无通过唯一解/);
+  assert.ok(hasVerifiedLessonPractice(26),'Full House must be playable');
 });
 
 test('Home and puzzle rules have navigation into an actual offline lesson screen',()=>{

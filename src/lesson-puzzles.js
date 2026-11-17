@@ -1,20 +1,40 @@
 // Lesson boards are taken exclusively from a checked solver trace.
 // Intermediate candidate notes are produced by replaying all earlier steps;
 // never hand-author a row of "possible" digits or infer an answer from a key.
-import {LESSON_FIXTURES} from './lesson-fixtures.js';
+import {LESSON_FIXTURES,TECHNIQUE_FIXTURES} from './lesson-fixtures.js';
+import {SUDOPEDIA_TECHNIQUES,SUDOPEDIA_BY_ID} from './sudopedia-catalog.js';
+import {randomizeLessonFixture} from './lesson-randomizer.js';
 
 const baseCell=()=>({value:null,corner:[],center:[],color:null});
 
+function certifiedFixture(id){
+  const number=Number(id);
+  if(Object.prototype.hasOwnProperty.call(LESSON_FIXTURES,String(number)))
+    return LESSON_FIXTURES[number];
+  const entry=SUDOPEDIA_BY_ID.get(number);
+  if(!entry?.method)return null;
+  const key=entry.method+(entry.size?':'+entry.size:'');
+  const fixture=TECHNIQUE_FIXTURES[key];
+  return fixture?.method===entry.method?fixture:null;
+}
+
 export function availableLessonPracticeIds(){
-  return Object.keys(LESSON_FIXTURES).map(Number).sort((a,b)=>a-b);
+  return [...new Set([
+    ...Object.keys(LESSON_FIXTURES).map(Number),
+    ...SUDOPEDIA_TECHNIQUES.filter(item=>certifiedFixture(item.id))
+       .map(item=>item.id)
+  ])].sort((a,b)=>a-b);
 }
 
 export function hasVerifiedLessonPractice(id){
-  return Object.prototype.hasOwnProperty.call(LESSON_FIXTURES,String(id));
+  return Boolean(certifiedFixture(id));
 }
 
-export function createLessonPractice(id) {
-  const fixture=LESSON_FIXTURES[id];
+export function createLessonPractice(id,{randomize=false,random=Math.random}={}) {
+  const source=certifiedFixture(id);
+  const fixture=source&&randomize?randomizeLessonFixture(source,random):source;
+  const topic=SUDOPEDIA_BY_ID.get(Number(id));
+  const nameZh=topic?.zh||fixture?.nameZh;
   if(!fixture){
     throw Error('本课暂无通过唯一解和逻辑推理验证的练习棋盘，已拒绝加载未经证明的候选数。');
   }
@@ -61,19 +81,19 @@ export function createLessonPractice(id) {
     ?'根据真实棋盘及完整候选状态，在黄色目标格填入唯一确定的数字。'
     :'根据真实棋盘及完整候选状态，在黄色目标格用「中心」模式删除一个可证明排除的候选。';
   const explanation=goal.kind==='fill'
-    ?'逻辑求解器证明：利用「'+fixture.nameZh+'」，'+goalLabel+
+    ?'逻辑求解器证明：利用「'+nameZh+'」，'+goalLabel+
       ' 只能填 '+goal.digit+'。此结论来自当前棋盘，不是预设答案。'
-    :'逻辑求解器证明：利用「'+fixture.nameZh+'」，'+goalLabel+
+    :'逻辑求解器证明：利用「'+nameZh+'」，'+goalLabel+
       ' 可以排除 '+goal.digit+'。此步骤由真实推理轨迹复现。';
 
   puzzle.id='sudokupadx-lesson-practice-'+id;
   puzzle.metadata={
     ...puzzle.metadata,
-    title:'技巧练习 '+id+' · '+fixture.nameZh+' · '+goalLabel,
+    title:'技巧练习 '+id+' · '+nameZh+' · '+goalLabel,
     author:'SudokuPadX 中文数独课堂',
     rules:'本题来自经过唯一解验证的真实数独。盘面候选数是在无猜测求解器的中途步骤中获得的完整状态，'+
       '不是任意设置的数字。蓝色格为相关位置，黄色格为目标。'+task+
-      '\n技巧：'+fixture.nameZh+'。\n'+(puzzle.metadata.rules||''),
+      '\n技巧：'+nameZh+'。\n'+(puzzle.metadata.rules||''),
     msgcorrect:'训练只要求完成黄色目标格中的一步逻辑推理，不要求解完整盘面。'
   };
   return {

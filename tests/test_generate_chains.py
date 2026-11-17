@@ -231,7 +231,7 @@ class SudopediaChainTests(unittest.TestCase):
                          ADVANCED_GUIDE_URL)
         self.assertEqual(profile["techniquePath"][0]["source"]["chain"],
                          [1, 2, 3, 4])
-        self.assertEqual(len(ADVANCED_METHODS), 10)
+        self.assertGreaterEqual(len(ADVANCED_METHODS), 25)
 
     def test_tier_gating_prevents_advanced_method(self):
         masks = blank()
