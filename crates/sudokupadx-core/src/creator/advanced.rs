@@ -361,3 +361,115 @@ impl Solver {
         Ok(false)
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn blank()->Vec<Mask>{vec![full(9);81]}
+    fn only(masks:&mut [Mask],digit:u8,cells:&[usize],allowed:&[usize]){
+        for &cell in cells{
+            if !allowed.contains(&cell){masks[cell]&=!bit(digit);}
+        }
+    }
+    fn solver(masks:Vec<Mask>)->Solver{
+        Solver::from_masks(9,masks,&[],4).expect("valid local candidate state")
+    }
+
+    #[test]
+    fn wxyz_wing_rejects_common_peer(){
+        let mut d=blank();
+        d[10]=bit(1)|bit(2)|bit(3)|bit(4);
+        d[9]=bit(1)|bit(4);
+        d[11]=bit(2)|bit(4);
+        d[18]=bit(3)|bit(4);
+        let mut s=solver(d);
+        assert!(s.wxyz_wing_ext().unwrap());
+        assert_eq!(s.masks[0]&bit(4),0);
+    }
+
+    #[test]
+    fn empty_rectangle_uses_a_conjugate_pair(){
+        let mut d=blank();
+        let houses=units(9);
+        only(&mut d,7,&houses[18],&[9,1,19]);
+        only(&mut d,7,&houses[14],&[14,50]);
+        let mut s=solver(d);
+        assert!(s.empty_rectangle_ext().unwrap());
+        assert_eq!(s.masks[46]&bit(7),0);
+    }
+
+    #[test]
+    fn aic_crosses_between_different_digits(){
+        let mut d=blank();let houses=units(9);
+        d[0]=bit(1)|bit(2)|bit(3);
+        d[1]=bit(1)|bit(2)|bit(4);
+        d[10]=bit(2)|bit(5);
+        only(&mut d,1,&houses[0],&[0,1]);
+        only(&mut d,2,&houses[10],&[1,10]);
+        let mut s=solver(d);
+        // Other AIC deductions may be found first, but none may erase
+        // an actual possible value of this certified implication.
+        for _ in 0..16{
+            if s.masks[0]&bit(2)==0{break;}
+            if !s.aic_ext().unwrap(){break;}
+        }
+        assert_eq!(s.masks[0]&bit(2),0);
+    }
+
+    #[test]
+    fn sue_de_coq_has_two_disjoint_candidate_wings(){
+        let mut d=blank();
+        d[9]=bit(1)|bit(5);
+        d[10]=bit(2)|bit(8);
+        d[13]=bit(1)|bit(2);
+        d[0]=bit(5)|bit(8);
+        let mut s=solver(d);
+        for _ in 0..30{
+            if s.masks[14]&bit(1)==0 && s.masks[20]&bit(5)==0 {break;}
+            if !s.sue_de_coq_ext().unwrap(){break;}
+        }
+        assert_eq!(s.masks[14]&bit(1),0);
+        assert_eq!(s.masks[20]&bit(5),0);
+    }
+
+    #[test]
+    fn franken_fish_uses_disjoint_houses_on_both_sides(){
+        let mut d=blank();let houses=units(9);
+        only(&mut d,7,&houses[0],&[1,4]);
+        only(&mut d,7,&houses[21],&[28,37]);
+        let mut s=solver(d);
+        for _ in 0..16{
+            if s.masks[55]&bit(7)==0 && s.masks[12]&bit(7)==0{break;}
+            if !s.general_fish_ext().unwrap(){break;}
+        }
+        assert_eq!(s.masks[55]&bit(7),0);
+        assert_eq!(s.masks[12]&bit(7),0);
+    }
+
+    #[test]
+    fn randomized_superset_never_loses_a_valid_answer_digit(){
+        let solution:Vec<u8>=(0..9).flat_map(|r|
+            (0..9).map(move |c|((r*3+r/3+c)%9+1) as u8)
+        ).collect();
+        for seed in 0..4u32{
+            let mut state=seed+20261117u32;
+            let mut domains=Vec::new();
+            for &true_digit in &solution{
+                let mut mask=bit(true_digit);
+                for d in 1..=9u8{
+                    state=state.wrapping_mul(1664525).wrapping_add(1013904223);
+                    if state%5==0{mask|=bit(d);}
+                }
+                domains.push(mask);
+            }
+            let mut s=solver(domains);
+            for _ in 0..30{
+                if !s.advanced_patterns().unwrap(){break;}
+                assert!(solution.iter().enumerate().all(|(cell,&digit)|
+                    s.masks[cell]&bit(digit)!=0));
+            }
+        }
+    }
+}
