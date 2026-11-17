@@ -239,3 +239,90 @@ def sue_de_coq(n, masks, units, reduce):
                                     changed |= reduce(target, masks[target] - db,
                                                       'sue_de_coq', source)
     return changed
+
+
+def kraken_fish(n, masks, units, reduce, maximum=3, budget=5500):
+    """A fish with fin-to-target *indirect* weak inferences.
+
+    If the fins are absent, k base lines in k cover lines form a basic
+    fish. If any fin F is true, its recorded W-S-W inference proves the
+    target T false. This is an implication proof, not branching/searching
+    candidate assumptions or relying on a known completed puzzle.
+    """
+    if n != 9:
+        return False
+    from sudopedia_inference import inference_graph, _weak
+    strong, _ = inference_graph(n, masks, units)
+    peers = peer_sets(n)
+    memo = {}
+
+    def witness(fin, target):
+        key = (fin, target)
+        if key in memo:
+            return memo[key]
+        if _weak(fin, target, peers):
+            memo[key] = ([fin, target], False)
+            return memo[key]
+        for a, linked_nodes in strong.items():
+            if not _weak(fin, a, peers):
+                continue
+            for b in linked_nodes:
+                if len({fin, a, b, target}) == 4 and _weak(b, target, peers):
+                    memo[key] = ([fin, a, b, target], True)
+                    return memo[key]
+        memo[key] = None
+        return None
+
+    for digit in range(1, n+1):
+        patterns = 0
+        for vertical in (False, True):
+            def at(base, cover):
+                return cover*n+base if vertical else base*n+cover
+            positions = [{axis for axis in range(n)
+                          if digit in masks[at(base, axis)]}
+                         for base in range(n)]
+            for size in range(2, maximum+1):
+                eligible = [b for b in range(n)
+                            if 2 <= len(positions[b]) <= size+2]
+                for bases in combinations(eligible, size):
+                    if patterns > budget:
+                        break
+                    for covers in combinations(range(n), size):
+                        patterns += 1
+                        if patterns > budget:
+                            break
+                        core = [positions[b] & set(covers) for b in bases]
+                        if any(not group for group in core):
+                            continue
+                        fins = [at(b, axis) for b in bases
+                                for axis in positions[b] - set(covers)]
+                        if not 1 <= len(fins) <= 2:
+                            continue
+                        if any(not any(axis in group for group in core)
+                               for axis in covers):
+                            continue
+                        for cover in covers:
+                            for other in range(n):
+                                if other in bases:
+                                    continue
+                                target = at(other, cover)
+                                if digit not in masks[target]:
+                                    continue
+                                proofs = [witness((fin, digit), (target, digit))
+                                          for fin in fins]
+                                if any(path is None for path in proofs):
+                                    continue
+                                if not any(indirect for _, indirect in proofs):
+                                    continue  # ordinary (direct) finned fish
+                                source = {'digit': digit, 'base': list(bases),
+                                          'cover': list(covers),
+                                          'vertical': vertical, 'fins': fins,
+                                          'chains': [
+                                              [list(node) for node in path]
+                                              for path, _ in proofs]}
+                                if reduce(target, masks[target]-{digit},
+                                          'kraken_fish', source):
+                                    return True
+                    if patterns > budget:
+                        break
+    return False
