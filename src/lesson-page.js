@@ -1,6 +1,6 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
 import atlasMarkdown from '../docs/sudopedia-catalog.zh-CN.md?raw';
-import {STAGES, parseLessonGuide, parseTechniqueAtlas, parseTechniqueEntries, filterLessons, LESSON_IDS} from './lesson-data.js';
+import {STAGES, parseLessonGuide, parseTechniqueAtlas, parseTechniqueEntries, practiceLessonIdsForAtlas, filterLessons, LESSON_IDS} from './lesson-data.js';
 import {hasVerifiedLessonPractice} from './lesson-puzzles.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
@@ -209,8 +209,22 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     const root=$('lessonExercise');
     root.replaceChildren();
     if(filter==='atlas'){
-      root.append(element('p','lesson-exercise-context',
-        '这里收录 Sudopedia 各技巧条目、中文原理与实现状态。只有已具备真实推理证据的内置课程才开放棋盘练习；未支持的条目不会生成虚假题面。切换回课程即可进行实战。'));
+      const entry=atlas[atlasIndex];
+      const lessons=practiceLessonIdsForAtlas(entry).filter(hasVerifiedLessonPractice);
+      if(lessons.length){
+        root.append(element('p','lesson-exercise-context',
+          '已找到与该技巧吻合的真实求解轨迹，可直接进入棋盘练习；每一次经典数独练习都会合法随机改变数字。'));
+        for(const id of lessons){
+          const start=element('button','lesson-start-practice',
+            practiceLoading?'正在准备训练棋盘…':
+            '进入第 '+id+' 课的实战练习');
+          start.type='button';
+          start.dataset.lessonPractice=String(id);
+          start.disabled=practiceLoading;
+          root.append(start);
+        }
+      }else root.append(element('p','lesson-exercise-context',
+        '本技巧尚无可发布的专项练习。只有求解器证明、唯一解验证、候选状态复现全部通过后才会开放；不会提供伪造的训练盘面。'));
       return;
     }
     if(!LESSON_IDS.includes(selected.id))return;
@@ -336,7 +350,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     saveProgress();renderList();renderDetail();
   });
   $('lessonExercise').addEventListener('click',async event=>{
-    const button=event.target.closest('#lessonStartPractice');
+    const button=event.target.closest('#lessonStartPractice,button[data-lesson-practice]');
     if(!button||practiceLoading)return;
     if(typeof launchPractice!=='function'){
       $('lessonPracticeFeedback').textContent='训练引擎尚未连接。';
@@ -345,7 +359,9 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     practiceLoading=true;
     button.disabled=true;
     try{
-      await launchPractice(selected);
+      const id=button.dataset.lessonPractice
+        ?Number(button.dataset.lessonPractice):selected.id;
+      await launchPractice({id});
     }catch(error){
       $('lessonPracticeFeedback').textContent='训练棋盘加载失败：'+
         String(error?.message||error);
