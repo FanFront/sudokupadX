@@ -1,6 +1,6 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
 import atlasMarkdown from '../docs/sudopedia-catalog.zh-CN.md?raw';
-import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS} from './lesson-data.js';
+import {STAGES, parseLessonGuide, parseTechniqueAtlas, filterLessons, LESSON_IDS} from './lesson-data.js';
 import {hasVerifiedLessonPractice} from './lesson-puzzles.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
@@ -113,18 +113,6 @@ export function renderLessonContent(markdown, root) {
     markdownParagraph(root,paragraph.join(' '));
   }
   return root;
-}
-
-// Keep the entire Sudopedia reference locally browsable, without pretending
-// a catalogue entry has a practice board until a real solver trace exists.
-export function parseTechniqueAtlas(markdown) {
-  const matches=[...markdown.matchAll(/^##\s+(\d+)\.\s+(.+)$/gm)];
-  return matches.map((match,i)=>({
-    id:Number(match[1]),title:match[2].trim(),
-    content:markdown.slice(
-      match.index+match[0].length,
-      i+1<matches.length?matches[i+1].index:markdown.length).trim()
-  })).filter(entry=>entry.title&&entry.content);
 }
 
 function getCompleted(storage) {
