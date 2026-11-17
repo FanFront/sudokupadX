@@ -10,6 +10,7 @@ from advanced_patterns import (finned_fish, empty_rectangles,
                                wxyz_wings, als_xy_wings)
 from technique_catalog import METHODS, replay_trace, technique_tier
 from variant_logic import houses
+from advanced_chains import aic_chains, medusa_3d
 
 N = 9
 DIGITS = set(range(1, 10))
@@ -105,11 +106,24 @@ class SudopediaAdvancedPatternsTests(unittest.TestCase):
                 n, masks, houses(n), reduce), domains)
         self.assert_eliminates(steps, index(5,2), 3, "als_xy_wing")
 
+    def test_aic_chain_uses_strong_weak_link_alternation(self):
+        domains = [{9} for _ in range(81)]
+        # R2C2 {1,2} -- R2C5 {2,3} -- R5C5 {3,1}.
+        # Either endpoint is 1, so R5C2 cannot be 1.
+        domains[index(2,2)] = {1,2}
+        domains[index(2,5)] = {2,3}
+        domains[index(5,5)] = {1,3}
+        domains[index(5,2)] = {1,9}
+        _, steps = exercise(
+            lambda n, m, reduce: aic_chains(n,m,houses(n),reduce),
+            domains)
+        self.assert_eliminates(steps, index(5,2), 1, "aic")
+
     def test_new_methods_have_chinese_names_and_curriculum_tier(self):
         names = ("finned_swordfish", "finned_jellyfish",
                  "sashimi_x_wing", "sashimi_swordfish",
                  "sashimi_jellyfish", "empty_rectangle",
-                 "wxyz_wing", "als_xy_wing")
+                 "wxyz_wing", "als_xy_wing", "aic", "medusa_3d")
         for name in names:
             self.assertIn(name, METHODS)
             self.assertEqual(technique_tier(name), 4)
@@ -128,6 +142,10 @@ class SudopediaAdvancedPatternsTests(unittest.TestCase):
                 lambda n, m, reduce: empty_rectangles(n,m,reduce),
                 lambda n, m, reduce: wxyz_wings(n,m,reduce),
                 lambda n, m, reduce: als_xy_wings(
+                    n,m,houses(n),reduce),
+                lambda n, m, reduce: medusa_3d(
+                    n,m,houses(n),reduce),
+                lambda n, m, reduce: aic_chains(
                     n,m,houses(n),reduce)
             ]
             for runner in runners:
