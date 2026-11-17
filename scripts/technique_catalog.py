@@ -13,6 +13,7 @@ ADVANCED_METHODS = frozenset({
     "two_string_kite", "w_wing", "remote_pairs", "color_trap",
     "color_wrap", "xy_chain", "x_chain", "als_xz",
     "finned_x_wing", "squirmbag",
+    "franken_fish", "mutant_fish", "sashimi_fish", "finned_swordfish", "finned_jellyfish", "wxyz_wing", "sue_de_coq", "aic", "medusa_wrap", "medusa_trap", "multi_colors", "empty_rectangle", "als_xy_wing", "als_xy_chain", "death_blossom",
 })
 
 # (Chinese name, curriculum tier). Every solver method is accounted for.
@@ -60,6 +61,21 @@ METHODS = {
     "als_xz": ("ALS-XZ 准锁定数组联动", 4),
     "finned_x_wing": ("鳍形 X-Wing", 4),
     "squirmbag": ("Squirmbag 五行列鱼", 4),
+    "franken_fish": ("Franken Fish 混合宫鱼", 4),
+    "mutant_fish": ("Mutant Fish 变异鱼", 4),
+    "sashimi_fish": ("Sashimi Fish 生鱼片鱼形", 4),
+    "finned_swordfish": ("Finned Swordfish 鳍形剑鱼", 4),
+    "finned_jellyfish": ("Finned Jellyfish 鳍形水母", 4),
+    "wxyz_wing": ("WXYZ-Wing 四格翼", 4),
+    "sue_de_coq": ("Sue de Coq 双扇区数组", 4),
+    "aic": ("AIC 交替推理链", 4),
+    "medusa_wrap": ("3D Medusa 三维染色冲突", 4),
+    "medusa_trap": ("3D Medusa 三维颜色陷阱", 4),
+    "multi_colors": ("Multi-Colors 多簇染色", 4),
+    "empty_rectangle": ("Empty Rectangle 空矩形", 4),
+    "als_xy_wing": ("ALS-XY-Wing 准锁定数组翼", 4),
+    "als_xy_chain": ("ALS-XY-Chain 准锁定数组链", 4),
+    "death_blossom": ("Death Blossom 死亡绽放", 4),
 }
 
 
