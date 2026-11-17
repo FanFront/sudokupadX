@@ -108,3 +108,27 @@ export function parseTechniqueEntries(markdown) {
   }
   return entries;
 }
+
+
+// Direct atlas-to-practice mappings are intentionally conservative.
+// Every referenced lesson has a unique-solution fixture whose trace proves
+// that same method, not just a visually similar illustration.
+const VERIFIED_ATLAS_LESSONS=Object.freeze({
+  'Hidden Single / Pinned Digit':[2],
+  'Locked Candidates / Intersection Removal / Pointing / Claiming':[6],
+  'Naked Pair / Triple / Quad':[3,4],
+  'Hidden Pair / Triple / Quad':[5],
+  'Basic Fish / X-Wing':[7],
+  'Swordfish':[8],
+  'Jellyfish':[9],
+  'XY-Wing':[10],
+  'XYZ-Wing':[11],
+  'Skyscraper（摩天楼）':[12],
+  'Killer 笼的和／不可重复候选组合':[13],
+  '45 Rule／Innie／Outie':[14],
+  'Kropki 三格链、全行连续段划分':[16],
+  '熵线与模三线交叉':[23],
+});
+export function practiceLessonIdsForAtlas(entry) {
+  return [...(VERIFIED_ATLAS_LESSONS[entry?.title]||[])];
+}
