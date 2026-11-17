@@ -47,25 +47,25 @@ fish|Squirmbag|五行鱼|squirmbag|五条基准线和五条覆盖线形成大鱼
 fish|Fish and Subsets|鱼形与数组关系||鱼形和数组是行列数字占位计数的两个视角。
 fish|Finned Fish|鳍形鱼|finned_x_wing|允许基准行额外的同宫鳍候选，限定删数位置。
 fish|Finned X-Wing|鳍形 X 翼|finned_x_wing|两条行列形成 X 翼核心，额外鳍在宫中限制删数区域。
-fish|Finned Swordfish|鳍形剑鱼||三行列鱼核心有额外候选鳍。
-fish|Finned Jellyfish|鳍形水母||四行列鱼核心有额外候选鳍。
-fish|Sashimi Fish|生鱼片鱼形||带鳍但主体鱼形缺少一个候选位置的特殊鱼。
-fish|Sashimi X-Wing|生鱼片 X 翼||两线生鱼片鱼形的特殊情况。
-fish|Franken Fish|Franken 混合鱼||基础单位允许使用宫与行列混合。
-fish|Mutant Fish|Mutant 变异鱼||基准和覆盖约束可以同时混合行、列与宫。
+fish|Finned Swordfish|鳍形剑鱼|finned_swordfish|三行列鱼核心有额外候选鳍。
+fish|Finned Jellyfish|鳍形水母|finned_jellyfish|四行列鱼核心有额外候选鳍。
+fish|Sashimi Fish|生鱼片鱼形|sashimi_fish|带鳍但主体鱼形缺少一个候选位置的特殊鱼。
+fish|Sashimi X-Wing|生鱼片 X 翼|sashimi_fish|两线生鱼片鱼形的特殊情况。
+fish|Franken Fish|Franken 混合鱼|franken_fish|基础单位允许使用宫与行列混合。
+fish|Mutant Fish|Mutant 变异鱼|mutant_fish|基准和覆盖约束可以同时混合行、列与宫。
 fish|Kraken Fish|Kraken 关联鱼||通过鳍与目标候选之间的间接推理链实施删除。
 single-digit|Skyscraper|摩天楼|skyscraper|两个平行的双候选强关联，一侧互斥使另一侧至少一真。
 single-digit|2-String Kite|双线风筝|two_string_kite|一条行强关联、一条列强关联在宫中形成互斥。
-single-digit|Empty Rectangle|空矩形||一个宫内候选限制在十字行列上，接外部强关联实现排除。
+single-digit|Empty Rectangle|空矩形|empty_rectangle|一个宫内候选限制在十字行列上，接外部强关联实现排除。
 coloring|Simple Colors|简单双染色|color_trap|沿强关联给同一数字的候选交替染色。
-coloring|Multi-Colors|多簇染色||在多个互不连接的强关联染色簇之间寻找推理。
+coloring|Multi-Colors|多簇染色|multi_colors|在多个互不连接的强关联染色簇之间寻找推理。
 coloring|Supercoloring|超染色||多簇染色的推广名称。
 coloring|Weak Colors|弱边染色||在强关联染色基础上使用弱关联、铰链推理。
 coloring|X-Colors|X 染色||在两色情形下继续传播各颜色对应的逻辑含义。
 coloring|Color Trap|颜色陷阱|color_trap|目标同时看见同一染色簇的两种颜色，因此可删除目标数字。
 coloring|Color Wrap|颜色包围|color_wrap|同色两候选相互可见，整个颜色集合为假。
-coloring|Color Wing|颜色翼||多色簇联动的别名。
-coloring|3D Medusa|三维美杜莎||跨数字的强弱关联组成的扩展染色。
+coloring|Color Wing|颜色翼|multi_colors|多色簇联动的别名。
+coloring|3D Medusa|三维美杜莎|medusa_trap|跨数字的强弱关联组成的扩展染色。
 uniqueness|Uniqueness Test / Unique Rectangle|唯一矩形判定||仅在可交换矩形确实可能破坏解唯一性时才适用；依赖唯一解前提。
 uniqueness|Avoidable Rectangle|可避矩形||把部分已填格纳入唯一矩形的推导。
 uniqueness|Bivalue Universal Grave / BUG|双候选通用墓穴||所有未填格成双候选的特殊死局结构。
@@ -83,7 +83,7 @@ chain|Generalized Fishy Cycles|广义鱼形环||允许更广义候选节点与�
 chain|Broken Wing|断翼奇环||奇数长度的推理环引出排除。
 chain|Nice Loops|漂亮环||根据严格的强弱链规则构造闭合回路。
 chain|Double Implication Chain|双向蕴涵链||链可由两个方向导出同一确定结论。
-chain|Alternating Inference Chain / AIC|交替推理链||强弱推理边交替的广义候选链。
+chain|Alternating Inference Chain / AIC|交替推理链|aic|强弱推理边交替的广义候选链。
 chain|Oriented Chains|定向链总论||利用已传播候选信息选择下一环，分二维与三维形式。
 chain|xyt-chain|xyt 定向链||在二维定向 XY 链中加入跟踪信息。
 chain|xyz-chain|xyz 定向链||在二维定向链中允许额外候选关联。
@@ -96,18 +96,18 @@ chain|nrcz-chain|nrcz 三维链||另一种三维定向链。
 chain|nrczt-chain|nrczt 三维链||融合前述约束的三维定向链。
 wing|XY-Wing|XY 三格翼|xy_wing|双候选中心 XY 与两个钳位 XZ、YZ 导出共同候选 Z。
 wing|XYZ-Wing|XYZ 三格翼|xyz_wing|三候选中心 XYZ 与两个含 Z 的双候选钳位联动。
-wing|WXYZ-Wing|WXYZ 四格翼||一格四候选和三格双候选构成更高阶翼形。
+wing|WXYZ-Wing|WXYZ 四格翼|wxyz_wing|一格四候选和三格双候选构成更高阶翼形。
 wing|W-Wing|W 双数对翼|w_wing|两个相同的双候选格经过一种数字的强关联相连。
 als|Almost Locked Sets|准锁定数组总论|als_xz|同单位 N 格共有 N+1 种候选数。
 als|ALS-XZ|ALS-XZ 规则|als_xz|两组 ALS 有受限共数 X，可删除另一共数 Z。
-als|ALS-XY-Wing|ALS-XY 翼||三组 ALS 由两种受限共数连接。
-als|ALS-XY-Chain|ALS-XY 链||用 ALS 作链节点实现交替传递。
-als|Death Blossom|死亡绽放||一个中心多候选格连接多个 ALS 花瓣。
+als|ALS-XY-Wing|ALS-XY 翼|als_xy_wing|三组 ALS 由两种受限共数连接。
+als|ALS-XY-Chain|ALS-XY 链|als_xy_chain|用 ALS 作链节点实现交替传递。
+als|Death Blossom|死亡绽放|death_blossom|一个中心多候选格连接多个 ALS 花瓣。
 als|Almost ALS|准准锁定数组||比普通 ALS 再多一个候选的宽松结构。
 enumeration|Aligned Pair Exclusion|对齐数对组合排除||检查交集内两格候选配对，不可省略组合证明。
 enumeration|Aligned Triple Exclusion|对齐三数组组合排除||检查交集内三格候选组合及冲突。
 enumeration|Subset Exclusion|任意数组组合排除||对不需对齐的局部格组进行可证明的组合删减。
-misc|Sue de Coq|Sue de Coq 数组||在行宫交集利用互补数位限制两个单位。
+misc|Sue de Coq|Sue de Coq 数组|sue_de_coq|在行宫交集利用互补数位限制两个单位。
 misc|Subset Counting|数组计数||通过数字在某格组中必须出现的次数约束候选。
 misc|Braid Analysis / Traveling Pairs|带状数对分析||观察宫带中数对的重复分布。
 misc|Constraint Subsets|广义约束数组||用约束计数统一描述数组和鱼形。
