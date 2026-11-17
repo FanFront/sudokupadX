@@ -69,7 +69,7 @@ try{
   // presuming the hard-coded fixture still has the same cell or digit.
   await page.locator('#lessonPracticeHint').click();
   const hint=await page.locator('#lessonPracticeStatus').textContent();
-  const elimination=hint.match(/(R\\d+C\\d+)\\s+可以排除\\s+(\\d+)/);
+  const elimination=hint.match(/(R\d+C\d+)\s+可以排除\s+(\d+)/);
   assert.ok(elimination,'randomized lesson must expose its current deduction');
   assert.equal(await page.locator('#selectionLabel').textContent(),elimination[1]);
   await page.locator('#keypad button[data-symbol="'+elimination[2]+'"]').click();
