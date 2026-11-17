@@ -59,7 +59,7 @@ def _color_components(adjacency, minimum=2):
 
 
 def alternating_inference_chains(n, masks, units, reduce,
-                                 max_links=7, max_explored=32000):
+                                 max_links=7, max_explored=4500):
     """AIC: S-W-S[-W-S...] yields a strong link between its endpoints.
 
     A candidate weakly linked to both endpoints must be false.
@@ -84,7 +84,7 @@ def alternating_inference_chains(n, masks, units, reduce,
     for start in active:
         queue = deque([(start, (start,))])
         explored = 0
-        while queue and explored < 1000 and total < max_explored:
+        while queue and explored < 240 and total < max_explored:
             node, path = queue.popleft()
             explored += 1
             total += 1
