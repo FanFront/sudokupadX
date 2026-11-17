@@ -10,6 +10,8 @@ use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 #[path = "creator_advanced.rs"]
 mod advanced;
+#[path = "creator_chains.rs"]
+mod chains;
 
 const DIGITS: usize = 9;
 type Mask = u16;
@@ -90,11 +92,13 @@ struct Proof {
 fn level_of(method: &str) -> u8 {
     match method {
         "naked_subset"|"hidden_subset"|"locked_candidate" => 2,
-        "x_wing"|"swordfish"|"xy_wing"|"skyscraper" => 3,
+        "x_wing"|"swordfish"|"xy_wing"|"skyscraper"|
+        "two_string_kite"|"w_wing"|"remote_pairs" => 3,
         "jellyfish"|"xyz_wing"|"xy_chain"|
         "finned_x_wing"|"finned_swordfish"|"finned_jellyfish"|
         "sashimi_x_wing"|"sashimi_swordfish"|"sashimi_jellyfish"|
-        "empty_rectangle"|"wxyz_wing" => 4,
+        "empty_rectangle"|"wxyz_wing"|
+        "color_trap"|"color_wrap" => 4,
         _ => 1,
     }
 }
@@ -110,7 +114,9 @@ fn allowed_focus(method: &str) -> bool {
         "jellyfish"|"xyz_wing"|"xy_chain"|
         "finned_x_wing"|"finned_swordfish"|"finned_jellyfish"|
         "sashimi_x_wing"|"sashimi_swordfish"|"sashimi_jellyfish"|
-        "empty_rectangle"|"wxyz_wing")
+        "empty_rectangle"|"wxyz_wing"|
+        "two_string_kite"|"w_wing"|"remote_pairs"|
+        "color_trap"|"color_wrap")
 }
 
 struct Solver {
@@ -704,6 +710,9 @@ impl Solver {
                 changed|=self.fish(3)?;
                 if !changed{changed|=self.xy_wing()?;}
                 if !changed{changed|=self.skyscraper()?;}
+                if !changed{changed|=self.two_string_kites()?;}
+                if !changed{changed|=self.w_wings()?;}
+                if !changed{changed|=self.remote_pairs()?;}
             }
             if !changed && self.tier>=4{
                 changed|=self.fish(4)?;
@@ -712,6 +721,7 @@ impl Solver {
                 if !changed{changed|=self.finned_fish()?;}
                 if !changed{changed|=self.empty_rectangle()?;}
                 if !changed{changed|=self.wxyz_wing()?;}
+                if !changed{changed|=self.simple_colors()?;}
             }
             if !changed{break;}
             if iteration==149{return Err("无猜测求解步数超出安全限制".into());}
