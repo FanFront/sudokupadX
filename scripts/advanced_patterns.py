@@ -22,6 +22,8 @@ def finned_fish(n, masks, reduce, maximum=4):
         return False
     changed = False
     h, w = BOXES[n]
+    peers = peer_sets(n)
+    box = lambda cell: ((cell // n) // h, (cell % n) // w)
     names = {2: "x_wing", 3: "swordfish", 4: "jellyfish"}
     for digit in range(1, n + 1):
         for vertical in (False, True):
@@ -46,7 +48,6 @@ def finned_fish(n, masks, reduce, maximum=4):
                             for cover in positions[base] - coverage)
                         if not fins or len(fins) > 3:
                             continue
-                        box = lambda cell: ((cell // n) // h, (cell % n) // w)
                         if len({box(cell) for cell in fins}) != 1:
                             continue
                         sashimi = any(not positions[base] & coverage
@@ -59,7 +60,6 @@ def finned_fish(n, masks, reduce, maximum=4):
                             "finCells": fins,
                             "sashimi": sashimi
                         }
-                        peers = peer_sets(n)
                         for other in range(n):
                             if other in defining:
                                 continue
@@ -159,12 +159,9 @@ def wxyz_wings(n, masks, reduce):
             union = set().union(*(masks[cell] for cell in group))
             if len(union) != 4:
                 continue
-            if any(all(b in peers[a] for b in group if b != a)
-                   for a in group):
-                # Whole group need not be disjoint, but avoid calling a
-                # local naked quad a WXYZ-Wing.
-                if all(b in peers[a] for a, b in combinations(group, 2)):
-                    continue
+            # A local naked quad should retain its simpler explanation.
+            if all(b in peers[a] for a, b in combinations(group, 2)):
+                continue
             for digit in sorted(union):
                 if not all(
                     b in peers[a]
