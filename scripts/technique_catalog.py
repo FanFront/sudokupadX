@@ -14,7 +14,7 @@ ADVANCED_METHODS = frozenset({
     "color_wrap", "xy_chain", "x_chain", "als_xz",
     "finned_x_wing", "squirmbag", "finned_swordfish", "finned_jellyfish",
     "sashimi_x_wing", "sashimi_swordfish", "sashimi_jellyfish",
-    "empty_rectangle", "wxyz_wing", "als_xy_wing",
+    "empty_rectangle", "wxyz_wing", "als_xy_wing", "aic", "medusa_3d",
 })
 
 # (Chinese name, curriculum tier). Every solver method is accounted for.
@@ -67,6 +67,8 @@ METHODS = {
     "empty_rectangle": ("空矩形 Empty Rectangle", 4),
     "wxyz_wing": ("WXYZ-Wing 四格翼", 4),
     "als_xy_wing": ("ALS-XY-Wing 三组准锁定数组", 4),
+    "aic": ("交替推理链 AIC", 4),
+    "medusa_3d": ("三维美杜莎染色 3D Medusa", 4),
 }
 
 
