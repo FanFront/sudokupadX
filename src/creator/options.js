@@ -49,7 +49,15 @@ export const TECHNIQUES=[
   ['skyscraper','摩天楼 Skyscraper',3],
   ['jellyfish','Jellyfish',4],
   ['xyz_wing','XYZ-Wing',4],
-  ['xy_chain','XY-Chain',4]
+  ['xy_chain','XY-Chain',4],
+  ['finned_x_wing','鳍形 X-Wing',4],
+  ['finned_swordfish','鳍形剑鱼',4],
+  ['finned_jellyfish','鳍形水母鱼',4],
+  ['sashimi_x_wing','刺身 X-Wing',4],
+  ['sashimi_swordfish','刺身剑鱼',4],
+  ['sashimi_jellyfish','刺身水母鱼',4],
+  ['empty_rectangle','空矩形',4],
+  ['wxyz_wing','WXYZ-Wing',4]
 ];
 export function availableVariants(size){
   return VARIANTS.filter(([, ,sizes])=>sizes.includes(Number(size)));
