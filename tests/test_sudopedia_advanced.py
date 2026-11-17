@@ -59,6 +59,19 @@ def execute(method, masks):
     return steps
 
 
+def execute_until(method, masks, cell, digit, limit=36):
+    """Proof detectors may emit an earlier valid elimination first."""
+    result = []
+    for _ in range(limit):
+        if digit not in masks[cell]:
+            break
+        steps = execute(method, masks)
+        result.extend(steps)
+        if not steps:
+            break
+    return result
+
+
 class SudopediaAdvancedTests(unittest.TestCase):
     def test_empty_rectangle_both_cross_and_conjugate(self):
         masks = blank()
@@ -133,7 +146,7 @@ class SudopediaAdvancedTests(unittest.TestCase):
         masks[10] = {2, 5}
         only(masks, 1, houses(9)[0], {0, 1})
         only(masks, 2, houses(9)[9+1], {1, 10})
-        steps = execute(alternating_inference_chains, masks)
+        steps = execute_until(alternating_inference_chains, masks, 0, 2)
         self.assertNotIn(2, masks[0])
         self.assertTrue(any(s['method'] == 'aic' and
                             'S-W-S' in s['source']['edges'] for s in steps))
@@ -143,7 +156,7 @@ class SudopediaAdvancedTests(unittest.TestCase):
         masks[10], masks[13], masks[37] = {1, 2}, {1, 3}, {2, 3}
         only(masks, 1, houses(9)[1], {10, 13})
         only(masks, 2, houses(9)[9+1], {10, 37})
-        steps = execute(medusa_3d, masks)
+        steps = execute_until(medusa_3d, masks, 40, 3)
         self.assertNotIn(3, masks[40])  # sees B3 and C3 of opposite parity
         self.assertTrue(any(s['method'] == 'medusa_trap' and s['cell'] == 40
                             for s in steps))
@@ -154,7 +167,7 @@ class SudopediaAdvancedTests(unittest.TestCase):
         masks[11] = {1, 2}
         masks[20] = {2, 3}
         masks[19] = {3, 4, 5}
-        steps = execute(als_xy_wings, masks)
+        steps = execute_until(als_xy_wings, masks, 19, 3)
         self.assertNotIn(3, masks[19])
         self.assertTrue(any(s['method'] == 'als_xy_wing' and s['cell'] == 19
                             for s in steps))
@@ -165,7 +178,7 @@ class SudopediaAdvancedTests(unittest.TestCase):
                              (20, {2, 3}), (29, {3, 5})):
             masks[cell] = domain
         masks[28] = {5, 6, 7}
-        steps = execute(als_xy_chains, masks)
+        steps = execute_until(als_xy_chains, masks, 28, 5)
         self.assertNotIn(5, masks[28])
         self.assertTrue(any(s['method'] == 'als_xy_chain' and s['cell'] == 28
                             for s in steps))
@@ -175,7 +188,7 @@ class SudopediaAdvancedTests(unittest.TestCase):
         masks[10] = {1, 2, 3}  # Stem
         masks[0], masks[1], masks[9] = {1, 7}, {2, 7}, {3, 7}
         masks[20] = {4, 7, 8}
-        steps = execute(death_blossoms, masks)
+        steps = execute_until(death_blossoms, masks, 20, 7)
         self.assertNotIn(7, masks[20])
         self.assertTrue(any(s['method'] == 'death_blossom' and s['cell'] == 20
                             for s in steps))
