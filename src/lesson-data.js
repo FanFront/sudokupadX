@@ -81,3 +81,30 @@ export function parseTechniqueAtlas(markdown) {
   })).filter(entry=>entry.title&&entry.content);
 }
 
+
+/**
+ * Indexed technique rows from the complete offline reference. Each entry
+ * retains its chapter, Chinese explanation, implementation status and
+ * unmodified source chapter. It never implies an executable exercise.
+ */
+export function parseTechniqueEntries(markdown) {
+  const sections=parseTechniqueAtlas(markdown);
+  const entries=[];
+  for(const section of sections){
+    for(const line of section.content.split('\\n')){
+      if(!/^\\s*\\|/.test(line))continue;
+      const fields=line.trim().replace(/^\\||\\|$/g,'')
+        .split('|').map(field=>field.trim());
+      if(fields.length!==3||!/^[✓≈○×]/u.test(fields[2]))continue;
+      const [title,description,status]=fields;
+      if(!title||!description)continue;
+      entries.push({
+        id:section.id+'-'+(entries.length+1),
+        title,description,status,
+        chapterId:section.id,chapterTitle:section.title,
+        content:section.content
+      });
+    }
+  }
+  return entries;
+}
