@@ -118,7 +118,7 @@ export function renderLessonContent(markdown, root) {
 // Keep the entire Sudopedia reference locally browsable, without pretending
 // a catalogue entry has a practice board until a real solver trace exists.
 export function parseTechniqueAtlas(markdown) {
-  const matches=[...markdown.matchAll(/^##\\s+(\\d+)\\.\\s+(.+)$/gm)];
+  const matches=[...markdown.matchAll(/^##\s+(\d+)\.\s+(.+)$/gm)];
   return matches.map((match,i)=>({
     id:Number(match[1]),title:match[2].trim(),
     content:markdown.slice(
