@@ -12,7 +12,9 @@ ADVANCED_GUIDE_URL = ("https://github.com/FanFront/sudokupadX/"
 ADVANCED_METHODS = frozenset({
     "two_string_kite", "w_wing", "remote_pairs", "color_trap",
     "color_wrap", "xy_chain", "x_chain", "als_xz",
-    "finned_x_wing", "squirmbag",
+    "finned_x_wing", "squirmbag", "finned_swordfish", "finned_jellyfish",
+    "sashimi_x_wing", "sashimi_swordfish", "sashimi_jellyfish",
+    "empty_rectangle", "wxyz_wing", "als_xy_wing",
 })
 
 # (Chinese name, curriculum tier). Every solver method is accounted for.
@@ -57,6 +59,14 @@ METHODS = {
     "als_xz": ("ALS-XZ 准锁定数组联动", 4),
     "finned_x_wing": ("鳍形 X-Wing", 4),
     "squirmbag": ("Squirmbag 五行列鱼", 4),
+    "finned_swordfish": ("鳍形剑鱼", 4),
+    "finned_jellyfish": ("鳍形水母鱼", 4),
+    "sashimi_x_wing": ("刺身 X-Wing", 4),
+    "sashimi_swordfish": ("刺身剑鱼", 4),
+    "sashimi_jellyfish": ("刺身水母鱼", 4),
+    "empty_rectangle": ("空矩形 Empty Rectangle", 4),
+    "wxyz_wing": ("WXYZ-Wing 四格翼", 4),
+    "als_xy_wing": ("ALS-XY-Wing 三组准锁定数组", 4),
 }
 
 
