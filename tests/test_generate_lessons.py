@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from generate_lessons import (LESSON_METHODS, anchor_examples,
                               anchored_line_examples, anchored_classic_examples,
                               collect_report_examples, make_fixture,
-                              certified_single_examples)
+                              certified_single_examples, clue_domains, given_values)
 from variant_logic import houses
 
 
@@ -104,19 +104,18 @@ class VerifiedLessonsTests(unittest.TestCase):
                 self.assertEqual(sum(v == digit for v in givens), 8)
             if method == "naked_single":
                 self.assertEqual(
-                    fixture["masks"][target][-1], int(fixture["goal"]["digit"]))
+                    clue_domains(n, given_values(fixture["puzzle"]))[target],
+                    {int(fixture["goal"]["digit"])})
 
     def test_sudopedia_method_proofs_are_collected_from_real_steps(self):
         lessons, methods = collect_report_examples(with_methods=True)
-        self.assertEqual(set(lessons), set(range(3,26)) -
-                         set([20,21,22,4,8,10,11,12]) if False else set(lessons))
+        self.assertTrue(lessons)
         self.assertIn("naked_subset", methods)
-        self.assertIn("hidden_single", methods) if "hidden_single" in methods else None
         for key, fixture in methods.items():
             self.assertEqual(key.split(":")[0], fixture["method"])
             self.assertTrue(fixture["proof"]["removed"])
             self.assertTrue(fixture["focus"])
-            self.assertEqual(fixture["goal"]["index"] in fixture["focus"], True)
+            self.assertIn(fixture["goal"]["index"], fixture["focus"])
 
     def test_impossible_eight_cell_128_row_cannot_be_exported(self):
         lesson = anchor_examples()[2]
