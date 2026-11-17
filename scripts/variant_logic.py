@@ -21,6 +21,11 @@ from technique_catalog import technique_tier
 from chain_techniques import (two_string_kites, w_wings, simple_colors,
                               remote_pairs, xy_chains, x_chains)
 from als_techniques import als_xz
+from sudopedia_patterns import (generalized_fish, extended_finned_fish,
+                                wxyz_wings, sue_de_coq)
+from sudopedia_inference import (alternating_inference_chains, medusa_3d,
+                                 multi_colors, empty_rectangles)
+from sudopedia_als import (als_xy_wings, als_xy_chains, death_blossoms)
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
@@ -257,6 +262,31 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
             changed |= x_chains(n, masks, units, reduce)
         if not changed and (max_tier is None or max_tier >= 4):
             changed |= als_xz(n, masks, units, reduce)
+        # Additional Sudopedia methods share the same proof-emitting reduce
+        # callback. Run only on a stalled tier-4 board; each detector is
+        # deterministic, bounded, and never accesses a completed solution.
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= extended_finned_fish(n, masks, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= empty_rectangles(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= wxyz_wings(n, masks, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= sue_de_coq(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= multi_colors(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= medusa_3d(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= alternating_inference_chains(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= als_xy_wings(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= als_xy_chains(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= death_blossoms(n, masks, units, reduce)
+        if not changed and (max_tier is None or max_tier >= 4):
+            changed |= generalized_fish(n, masks, units, reduce)
 
         if not changed:
             break
