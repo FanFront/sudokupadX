@@ -68,3 +68,16 @@ export function filterLessons(lessons, term='', stage='all') {
 // manually invented "candidate exercises" here: those can contradict a
 // Sudoku house (the retired lesson 2 once had eight {1,2,8} cells).
 export const LESSON_IDS=Object.freeze(Array.from({length:25},(_,i)=>i+1));
+
+// Keep the entire Sudopedia reference locally browsable, without pretending
+// a catalogue entry has a practice board until a real solver trace exists.
+export function parseTechniqueAtlas(markdown) {
+  const matches=[...markdown.matchAll(/^##\s+(\d+)\.\s+(.+)$/gm)];
+  return matches.map((match,i)=>({
+    id:Number(match[1]),title:match[2].trim(),
+    content:markdown.slice(
+      match.index+match[0].length,
+      i+1<matches.length?matches[i+1].index:markdown.length).trim()
+  })).filter(entry=>entry.title&&entry.content);
+}
+
