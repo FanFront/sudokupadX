@@ -21,7 +21,7 @@
 
 ## 仍未有专项随机训练的内容
 
-目录覆盖不等于 98 个技巧都具有自动生成与证明器。**当前尚未给出专项证书**的高阶家族包含：Sashimi／Franken／Mutant／Kraken Fish、Empty Rectangle、Multi-Colors、3D Medusa、广义环／AIC／定向链、WXYZ-Wing、ALS-XY-Wing／Chain、Death Blossom、Sue de Coq、局部组合排除等。对于它们，当前 UI 会明确显示“练习验证中”，避免让“随便找一盘无关数独”冒充技巧训练。
+目录覆盖不等于 98 个技巧都具有自动生成与证明器。**本次补充的 solver 方法**包括 AIC（最长 7 条边）、3D Medusa、Multi-Colors、Empty Rectangle、Franken／Mutant Fish、Sashimi／鳍形大鱼、Kraken Fish（含间接 W-S-W 链）、WXYZ-Wing、Sue de Coq 双扇区数对型、ALS-XY-Wing／4 组 ALS Chain、Death Blossom 三分支型。Android／Web 使用 Rust 求解器，Python 则负责离线训练证明；各家族均需独立回归验证。**能识别某种推理，不等于已有可随机反复训练的专项构造器**。目前广义 Nice Loops、定向链、复杂局部组合排除等仍缺少完整自动识别，未取得证书的课程仍显示“练习验证中”，不以其他方法的练习冒充。
 
 唯一解假设家族、试错／猜测／Nishio、模板覆盖等**都保留阅读索引**；因其证明语义、前提或求解方式与现有无猜测训练器不同，尚不能声称存在对应的训练实例。此项仍是开发缺口，而不是“已经支持”的技巧。
 
