@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {parseTechniqueAtlas,parseTechniqueEntries} from '../src/lesson-data.js';
+import {parseTechniqueAtlas,parseTechniqueEntries,practiceLessonIdsForAtlas} from '../src/lesson-data.js';
 
 const markdown=readFileSync(
   new URL('../docs/sudopedia-catalog.zh-CN.md',import.meta.url),'utf8');
@@ -32,4 +32,13 @@ test('Sudopedia technique index includes methods as individual entries',()=>{
   assert.ok(entries.some(item=>item.title.includes('3D Medusa')));
   assert.ok(entries.every(item=>item.chapterTitle&&item.description&&item.status));
   assert.equal(new Set(entries.map(entry=>entry.id)).size,entries.length);
+});
+
+test('only actual verified technique rows offer an interactive practice',()=>{
+  const entries=parseTechniqueEntries(markdown);
+  const row=title=>entries.find(entry=>entry.title===title);
+  assert.deepEqual(practiceLessonIdsForAtlas(row('Basic Fish / X-Wing')),[7]);
+  assert.deepEqual(practiceLessonIdsForAtlas(row('Naked Pair / Triple / Quad')),[3,4]);
+  assert.deepEqual(practiceLessonIdsForAtlas(row('ALS-XZ')),[]);
+  assert.deepEqual(practiceLessonIdsForAtlas(row('Unique Rectangle')),[]);
 });
