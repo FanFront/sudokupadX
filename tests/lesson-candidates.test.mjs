@@ -46,9 +46,9 @@ test('peer-elimination lesson alone retains one conflicting note to remove',()=>
 test('an equally proved legal elimination replaces a conflicting first digit',()=>{
   const f=fixture('naked_subset');
   f.goal={kind:'remove',index:2,digit:'1'};
-  f.proof={method:'naked_subset',removed:[1,3],remaining:[4]};
+  f.proof={method:'naked_subset',removed:[1,4],remaining:[3]};
   const masks=normalizeLessonCandidates(f);
-  assert.equal(f.goal.digit,'3');
+  assert.equal(f.goal.digit,'4');
   assert.deepEqual(masks[2],[3,4]);
 });
 test('six-by-six uses 2x3 boxes instead of 3x2',()=>{
