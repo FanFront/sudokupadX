@@ -51,9 +51,8 @@ export function setupCreatorUI({openPuzzle,onCatalogChanged,handleDelete,notify}
     $('creatorTierHint').textContent=tier===5?
       '等级 5：第 4 级逻辑求解器无法完成，但精确搜索验证唯一解；可能需要试探或穷举。':
       '等级 '+tier+'：前一级求解器无法完成，目标等级可在不猜测的情况下完成。生成失败不会伪造等级。';
-    $('creatorTier').querySelectorAll('option').forEach(option=>{
-      option.disabled=Number($('creatorSize').value)!==9&&Number(option.value)>=3;
-    });
+    // Advanced techniques are available on any supported grid size.
+    // Their actual applicability is certified by the Rust solver.
   }
   function setBusy(value){
     busy=value;
@@ -154,9 +153,6 @@ export function setupCreatorUI({openPuzzle,onCatalogChanged,handleDelete,notify}
     if(busy)cancel();
   });
   $('creatorSize').addEventListener('change',()=>{
-    const size=Number($('creatorSize').value);
-    if(size!==9&&Number($('creatorTier').value)>=3)
-      $('creatorTier').value='2';
     renderVariants();
   });
   $('creatorTier').addEventListener('change',renderTechniques);
