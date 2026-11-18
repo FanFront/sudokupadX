@@ -1353,7 +1353,9 @@ function practiceBanner(active){
 }
 async function beginLessonPractice(id){
   if(pending||lessonPractice)throw Error('当前正在载入另一道谜题');
-  const practice=createLessonPractice(id,{randomize:true});
+  // A missing technique certificate opens an explicitly labeled basic
+  // review, never a falsely certified exercise for that advanced technique.
+  const practice=createLessonPractice(id,{randomize:true,allowReview:true});
   if(puzzle)save();
   const previous=snapshotForLesson();
   lessonPractice={...practice,previous,completed:false};
