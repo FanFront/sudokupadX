@@ -101,7 +101,9 @@ def make_fixture(id_, puzzle, masks, step, step_index=0, constraints=()):
     givens = given_values(puzzle)
     cell = step["cell"]
     removed = list(step["removed"])
-    if not removed or cell in givens or not removed[0] in masks[cell]:
+    direct_fill = step["method"] in ("full_house", "last_digit", "naked_single")
+    if (cell in givens or (not removed and not direct_fill) or
+            any(digit not in masks[cell] for digit in removed)):
         raise ValueError(f"Invalid lesson step {id_}")
     if len(masks) != n*n or any(not domain or
                                 solution[i] not in domain
@@ -124,8 +126,12 @@ def make_fixture(id_, puzzle, masks, step, step_index=0, constraints=()):
     if kind == "fill":
         remaining = list(step["remaining"])
         if len(remaining) != 1:
-            raise ValueError("A hidden single must force exactly one digit")
+            raise ValueError("A fill proof must force exactly one digit")
         digit = remaining[0]
+        # A Full House, Last Digit or Naked Single is already a valid
+        # *placement*, not an artificial elimination of 1..9 candidates.
+        if not removed and (not direct_fill or masks[cell] != {digit}):
+            raise ValueError("A direct fill must have a real singleton domain")
     else:
         digit = removed[0]
         if digit == solution[cell]:
@@ -510,13 +516,13 @@ def certified_single_examples():
                         "标准数独：每行、每列和每个 3×3 宫恰好有 1–9。"}
         }
         masks = clue_domains(n, givens)
-        # Show the target before deductions; the target candidate set still
-        # contains 1–9, as at the start of a normal candidate-clearing trace.
-        masks[target] = set(range(1,n+1))
+        # The printed givens already eliminate peer-conflicting digits.
+        # Do not fabricate a 1..9 target domain simply to show a single.
         digit = solution[target]
+        if masks[target] != {digit}:
+            raise ValueError("Direct placement has a non-singleton domain")
         step = {"method":method,"cell":target,
-                "removed":[d for d in range(1,n+1) if d != digit],
-                "remaining":[digit],
+                "removed":[], "remaining":[digit],
                 "source":{"house":4, "cells":sorted(holes)}}
         fixture = make_fixture(0, puzzle, masks, step)
         result[method] = fixture
