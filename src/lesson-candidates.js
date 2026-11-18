@@ -58,6 +58,12 @@ export function normalizeLessonCandidates(fixture){
     if(!out.length)throw Error('课程候选数在提示数字约束下为空');
     return out;
   });
+  // A hidden-single lesson must not silently become a naked single after
+  // cleaning peer-conflicting notes; otherwise its claimed technique is
+  // misleading even if placing the digit is correct.
+  if(fixture.method==='hidden_single' &&
+     normalized[target]?.length===1)
+    throw Error('隐性唯一数演示已变为显性唯一数，需更换专项盘面');
   if(!normalized[target]?.includes(Number(fixture.goal.digit))){
     // A trace step can remove several candidates, some already excluded
     // by the printed givens. Prefer another *actually legal* candidate
