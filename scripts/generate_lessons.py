@@ -563,8 +563,8 @@ def standardize_classic_example(number, fixture):
     puzzle = {
         "cells": [[{"value": str(givens[r*n+c])} if r*n+c in givens
                    else {} for c in range(n)] for r in range(n)],
-        "regions": [[[(r+dr, c+dc) for dr in range(h) for dc in range(w)]
-                     for r in range(0, n, h) for c in range(0, n, w)],
+        "regions": [[(r+dr, c+dc) for dr in range(h) for dc in range(w)]
+                    for r in range(0, n, h) for c in range(0, n, w)],
         "cages": [], "lines": [], "arrows": [],
         "overlays": [], "underlays": [],
         "metadata": {"solution": "".join(map(str, solution)),
