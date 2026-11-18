@@ -1508,6 +1508,78 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
 #[cfg(test)]
 mod tests{
     use super::*;
+
+    fn canonical_small_solution(n:usize)->Vec<u8>{
+        let (h,w)=boxes(n);
+        (0..n*n).map(|i|((i/n*w+i/n/h+i%n)%n+1) as u8).collect()
+    }
+
+    #[test]
+    fn smaller_fish_eliminates_only_false_candidates(){
+        for n in [4,6]{
+            let solution=canonical_small_solution(n);
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            let digit=1u8;
+            // Two base rows contain only two candidate columns for digit 1.
+            let first=(0..n).find(|&col|solution[col]==digit).unwrap();
+            let second=(0..n).find(|&col|solution[n+col]==digit).unwrap();
+            assert_ne!(first,second);
+            for row in [0,1] {
+                for col in [first,second]{
+                    masks[row*n+col]|=bit(digit);
+                }
+            }
+            let target=2*n+first;
+            assert_ne!(solution[target],digit);
+            masks[target]|=bit(digit);
+            let mut solver=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(solver.fish(2).unwrap(),"X-Wing did not run on {n}x{n}");
+            assert_eq!(solver.masks[target]&bit(digit),0);
+            for (cell,&answer) in solution.iter().enumerate(){
+                assert_ne!(solver.masks[cell]&bit(answer),0,
+                    "X-Wing removed true digit from {n}x{n} cell {cell}");
+            }
+        }
+    }
+
+    #[test]
+    fn wing_patterns_and_advanced_hints_operate_on_small_boards(){
+        for n in [4,6]{
+            let solution=canonical_small_solution(n);
+            assert_eq!(&solution[0..4],&[1,2,3,4]);
+            // The four cells of row one form a small valid pattern:
+            // XY pivot {1,3}, wings {1,2}, {2,3}, target {2,4}.
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            masks[0]=bit(1)|bit(3);
+            masks[1]=bit(1)|bit(2);
+            masks[2]=bit(2)|bit(3);
+            masks[3]=bit(2)|bit(4);
+            let mut solver=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(solver.xy_wing().unwrap(),"XY-Wing missing on {n}x{n}");
+            assert_eq!(solver.masks[3],bit(4));
+            for (i,&answer) in solution.iter().enumerate(){
+                assert_ne!(solver.masks[i]&bit(answer),0);
+            }
+
+            // XYZ pivot {1,2,3}; wings {1,2} and {1,3};
+            // all three are peers of the target containing false 1.
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            masks[0]=bit(1)|bit(2)|bit(3);
+            masks[1]=bit(1)|bit(2);
+            masks[2]=bit(1)|bit(3);
+            masks[3]=bit(1)|bit(4);
+            let mut solver=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(solver.xyz_wing().unwrap(),"XYZ-Wing missing on {n}x{n}");
+            assert_eq!(solver.masks[3],bit(4));
+
+            // No hard-coded 81-cell indexing or errors in the remaining
+            // size-independent advanced detectors.
+            let empty=vec![0u8;n*n];
+            assert!(solve(n,&empty,&[],4,false,None).is_ok());
+            assert!(next_hint(n,&empty,&[],4).is_ok());
+        }
+    }
+
     #[test]
     fn solved_grids_are_real_sudokus(){
         for n in [4,6,9]{
