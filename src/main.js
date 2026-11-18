@@ -1046,7 +1046,9 @@ async function edit(action,symbol='') {
       lessonPractice.completed=true;
       $('lessonPracticeStatus').textContent='✓ 推理正确！'+lessonPractice.explanation;
       $('lessonPracticeStatus').classList.add('complete');
-      lessonPage.markPracticed(lessonPractice.id);
+      // A prerequisite review is not a proof of the selected advanced method.
+      if(lessonPractice.practiceKind==='targeted')
+        lessonPage.markPracticed(lessonPractice.id);
     }
     updateControls();scheduleSave();requestDraw();
     showCompletionIfNew();
