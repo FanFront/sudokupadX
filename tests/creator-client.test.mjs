@@ -5,13 +5,18 @@ import {
 } from '../src/creator/options.js';
 import {createdCatalogEntries} from '../src/creator/storage.js';
 
-test('4x4/6x6 disable unsupported variants and level >=3',()=>{
+test('4x4/6x6 disable unsupported variants, not useful higher tiers',()=>{
   assert.ok(availableVariants(4).every(([, ,sizes])=>sizes.includes(4)));
   assert.ok(!availableVariants(4).some(([kind])=>kind==='whisper'));
   assert.ok(availableVariants(9).some(([kind])=>kind==='whisper'));
-  assert.throws(()=>validateCreatorOptions({
+  const search=validateCreatorOptions({
     size:6,tier:5,variants:['kropki'],focus:'',density:'light',attempts:3
-  }),/仅支持 9×9/);
+  });
+  assert.equal(search.size,6);
+  assert.equal(search.tier,5);
+  assert.equal(search.focus,null);
+  assert.ok(availableTechniques(6,4,[]).some(([name])=>name==='jellyfish'));
+  assert.ok(!availableTechniques(4,4,[]).some(([name])=>name==='jellyfish'));
 });
 
 test('level 5 must not falsely claim focus methods or logic completeness',()=>{
