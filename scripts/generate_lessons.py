@@ -584,11 +584,106 @@ def standardize_classic_example(number, fixture):
     return fixture
 
 
+def find_standard_classic_patterns(examples):
+    """Look for honest classical exercises on already-verified standard grids.
+
+    Technique-specific detectors inspect only candidate domains derived from
+    visible givens. A witness is accepted only if the same standard Sudoku
+    has an independently confirmed unique solution. No variant rule is
+    retained or secretly used in a standard practice.
+    """
+    from itertools import combinations
+    from classic_techniques import hidden_subsets, basic_fish
+
+    needed = {3, 5, 6, 7, 9}
+    result = {}
+    source_puzzles = [fixture["puzzle"] for fixture in examples.values()
+                      if is_standard_fixture(fixture)]
+    for puzzle in source_puzzles:
+        if not needed - result.keys():
+            break
+        n = len(puzzle["cells"])
+        givens = given_values(puzzle)
+        if n != 9 or count_solutions(n, givens, []) != 1:
+            continue
+        solution = list(map(int, puzzle["metadata"]["solution"]))
+        for number in sorted(needed - result.keys()):
+            method = LESSON_METHODS[number]
+            masks = clue_domains(n, givens)
+            witnesses = []
+
+            def reduce(cell, allowed, name, source):
+                removed = masks[cell] - set(allowed)
+                if not removed:
+                    return False
+                if solution[cell] in removed:
+                    raise ValueError("Classical pattern eliminates a true digit")
+                before = [set(domain) for domain in masks]
+                masks[cell].difference_update(removed)
+                witnesses.append((before, {
+                    "method": name, "cell": cell,
+                    "removed": sorted(removed),
+                    "remaining": sorted(masks[cell]), "source": source,
+                }))
+                return True
+
+            if number == 3:  # Genuine naked pair in a single house.
+                for house_id, unit in enumerate(houses(n)):
+                    unsolved = [i for i in unit if len(masks[i]) > 1]
+                    for pair in combinations(unsolved, 2):
+                        digits = masks[pair[0]] | masks[pair[1]]
+                        if len(digits) != 2:
+                            continue
+                        for cell in unit:
+                            if cell not in pair:
+                                reduce(cell, masks[cell] - digits, "naked_subset",
+                                       {"house": house_id, "size": 2,
+                                        "cells": list(pair),
+                                        "digits": sorted(digits)})
+            elif number == 5:
+                hidden_subsets(n, houses(n), masks, reduce)
+            elif number == 6:
+                units = houses(n)
+                for a, first in enumerate(units):
+                    for b in range(a+1, len(units)):
+                        common = set(first) & set(units[b])
+                        if len(common) < 2 or len(common) >= n:
+                            continue
+                        for source_id, dest_id in ((a, b), (b, a)):
+                            for digit in range(1,n+1):
+                                positions = [i for i in units[source_id]
+                                             if digit in masks[i]]
+                                if positions and all(i in common for i in positions):
+                                    for cell in units[dest_id]:
+                                        if cell not in common:
+                                            reduce(cell, masks[cell]-{digit},
+                                                   "locked_candidate",
+                                                   {"sourceHouse":source_id,
+                                                    "targetHouse":dest_id,
+                                                    "digit":digit})
+            elif number in (7, 9):
+                basic_fish(n, masks, reduce, maximum=4)
+
+            for before, step in witnesses:
+                if not matching_example(number, step):
+                    continue
+                try:
+                    result[number] = make_fixture(
+                        number, puzzle, before, step, constraints=[])
+                    break
+                except ValueError:
+                    continue
+    return result
+
+
 def generate():
     examples, method_examples = collect_report_examples(with_methods=True)
     examples.update(anchor_examples())
     examples.update(anchored_line_examples())
     examples.update(anchored_classic_examples())
+    # Seek additional authentic pair/hidden-pair/locked/fish patterns using
+    # only independent, uniquely solvable classic Sudoku givens.
+    examples.update(find_standard_classic_patterns(examples))
     # For classic techniques, drop variant clues only if a new standard-only
     # solver trace independently reproduces the same named deduction.
     for number in range(1, 13):
