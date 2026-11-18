@@ -1,8 +1,9 @@
 name: Rust and frontend checks
 on:
+  # The PR validation workflow already tests both Rust and frontend.
+  # Avoid running another independent, cold-cache 100-puzzle generator.
   push:
     branches: [main]
-  pull_request:
 jobs:
   core:
     runs-on: ubuntu-latest
