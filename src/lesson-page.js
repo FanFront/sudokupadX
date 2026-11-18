@@ -2,6 +2,7 @@ import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
 import advancedGuideMarkdown from '../docs/sudopedia-catalog.zh-CN.md?raw';
 import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS,buildLessonCatalog} from './lesson-data.js';
 import {lessonPracticeMode} from './lesson-puzzles.js';
+import {SUDOPEDIA_TECHNIQUES} from './sudopedia-catalog.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
 const LAST_KEY='sudokupadx:lesson-last:v1';
@@ -118,7 +119,8 @@ export function renderLessonContent(markdown, root) {
 function getCompleted(storage) {
   try {
     const value=JSON.parse(storage.getItem(PROGRESS_KEY)||'[]');
-    return new Set(Array.isArray(value)?value.filter(x=>Number.isInteger(x)&&LESSON_IDS.includes(x)):[]);
+    const valid=new Set([...LESSON_IDS,...SUDOPEDIA_TECHNIQUES.map(item=>item.id)]);
+    return new Set(Array.isArray(value)?value.filter(x=>Number.isInteger(x)&&valid.has(x)):[]);
   } catch {return new Set();}
 }
 
