@@ -387,7 +387,7 @@ def add_extra_geometry(n, solution, rng, constraints):
     constraints.append({"type": "xv", "sum": total, "cells": [a, b]})
 
 
-def dig(n, solution, constraints, rng, max_tier=3):
+def dig(n, solution, constraints, rng, max_tier=None):
     """Remove motif targets first, keeping every deletion logically solvable.
 
     Removing a whole collection of important cells simultaneously is
@@ -433,11 +433,9 @@ def quality(n, clues, constraints, solution, diagnostic=None,
             diagnostic[reason] += 1
         return None
 
-    # Ordinary collections use tiers <=3; the expensive tier-4 search is
-    # reserved for lessons or puzzles explicitly targeting tier 4.
-    if max_tier is None:
-        max_tier = max(3, required_min_tier,
-                       technique_tier(focus_method) if focus_method else 1)
+    # Default to complete deduction. Lesson certificates and trace replay
+    # rely on tier-4 methods (including Jellyfish for lesson 9).
+    # Callers generating a separate bulk pack may opt into a narrower tier.
     if len(clues) > MAX_GIVENS[n]:
         return reject("too many givens")
     try:
@@ -740,7 +738,9 @@ def build(seed, attempts=120, focus_method=None, focus_size=9,
                 # completed grid before expensive clue digging begins.
                 target = min_tier if n == focus_size else 1
                 focus = focus_method if n == focus_size else None
-                ceiling = max(3, target, technique_tier(focus) if focus else 1)
+                # Workshop puzzles are the source of the certified curriculum.
+                # Their proof must match the default, full-tier solver exactly.
+                ceiling = None
                 deduce(n, dict(enumerate(solution)), constraints,
                        trace=False, max_tier=ceiling)
                 clues = dig(n, solution, constraints, rng, max_tier=ceiling)
