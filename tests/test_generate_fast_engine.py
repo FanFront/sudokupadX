@@ -67,6 +67,17 @@ class FastEngineTests(unittest.TestCase):
                 self.assertEqual(a["solved"], b["solved"])
                 self.assertEqual(a["domains"], b["domains"])
 
+    def test_complete_grid_never_searches_advanced_patterns(self):
+        from unittest.mock import patch
+        completed = [((row * 3 + row // 3 + col) % 9) + 1
+                     for row in range(9) for col in range(9)]
+        with patch("variant_logic.two_string_kites",
+                   side_effect=AssertionError("unnecessary advanced search")):
+            proof = deduce(9, dict(enumerate(completed)), [],
+                           trace=True, max_tier=4)
+        self.assertTrue(proof["solved"])
+        self.assertEqual(proof["values"], completed)
+
     def test_exact_solution_count_does_not_need_advanced_patterns(self):
         # The exact counter uses exhaustive branching, independent of the
         # higher-tier human technique engine, even on an ambiguous board.
