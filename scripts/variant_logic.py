@@ -70,33 +70,36 @@ def _distinct_sum_supports(domains, total):
         return tuple(frozenset() for _ in domains)
     if sum(max(domain) for domain in available) < total:
         return tuple(frozenset() for _ in domains)
-    chosen = [0] * len(domains)
 
-    def visit(position, current_sum, used):
-        if position == len(domains):
-            if current_sum == total:
-                for index, value in enumerate(chosen):
-                    supports[index].add(value)
-            return
-        remaining = available[position + 1:]
+    # Dynamic programming over (cell, remaining sum, used digits) computes
+    # satisfiability first, without enumerating every valid tuple. Backward
+    # feasibility then identifies all supports, not just one assignment.
+    @lru_cache(maxsize=None)
+    def feasible(position, remainder, used):
+        if position == len(available):
+            return remainder == 0
+        if remainder < 0:
+            return False
         for digit in available[position]:
             bit = 1 << digit
-            if used & bit:
-                continue
-            target = current_sum + digit
-            if target > total:
-                continue
-            # Bounds ignore all-different, thus never reject a valid tuple.
-            if remaining and (target + sum(a[0] for a in remaining) > total
-                              or target + sum(a[-1] for a in remaining) < total):
-                continue
-            chosen[position] = digit
-            visit(position + 1, target, used | bit)
+            if not used & bit and feasible(position + 1,
+                                           remainder - digit, used | bit):
+                return True
+        return False
 
-    visit(0, 0, 0)
+    if feasible(0, total, 0):
+        states = {(total, 0)}
+        for position, options in enumerate(available):
+            next_states = set()
+            for remainder, used in states:
+                for digit in options:
+                    bit = 1 << digit
+                    if not used & bit and feasible(
+                            position + 1, remainder - digit, used | bit):
+                        supports[position].add(digit)
+                        next_states.add((remainder - digit, used | bit))
+            states = next_states
     return tuple(frozenset(group) for group in supports)
-
-VARIANTS = ("killer", "thermo", "kropki") + EXTRA_VARIANTS + LINE_VARIANTS
 
 
 def houses(n):
