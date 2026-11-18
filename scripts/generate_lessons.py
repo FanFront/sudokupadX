@@ -529,20 +529,82 @@ def certified_single_examples():
     return result
 
 
+def is_standard_fixture(fixture):
+    """Standard lessons should have no variant constraints or drawings."""
+    puzzle = fixture["puzzle"]
+    return (not any(puzzle.get(key) for key in
+                    ("cages", "lines", "arrows", "overlays", "underlays"))
+            and not puzzle.get("metadata", {}).get("solverRules"))
+
+
+def standardize_classic_example(number, fixture):
+    """Replace a workshop variant with a genuine classical proof if possible.
+
+    Removing variant drawings alone is unsound: a solver candidate snapshot
+    can rely on those constraints. Recompute the entire deduction trace
+    without variants and validate uniqueness *before* exporting any step.
+    """
+    if is_standard_fixture(fixture):
+        return fixture
+    if number > 12:
+        return fixture  # The later curriculum deliberately trains variants.
+    n = fixture["n"]
+    givens = given_values(fixture["puzzle"])
+    if count_solutions(n, givens, []) != 1:
+        return fixture
+    proof = deduce(n, givens, [], trace=True)
+    if not proof["solved"]:
+        return fixture
+    solution = list(map(int, fixture["puzzle"]["metadata"]["solution"]))
+    if proof["values"] != solution:
+        return fixture
+    shape = {4: (2, 2), 6: (2, 3), 9: (3, 3)}[n]
+    h, w = shape
+    puzzle = {
+        "cells": [[{"value": str(givens[r*n+c])} if r*n+c in givens
+                   else {} for c in range(n)] for r in range(n)],
+        "regions": [[[(r+dr, c+dc) for dr in range(h) for dc in range(w)]
+                     for r in range(0, n, h) for c in range(0, n, w)],
+        "cages": [], "lines": [], "arrows": [],
+        "overlays": [], "underlays": [],
+        "metadata": {"solution": "".join(map(str, solution)),
+                     "rules": "标准数独：每行、每列及每个宫包含 1 至 N。"}
+    }
+    masks = [set(range(1, n+1)) for _ in range(n*n)]
+    for cell, digit in givens.items():
+        masks[cell] = {digit}
+    for index, step in enumerate(proof["trace"]):
+        if matching_example(number, step) and step["cell"] not in givens:
+            try:
+                return make_fixture(number, puzzle, masks, step,
+                                    index, constraints=[])
+            except ValueError:
+                pass
+        masks[step["cell"]].difference_update(step["removed"])
+    return fixture
+
+
 def generate():
     examples, method_examples = collect_report_examples(with_methods=True)
     examples.update(anchor_examples())
     examples.update(anchored_line_examples())
     examples.update(anchored_classic_examples())
-    # Prefer the existing independently certified class examples to broad
-    # workshop traces for the same method, but don't overwrite size 2/3.
+    # For classic techniques, drop variant clues only if a new standard-only
+    # solver trace independently reproduces the same named deduction.
+    for number in range(1, 13):
+        examples[number] = standardize_classic_example(number, examples[number])
+    # Prefer genuine standard Sudoku fixtures over workshop variants for
+    # Sudopedia's classic topics, including named subset cardinalities.
     for fixture in examples.values():
         method = fixture["method"]
-        method_examples.setdefault(method, fixture)
         source = fixture["proof"].get("source")
         size = source.get("size") if isinstance(source, dict) else None
-        if isinstance(size, int):
-            method_examples.setdefault(f"{method}:{size}", fixture)
+        keys = [method] + ([f"{method}:{size}"] if isinstance(size, int) else [])
+        for key in keys:
+            previous = method_examples.get(key)
+            if previous is None or (is_standard_fixture(fixture) and
+                                    not is_standard_fixture(previous)):
+                method_examples[key] = fixture
     method_examples.update(certified_single_examples())
     for id_, fixture in examples.items():
         if fixture["method"] != LESSON_METHODS[id_]:
