@@ -4,6 +4,7 @@
 import {LESSON_FIXTURES,TECHNIQUE_FIXTURES} from './lesson-fixtures.js';
 import {SUDOPEDIA_TECHNIQUES,SUDOPEDIA_BY_ID} from './sudopedia-catalog.js';
 import {randomizeLessonFixture} from './lesson-randomizer.js';
+import {normalizeLessonCandidates} from './lesson-candidates.js';
 
 const baseCell=()=>({value:null,corner:[],center:[],color:null});
 
@@ -18,26 +19,64 @@ function certifiedFixture(id){
   return fixture?.method===entry.method?fixture:null;
 }
 
+function knownLessonId(id){
+  const number=Number(id);
+  return Number.isInteger(number) &&
+    ((number>=1&&number<=25)||SUDOPEDIA_BY_ID.has(number));
+}
+
+function reviewFixture(){
+  // The fallback is a genuinely certified *basic* exercise, not an
+  // invented proof of a specialist technique. Every catalog entry has a
+  // useful training action without falsely advertising technique coverage.
+  const item=TECHNIQUE_FIXTURES.naked_single;
+  return item?.method==='naked_single'?item:null;
+}
+
+export function lessonPracticeMode(id){
+  if(!knownLessonId(id))return 'unavailable';
+  if(certifiedFixture(id))return 'targeted';
+  return reviewFixture()?'review':'unavailable';
+}
+
 export function availableLessonPracticeIds(){
-  return [...new Set([
-    ...Object.keys(LESSON_FIXTURES).map(Number),
-    ...SUDOPEDIA_TECHNIQUES.filter(item=>certifiedFixture(item.id))
-       .map(item=>item.id)
-  ])].sort((a,b)=>a-b);
+  return [...Array.from({length:25},(_,i)=>i+1),
+          ...SUDOPEDIA_TECHNIQUES.map(item=>item.id)]
+    .filter(id=>lessonPracticeMode(id)!=='unavailable');
 }
 
 export function hasVerifiedLessonPractice(id){
-  return Boolean(certifiedFixture(id));
+  return lessonPracticeMode(id)!=='unavailable';
 }
 
 export function createLessonPractice(id,{randomize=false,random=Math.random}={}) {
-  const source=certifiedFixture(id);
-  const fixture=source&&randomize?randomizeLessonFixture(source,random):source;
-  const topic=SUDOPEDIA_BY_ID.get(Number(id));
-  const nameZh=topic?.zh||fixture?.nameZh;
-  if(!fixture){
-    throw Error('本课暂无通过唯一解和逻辑推理验证的练习棋盘，已拒绝加载未经证明的候选数。');
+  if(!knownLessonId(id))throw Error('课程编号无效');
+  let specific=certifiedFixture(id);
+  let practiceKind=specific?'targeted':'review';
+  const source=specific||reviewFixture();
+  if(!source)throw Error('没有经过验证的基础数独练习盘面');
+  // Never mutate frozen/generated shared fixtures, even if no random
+  // transformation was requested.
+  let fixture=randomize?randomizeLessonFixture(source,random):
+    structuredClone(source);
+  let candidates;
+  try {
+    candidates=normalizeLessonCandidates(fixture);
+  } catch(error) {
+    if(!specific||!reviewFixture())throw error;
+    // Older workshop traces can select an elimination that was already
+    // forced by a *given* in a row/column/box. They are not valid specialist
+    // practice after cleanup. Offer a labeled basic review instead.
+    practiceKind='review';
+    const review=reviewFixture();
+    fixture=randomize?randomizeLessonFixture(review,random):
+      structuredClone(review);
+    candidates=normalizeLessonCandidates(fixture);
   }
+  const topic=SUDOPEDIA_BY_ID.get(Number(id));
+  const nameZh=practiceKind==='targeted'?
+    (topic?.zh||fixture?.nameZh):fixture.nameZh;
+  const topicName=topic?.zh||'第 '+id+' 课';
   const n=fixture.n;
   const puzzle=JSON.parse(JSON.stringify(fixture.puzzle));
   const solution=puzzle.metadata?.solution;
@@ -54,7 +93,7 @@ export function createLessonPractice(id,{randomize=false,random=Math.random}={})
     throw Error('课程验证数据损坏，禁止显示练习棋盘。');
   }
 
-  const seed=fixture.masks.map((values,i)=>{
+  const seed=candidates.map((values,i)=>{
     const entry=baseCell();
     const given=puzzle.cells[Math.floor(i/n)]?.[i%n]?.value;
     if(!Array.isArray(values) || !values.length ||
@@ -77,19 +116,24 @@ export function createLessonPractice(id,{randomize=false,random=Math.random}={})
   if(!seed[goal.index].center.includes(goal.digit)){
     throw Error('课程目标候选不在被证明的推理状态里。');
   }
-  const task=goal.kind==='fill'
-    ?'根据真实棋盘及完整候选状态，在黄色目标格填入唯一确定的数字。'
-    :'根据真实棋盘及完整候选状态，在黄色目标格用「中心」模式删除一个可证明排除的候选。';
-  const explanation=goal.kind==='fill'
-    ?'逻辑求解器证明：利用「'+nameZh+'」，'+goalLabel+
-      ' 只能填 '+goal.digit+'。此结论来自当前棋盘，不是预设答案。'
-    :'逻辑求解器证明：利用「'+nameZh+'」，'+goalLabel+
-      ' 可以排除 '+goal.digit+'。此步骤由真实推理轨迹复现。';
+  const action=goal.kind==='fill'
+    ?'根据已验证的候选状态，在黄色目标格填入唯一确定的数字。'
+    :'根据已验证的候选状态，在黄色目标格用「中心」模式删除可证明排除的候选。';
+  const task=(practiceKind==='review'?
+    '本课的专项技巧尚无可验证的训练实例。现在进行标准数独「'+nameZh+
+    '」基础复习（不是「'+topicName+'」的专项练习）。':'')+action;
+  const explanation=(practiceKind==='review'?
+    '本节仅完成基础复习，尚未验证「'+topicName+'」技巧。':'')+
+    (goal.kind==='fill'
+      ?'逻辑求解器证明：利用「'+nameZh+'」，'+goalLabel+
+        ' 只能填 '+goal.digit+'。此结论来自当前棋盘。'
+      :'逻辑求解器证明：利用「'+nameZh+'」，'+goalLabel+
+        ' 可以排除 '+goal.digit+'。此步骤由真实推理轨迹复现。');
 
   puzzle.id='sudokupadx-lesson-practice-'+id;
   puzzle.metadata={
     ...puzzle.metadata,
-    title:'技巧练习 '+id+' · '+nameZh+' · '+goalLabel,
+    title:(practiceKind==='review'?'基础复习 ':'技巧练习 ')+id+' · '+nameZh+' · '+goalLabel,
     author:'SudokuPadX 中文数独课堂',
     rules:'本题来自经过唯一解验证的真实数独。盘面候选数是在无猜测求解器的中途步骤中获得的完整状态，'+
       '不是任意设置的数字。蓝色格为相关位置，黄色格为目标。'+task+
@@ -97,7 +141,7 @@ export function createLessonPractice(id,{randomize=false,random=Math.random}={})
     msgcorrect:'训练只要求完成黄色目标格中的一步逻辑推理，不要求解完整盘面。'
   };
   return {
-    id:Number(id),n,puzzle,seed,
+    id:Number(id),n,puzzle,seed,practiceKind,
     goal:{...goal},
     focus:[...fixture.focus],task,goalLabel,explanation,
     proof:structuredClone(proof),
