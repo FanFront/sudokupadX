@@ -58,7 +58,19 @@ export function normalizeLessonCandidates(fixture){
     if(!out.length)throw Error('课程候选数在提示数字约束下为空');
     return out;
   });
-  if(!normalized[target]?.includes(Number(fixture.goal.digit)))
-    throw Error('目标候选已被行列宫提示数排除，不构成对应技巧训练');
+  if(!normalized[target]?.includes(Number(fixture.goal.digit))){
+    // A trace step can remove several candidates, some already excluded
+    // by the printed givens. Prefer another *actually legal* candidate
+    // from the very same proved deduction instead of showing conflicts.
+    const alternative=fixture.goal.kind==='remove' &&
+      fixture.proof?.removed?.find(d=>
+        normalized[target].includes(d) &&
+        d!==Number(puzzle.metadata.solution[target]));
+    if(alternative){
+      fixture.goal.digit=String(alternative);
+    }else{
+      throw Error('目标候选已被行列宫提示数排除，不构成对应技巧训练');
+    }
+  }
   return normalized;
 }
