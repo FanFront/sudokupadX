@@ -31,6 +31,7 @@ from sudopedia_als import (als_xy_wings, als_xy_chains, death_blossoms)
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
+VARIANTS = ("killer", "thermo", "kropki") + EXTRA_VARIANTS + LINE_VARIANTS
 
 @lru_cache(maxsize=128)
 def _prepared_geometry(n, serialized):
