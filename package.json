@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "python3 scripts/generate_adventure.py && python3 scripts/generate_variants.py && python3 scripts/generate_lessons.py && python3 scripts/generate_batch9.py && python3 scripts/generate_single_variants.py && python3 scripts/generate_advanced.py --workers 4",
-    "predev:web": "python3 scripts/generate_adventure.py && python3 scripts/generate_variants.py && python3 scripts/generate_lessons.py && python3 scripts/generate_batch9.py && python3 scripts/generate_single_variants.py && python3 scripts/generate_advanced.py --workers 4",
-    "prebuild": "python3 scripts/generate_adventure.py && python3 scripts/generate_variants.py && python3 scripts/generate_lessons.py && python3 scripts/generate_batch9.py && python3 scripts/generate_single_variants.py && python3 scripts/generate_advanced.py --workers 4",
-    "prebuild:web": "python3 scripts/generate_adventure.py && python3 scripts/generate_variants.py && python3 scripts/generate_lessons.py && python3 scripts/generate_batch9.py && python3 scripts/generate_single_variants.py && python3 scripts/generate_advanced.py --workers 4",
-    "pretest": "python3 scripts/generate_adventure.py && python3 scripts/generate_variants.py && python3 scripts/generate_lessons.py && python3 scripts/generate_single_variants.py && python3 scripts/generate_advanced.py --workers 4 && python3 -m unittest discover -s tests -p 'test_generate_*.py' && python3 -m unittest discover -s tests -p 'test_sudopedia_advanced.py'",
+    "predev": "python3 scripts/prepare_assets.py",
+    "predev:web": "python3 scripts/prepare_assets.py",
+    "prebuild": "python3 scripts/prepare_assets.py",
+    "prebuild:web": "python3 scripts/prepare_assets.py",
+    "pretest": "python3 scripts/prepare_assets.py && python3 -m unittest discover -s tests -p 'test_generate_*.py' && python3 -m unittest discover -s tests -p 'test_sudopedia_advanced.py'",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build && node scripts/precache-assets.mjs",
     "wasm:build": "wasm-pack build crates/sudokupadx-web --target web --release --out-dir ../../public/wasm",
@@ -20,7 +20,8 @@
     "android:dev": "tauri android dev",
     "android:build": "node scripts/android-release.mjs version && node scripts/android-release.mjs sign && tauri android build --apk --target aarch64",
     "test": "node --test tests/*.test.mjs",
-    "fetch:prologue": "node scripts/fetch-prologue.mjs"
+    "fetch:prologue": "node scripts/fetch-prologue.mjs",
+    "assets:regenerate": "python3 scripts/prepare_assets.py --force"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.9.0",
