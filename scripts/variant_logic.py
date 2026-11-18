@@ -302,6 +302,11 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
                 changed |= propagate_extra(n, masks, clue, index, reduce)
 
         changed |= kropki_triple_partitions(n, units, masks, constraints, reduce)
+        # The solved state has already passed every house and authored rule.
+        # Do not exhaustively search impossible fish/ALS/chain eliminations
+        # once all cells are fixed. This also accelerates authoring checks.
+        if all(len(domain) == 1 for domain in masks):
+            break
         # Only advanced *proofs* after all house, variant and locked
         # candidate deductions have stalled; try shorter/local motifs first.
         # Do not spend time searching chains on tier-1/2 puzzles.
