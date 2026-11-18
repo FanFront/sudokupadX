@@ -14,6 +14,12 @@ jobs:
         with:
           node-version: '22'
       - run: npm install
+      - uses: actions/cache@v4
+        with:
+          path: |
+            public/puzzles
+            src/lesson-fixtures.js
+          key: offline-puzzles-${{ runner.os }}-${{ hashFiles('scripts/*.py', 'docs/*.zh-CN.md') }}
       - run: npm test
       - run: npm run build
       - run: test -s dist/puzzles/prologue-empty-house.scl
@@ -41,6 +47,12 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - run: npm install
+      - uses: actions/cache@v4
+        with:
+          path: |
+            public/puzzles
+            src/lesson-fixtures.js
+          key: offline-puzzles-${{ runner.os }}-${{ hashFiles('scripts/*.py', 'docs/*.zh-CN.md') }}
       - run: cargo install wasm-pack --locked
       - run: npm run build:web
       - run: npm install --no-save playwright
