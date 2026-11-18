@@ -387,7 +387,7 @@ def add_extra_geometry(n, solution, rng, constraints):
     constraints.append({"type": "xv", "sum": total, "cells": [a, b]})
 
 
-def dig(n, solution, constraints, rng):
+def dig(n, solution, constraints, rng, max_tier=3):
     """Remove motif targets first, keeping every deletion logically solvable.
 
     Removing a whole collection of important cells simultaneously is
@@ -416,7 +416,8 @@ def dig(n, solution, constraints, rng):
         if digit is None:
             continue
         try:
-            acceptable = deduce(n, clues, constraints, trace=False)
+            acceptable = deduce(n, clues, constraints, trace=False,
+                                max_tier=max_tier)
             if not acceptable["solved"] or acceptable["values"] != solution:
                 clues[cell] = digit
         except ValueError:
@@ -425,18 +426,23 @@ def dig(n, solution, constraints, rng):
 
 
 def quality(n, clues, constraints, solution, diagnostic=None,
-            focus_method=None, required_min_tier=1):
+            focus_method=None, required_min_tier=1, max_tier=None):
     """Check a genuine variant dependency, not merely decorative constraints."""
     def reject(reason):
         if diagnostic is not None:
             diagnostic[reason] += 1
         return None
 
+    # Ordinary collections use tiers <=3; the expensive tier-4 search is
+    # reserved for lessons or puzzles explicitly targeting tier 4.
+    if max_tier is None:
+        max_tier = max(3, required_min_tier,
+                       technique_tier(focus_method) if focus_method else 1)
     if len(clues) > MAX_GIVENS[n]:
         return reject("too many givens")
     try:
-        proof = deduce(n, clues, constraints)
-        ordinary = deduce(n, clues, [])
+        proof = deduce(n, clues, constraints, max_tier=max_tier)
+        ordinary = deduce(n, clues, [], max_tier=max_tier)
     except ValueError:
         return reject("deduction contradiction")
     if not proof["solved"] or proof["values"] != solution:
@@ -524,7 +530,8 @@ def quality(n, clues, constraints, solution, diagnostic=None,
     for kind in VARIANTS:
         subset = [c for c in constraints if c["type"] != kind]
         try:
-            if not deduce(n, clues, subset, trace=False)["solved"]:
+            if not deduce(n, clues, subset, trace=False,
+                          max_tier=max_tier)["solved"]:
                 essential.append(kind)
         except ValueError:
             # A contradiction cannot be used as an ablation success.
@@ -731,11 +738,14 @@ def build(seed, attempts=120, focus_method=None, focus_size=9,
                 constraints = make_constraints(n, solution, rng)
                 # Verify that every authored constraint agrees with the
                 # completed grid before expensive clue digging begins.
-                deduce(n, dict(enumerate(solution)), constraints, trace=False)
-                clues = dig(n, solution, constraints, rng)
+                target = min_tier if n == focus_size else 1
+                focus = focus_method if n == focus_size else None
+                ceiling = max(3, target, technique_tier(focus) if focus else 1)
+                deduce(n, dict(enumerate(solution)), constraints,
+                       trace=False, max_tier=ceiling)
+                clues = dig(n, solution, constraints, rng, max_tier=ceiling)
                 accepted = quality(n, clues, constraints, solution, failures,
-                                   focus_method if n == focus_size else None,
-                                   min_tier if n == focus_size else 1)
+                                   focus, target, max_tier=ceiling)
             except ValueError as exc:
                 failures[str(exc)] += 1
                 continue
