@@ -57,6 +57,7 @@ jobs:
       - run: cargo test -p sudokupadx-core --all-targets
 
   browser-wasm:
+    needs: offline-assets
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
