@@ -417,7 +417,7 @@ def dig(n, solution, constraints, rng, max_tier=None):
             continue
         try:
             acceptable = deduce(n, clues, constraints, trace=False,
-                                max_tier=max_tier)
+                                max_tier=max_tier, fast=True)
             if not acceptable["solved"] or acceptable["values"] != solution:
                 clues[cell] = digit
         except ValueError:
@@ -440,7 +440,8 @@ def quality(n, clues, constraints, solution, diagnostic=None,
         return reject("too many givens")
     try:
         proof = deduce(n, clues, constraints, max_tier=max_tier)
-        ordinary = deduce(n, clues, [], max_tier=max_tier)
+        ordinary = deduce(n, clues, [], trace=False,
+                          max_tier=max_tier, fast=True)
     except ValueError:
         return reject("deduction contradiction")
     if not proof["solved"] or proof["values"] != solution:
@@ -454,13 +455,13 @@ def quality(n, clues, constraints, solution, diagnostic=None,
         # to reject a good lower-tier lesson.
         target_tier = technique_tier(focus_method)
         if not deduce(n, clues, constraints, trace=False,
-                      max_tier=target_tier)["solved"]:
+                      max_tier=target_tier, fast=True)["solved"]:
             return reject("focused puzzle needs higher-tier techniques")
         # Under this curriculum (the selected tier and simpler methods),
         # the selected technique must actually be necessary.
         without = deduce(n, clues, constraints, trace=False,
                          max_tier=target_tier,
-                         disabled_methods=(focus_method,))
+                         disabled_methods=(focus_method,), fast=True)
         if without["solved"]:
             return reject("focused technique is redundant: " + focus_method)
     if ordinary["solved"]:
@@ -529,7 +530,7 @@ def quality(n, clues, constraints, solution, diagnostic=None,
         subset = [c for c in constraints if c["type"] != kind]
         try:
             if not deduce(n, clues, subset, trace=False,
-                          max_tier=max_tier)["solved"]:
+                          max_tier=max_tier, fast=True)["solved"]:
                 essential.append(kind)
         except ValueError:
             # A contradiction cannot be used as an ablation success.
