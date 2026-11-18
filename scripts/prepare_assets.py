@@ -18,11 +18,16 @@ ROOT = Path(__file__).resolve().parents[1]
 STAMP = ROOT / "public/puzzles/.generator-fingerprint"
 REQUIRED = (
     "src/lesson-fixtures.js",
+    "public/puzzles/generated/catalog-entries.json",
+    "public/puzzles/generated/generated-adventure-1.json",
     "public/puzzles/variants/validation.json",
+    "public/puzzles/variants/catalog-entries.json",
     "public/puzzles/batch9/validation.json",
     "public/puzzles/batch9/catalog-entries.json",
     "public/puzzles/single-rule/validation.json",
+    "public/puzzles/single-rule/catalog-entries.json",
     "public/puzzles/advanced/validation.json",
+    "public/puzzles/advanced/catalog-entries.json",
 )
 GENERATORS = (
     ("generate_adventure.py",),
@@ -50,8 +55,17 @@ def complete():
     if not all((ROOT / path).is_file() for path in REQUIRED):
         return False
     batch = ROOT / "public/puzzles/batch9"
-    return all((batch / f"generated-9x9-{i:03d}.json").is_file()
-               for i in range(1, 101))
+    if not all((batch / f"generated-9x9-{i:03d}.json").is_file()
+               for i in range(1, 101)):
+        return False
+    singles = ROOT / "public/puzzles/single-rule"
+    if not all((singles / f"single-rule-lab-{kind}.json").is_file()
+               for kind in ("killer", "kropki", "thermo",
+                            "renban", "arrow", "whisper")):
+        return False
+    advanced = ROOT / "public/puzzles/advanced"
+    return all((advanced / f"advanced-logic-{kind}-t3.json").is_file()
+               for kind in ("killer", "kropki", "thermo", "renban"))
 
 
 def main():
