@@ -35,6 +35,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install dependencies
         run: npm install
+      - uses: actions/cache@v4
+        with:
+          path: |
+            public/puzzles
+            src/lesson-fixtures.js
+          key: offline-puzzles-${{ runner.os }}-${{ hashFiles('scripts/*.py', 'docs/*.zh-CN.md') }}
       - name: Check JavaScript rendering regressions
         run: npm test
       - name: Check Rust core
