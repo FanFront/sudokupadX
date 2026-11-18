@@ -22,5 +22,14 @@ jobs:
         with:
           node-version: '22'
       - run: npm install
+      # Puzzle creation is deterministic and expensive, especially the
+      # certified 100-puzzle pack. Cache all generated offline resources
+      # across runs, then reuse them in prebuild and pretest.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            public/puzzles
+            src/lesson-fixtures.js
+          key: offline-puzzles-${{ runner.os }}-${{ hashFiles('scripts/*.py', 'docs/*.zh-CN.md') }}
       - run: npm run build
       - run: npm test
