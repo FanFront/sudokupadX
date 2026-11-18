@@ -1,0 +1,40 @@
+name: Verify proof-backed lessons
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/generate_lessons.py'
+      - 'scripts/variant_logic.py'
+      - 'src/lesson-*.js'
+      - 'src/lesson-page.js'
+      - 'src/sudopedia-catalog.js'
+      - 'tests/lesson-*.test.mjs'
+      - 'tests/test_generate_lessons.py'
+      - '.github/workflows/lesson-check.yml'
+permissions:
+  contents: read
+concurrency:
+  group: lesson-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  lessons:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and candidate invariants
+        run: |
+          python3 -m compileall -q scripts
+          node --check src/lesson-puzzles.js
+          node --test tests/lesson-candidates.test.mjs
+      - name: Build workshop source for independent lesson proofs
+        run: python3 -u scripts/generate_variants.py
+      - name: Construct verified lesson snapshots
+        run: python3 -u scripts/generate_lessons.py
+      - name: Validate source proofs and all practice boards
+        run: |
+          python3 -m unittest discover -s tests -p 'test_generate_lessons.py'
+          node --test tests/lesson-*.test.mjs
