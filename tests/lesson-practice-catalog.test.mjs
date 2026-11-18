@@ -20,7 +20,8 @@ test('every random lesson starts from legal row/column/box notes',()=>{
   const all=[...Array.from({length:25},(_,i)=>i+1),
              ...SUDOPEDIA_TECHNIQUES.map(item=>item.id)];
   for(const id of all){
-    const item=createLessonPractice(id,{randomize:true,random:()=>.37});
+    const item=createLessonPractice(id,{randomize:true,random:()=>.37,
+      allowReview:true});
     assert.ok(item.practiceKind==='targeted'||item.practiceKind==='review');
     const legal=legalGivenCandidates(item.puzzle);
     const given=item.puzzle.cells.flat();
