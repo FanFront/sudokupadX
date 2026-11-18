@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LESSON_FIXTURES,TECHNIQUE_FIXTURES} from '../src/lesson-fixtures.js';
 import {SUDOPEDIA_TECHNIQUES} from '../src/sudopedia-catalog.js';
-import {lessonPracticeMode,availableLessonPracticeIds,createLessonPractice}
+import {lessonPracticeMode,availableLessonPracticeIds,createLessonPractice,
+        hasVerifiedLessonPractice}
   from '../src/lesson-puzzles.js';
 import {legalGivenCandidates} from '../src/lesson-candidates.js';
 
@@ -60,5 +61,21 @@ test('well-known classical technique lessons prefer variant-free examples',()=>{
     assert.equal(exercise.puzzle.cages?.length||0,0,String(id));
     assert.equal(exercise.puzzle.lines?.length||0,0,String(id));
     assert.equal(exercise.puzzle.arrows?.length||0,0,String(id));
+  }
+});
+
+
+test('basic review is available without misreporting specialist certification',()=>{
+  for(const name of ['Kraken Fish','3D Medusa','Death Blossom','Guessing']){
+    const entry=SUDOPEDIA_TECHNIQUES.find(item=>item.name===name);
+    assert.ok(entry,name);
+    assert.equal(lessonPracticeMode(entry.id),'review',name);
+    assert.equal(hasVerifiedLessonPractice(entry.id),false,name);
+    assert.throws(()=>createLessonPractice(entry.id),/暂无通过唯一解/);
+    const review=createLessonPractice(entry.id,{allowReview:true});
+    assert.equal(review.practiceKind,'review');
+    assert.equal(review.proof.method,'naked_single');
+    assert.equal(review.puzzle.cages?.length||0,0);
+    assert.equal(review.puzzle.lines?.length||0,0);
   }
 });
