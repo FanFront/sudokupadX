@@ -70,8 +70,8 @@ class FastEngineTests(unittest.TestCase):
     def test_exact_solution_count_does_not_need_advanced_patterns(self):
         # The exact counter uses exhaustive branching, independent of the
         # higher-tier human technique engine, even on an ambiguous board.
-        seed = {0: 1, 1: 2, 4: 3, 5: 4, 8: 2, 9: 1,
-                12: 4, 13: 3}
+        seed = {0: 1, 1: 2, 2: 3, 4: 3, 5: 4, 6: 1,
+                8: 2, 9: 1, 12: 4, 13: 3}
         self.assertEqual(count_solutions(4, seed, []), 1)
         self.assertEqual(count_solutions(4, {}, [], limit=2), 2)
 
