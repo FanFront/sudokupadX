@@ -20,6 +20,12 @@ jobs:
             public/puzzles
             src/lesson-fixtures.js
           key: offline-puzzles-${{ runner.os }}-${{ hashFiles('scripts/*.py', 'docs/*.zh-CN.md') }}
+      - name: Check lesson scripts and candidate logic before expensive generation
+        run: |
+          python3 -m compileall -q scripts
+          node --check src/lesson-puzzles.js
+          node --check src/lesson-page.js
+          node --test tests/lesson-candidates.test.mjs
       - name: Generate or restore verified offline puzzle library
         run: python3 scripts/prepare_assets.py
       - uses: actions/upload-artifact@v4

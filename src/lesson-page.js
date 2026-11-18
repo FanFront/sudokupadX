@@ -1,7 +1,8 @@
 import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
 import advancedGuideMarkdown from '../docs/sudopedia-catalog.zh-CN.md?raw';
 import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS,buildLessonCatalog} from './lesson-data.js';
-import {hasVerifiedLessonPractice} from './lesson-puzzles.js';
+import {lessonPracticeMode} from './lesson-puzzles.js';
+import {SUDOPEDIA_TECHNIQUES} from './sudopedia-catalog.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
 const LAST_KEY='sudokupadx:lesson-last:v1';
@@ -118,7 +119,8 @@ export function renderLessonContent(markdown, root) {
 function getCompleted(storage) {
   try {
     const value=JSON.parse(storage.getItem(PROGRESS_KEY)||'[]');
-    return new Set(Array.isArray(value)?value.filter(x=>Number.isInteger(x)&&LESSON_IDS.includes(x)):[]);
+    const valid=new Set([...LESSON_IDS,...SUDOPEDIA_TECHNIQUES.map(item=>item.id)]);
+    return new Set(Array.isArray(value)?value.filter(x=>Number.isInteger(x)&&valid.has(x)):[]);
   } catch {return new Set();}
 }
 
@@ -183,21 +185,28 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   function renderExercise(){
     const root=$('lessonExercise');
     root.replaceChildren();
-    if(!LESSON_IDS.includes(selected.id))return;
-    const verified=hasVerifiedLessonPractice(selected.id);
+    const mode=lessonPracticeMode(selected.id);
+    const verified=mode!=='unavailable',review=mode==='review';
     const heading=element('div','lesson-exercise-heading');
     heading.append(element('strong','',
-      verified?'随机实战训练':'练习验证中'));
+      review?'标准数独基础复习':verified?'随机实战训练':'练习验证中'));
     heading.append(element('span','',
-      verified?'每次进入都基于已验证证明随机变换棋盘':'未发布不可靠的候选数示例'));
+      review?'专项技巧待验证，可先训练已证明的基础技能':
+        verified?'每次进入都基于已验证证明随机变换棋盘':
+          '未发布不可靠的候选数示例'));
     const body=element('div','lesson-exercise-body');
     if(verified){
       body.append(element('p','lesson-exercise-context',
-        '本课使用经过唯一解与无猜测推理验证的棋盘。候选数来自真实的求解中间状态，蓝色标记提示关联格，黄色格是操作目标。'));
+        review?
+          '该技巧暂无独立验证的专项盘面。可进行标准数独的显性唯一数基础复习；不会将其他技巧的步骤冒充本课技巧。':
+          '本课使用经过唯一解与无猜测推理验证的棋盘。候选数均排除了与已给定数字冲突的数，黄色格是操作目标。'));
       body.append(element('p','lesson-exercise-context',
-        '请在棋盘中完成一次真实的填数或候选删除；遇到困难时可查看推理讲解。'));
+        review?
+          '完成基础复习不会标记本课专项技巧已经掌握。':
+          '请在棋盘中完成一次真实的填数或候选删除；遇到困难时可查看推理讲解。'));
       const start=element('button','lesson-start-practice',
-        practiceLoading?'正在准备训练棋盘…':'生成随机训练棋盘');
+        practiceLoading?'正在准备训练棋盘…':
+          review?'生成随机基础复习棋盘':'生成随机专项训练棋盘');
       start.id='lessonStartPractice';
       start.type='button';
       start.disabled=practiceLoading;

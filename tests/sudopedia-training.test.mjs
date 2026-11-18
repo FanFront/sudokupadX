@@ -71,7 +71,8 @@ test('every randomized published lesson preserves house solution, givens and sou
     ids.push(extra.id);
   for(const id of ids){
     for(let seed=1;seed<=4;seed++){
-      const task=createLessonPractice(id,{randomize:true,random:seeded(seed+id*271)});
+      const task=createLessonPractice(id,{randomize:true,random:seeded(seed+id*271),
+        allowReview:true});
       const n=task.n,solution=task.puzzle.metadata.solution.split('').map(Number);
       assert.equal(solution.length,n*n);
       assert.deepEqual([...new Set(solution)].sort((a,b)=>a-b),
@@ -110,9 +111,14 @@ test('randomized classic drills produce new clue positions without mutating the 
   assert.deepEqual(createLessonPractice(10).goal,source.goal);
 });
 
-test('randomized variant lesson geometry remains attached to the solution',()=>{
+test('certified randomized variant lesson geometry remains attached to the solution',()=>{
+  let verified=0;
   for(const id of [15,16,17,18,19,20,21,22,23,24,25]){
+    // Variant geometry is required only for a *verified variant technique*.
+    // Invalid legacy traces correctly offer a standard-Sudoku review instead.
+    if(!hasVerifiedLessonPractice(id))continue;
     const task=createLessonPractice(id,{randomize:true,random:seeded(id*31)});
+    verified++;
     const rules=task.puzzle.metadata.solverRules;
     // Some generated lessons supply graphical constraints without a solverRules
     // metadata entry; in those cases geometry must still remain in the scene.
@@ -139,4 +145,5 @@ test('randomized variant lesson geometry remains attached to the solution',()=>{
         assert.equal(digits[0],digits.slice(1).reduce((a,b)=>a+b,0));
     }
   }
+  assert.ok(verified>0,'at least one variant technique retains a certified exercise');
 });

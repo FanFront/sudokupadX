@@ -1046,7 +1046,9 @@ async function edit(action,symbol='') {
       lessonPractice.completed=true;
       $('lessonPracticeStatus').textContent='✓ 推理正确！'+lessonPractice.explanation;
       $('lessonPracticeStatus').classList.add('complete');
-      lessonPage.markPracticed(lessonPractice.id);
+      // A prerequisite review is not a proof of the selected advanced method.
+      if(lessonPractice.practiceKind==='targeted')
+        lessonPage.markPracticed(lessonPractice.id);
     }
     updateControls();scheduleSave();requestDraw();
     showCompletionIfNew();
@@ -1351,7 +1353,9 @@ function practiceBanner(active){
 }
 async function beginLessonPractice(id){
   if(pending||lessonPractice)throw Error('当前正在载入另一道谜题');
-  const practice=createLessonPractice(id,{randomize:true});
+  // A missing technique certificate opens an explicitly labeled basic
+  // review, never a falsely certified exercise for that advanced technique.
+  const practice=createLessonPractice(id,{randomize:true,allowReview:true});
   if(puzzle)save();
   const previous=snapshotForLesson();
   lessonPractice={...practice,previous,completed:false};

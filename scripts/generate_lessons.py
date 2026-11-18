@@ -101,7 +101,9 @@ def make_fixture(id_, puzzle, masks, step, step_index=0, constraints=()):
     givens = given_values(puzzle)
     cell = step["cell"]
     removed = list(step["removed"])
-    if not removed or cell in givens or not removed[0] in masks[cell]:
+    direct_fill = step["method"] in ("full_house", "last_digit", "naked_single")
+    if (cell in givens or (not removed and not direct_fill) or
+            any(digit not in masks[cell] for digit in removed)):
         raise ValueError(f"Invalid lesson step {id_}")
     if len(masks) != n*n or any(not domain or
                                 solution[i] not in domain
@@ -124,8 +126,12 @@ def make_fixture(id_, puzzle, masks, step, step_index=0, constraints=()):
     if kind == "fill":
         remaining = list(step["remaining"])
         if len(remaining) != 1:
-            raise ValueError("A hidden single must force exactly one digit")
+            raise ValueError("A fill proof must force exactly one digit")
         digit = remaining[0]
+        # A Full House, Last Digit or Naked Single is already a valid
+        # *placement*, not an artificial elimination of 1..9 candidates.
+        if not removed and (not direct_fill or masks[cell] != {digit}):
+            raise ValueError("A direct fill must have a real singleton domain")
     else:
         digit = removed[0]
         if digit == solution[cell]:
@@ -510,16 +516,163 @@ def certified_single_examples():
                         "标准数独：每行、每列和每个 3×3 宫恰好有 1–9。"}
         }
         masks = clue_domains(n, givens)
-        # Show the target before deductions; the target candidate set still
-        # contains 1–9, as at the start of a normal candidate-clearing trace.
-        masks[target] = set(range(1,n+1))
+        # The printed givens already eliminate peer-conflicting digits.
+        # Do not fabricate a 1..9 target domain simply to show a single.
         digit = solution[target]
+        if masks[target] != {digit}:
+            raise ValueError("Direct placement has a non-singleton domain")
         step = {"method":method,"cell":target,
-                "removed":[d for d in range(1,n+1) if d != digit],
-                "remaining":[digit],
+                "removed":[], "remaining":[digit],
                 "source":{"house":4, "cells":sorted(holes)}}
         fixture = make_fixture(0, puzzle, masks, step)
         result[method] = fixture
+    return result
+
+
+def is_standard_fixture(fixture):
+    """Standard lessons should have no variant constraints or drawings."""
+    puzzle = fixture["puzzle"]
+    return (not any(puzzle.get(key) for key in
+                    ("cages", "lines", "arrows", "overlays", "underlays"))
+            and not puzzle.get("metadata", {}).get("solverRules"))
+
+
+def standardize_classic_example(number, fixture):
+    """Replace a workshop variant with a genuine classical proof if possible.
+
+    Removing variant drawings alone is unsound: a solver candidate snapshot
+    can rely on those constraints. Recompute the entire deduction trace
+    without variants and validate uniqueness *before* exporting any step.
+    """
+    if is_standard_fixture(fixture):
+        return fixture
+    if number > 12:
+        return fixture  # The later curriculum deliberately trains variants.
+    n = fixture["n"]
+    givens = given_values(fixture["puzzle"])
+    if count_solutions(n, givens, []) != 1:
+        return fixture
+    proof = deduce(n, givens, [], trace=True)
+    if not proof["solved"]:
+        return fixture
+    solution = list(map(int, fixture["puzzle"]["metadata"]["solution"]))
+    if proof["values"] != solution:
+        return fixture
+    shape = {4: (2, 2), 6: (2, 3), 9: (3, 3)}[n]
+    h, w = shape
+    puzzle = {
+        "cells": [[{"value": str(givens[r*n+c])} if r*n+c in givens
+                   else {} for c in range(n)] for r in range(n)],
+        "regions": [[(r+dr, c+dc) for dr in range(h) for dc in range(w)]
+                    for r in range(0, n, h) for c in range(0, n, w)],
+        "cages": [], "lines": [], "arrows": [],
+        "overlays": [], "underlays": [],
+        "metadata": {"solution": "".join(map(str, solution)),
+                     "rules": "标准数独：每行、每列及每个宫包含 1 至 N。"}
+    }
+    masks = [set(range(1, n+1)) for _ in range(n*n)]
+    for cell, digit in givens.items():
+        masks[cell] = {digit}
+    for index, step in enumerate(proof["trace"]):
+        if matching_example(number, step) and step["cell"] not in givens:
+            try:
+                return make_fixture(number, puzzle, masks, step,
+                                    index, constraints=[])
+            except ValueError:
+                pass
+        masks[step["cell"]].difference_update(step["removed"])
+    return fixture
+
+
+def find_standard_classic_patterns(examples):
+    """Look for honest classical exercises on already-verified standard grids.
+
+    Technique-specific detectors inspect only candidate domains derived from
+    visible givens. A witness is accepted only if the same standard Sudoku
+    has an independently confirmed unique solution. No variant rule is
+    retained or secretly used in a standard practice.
+    """
+    from itertools import combinations
+    from classic_techniques import hidden_subsets, basic_fish
+
+    needed = {3, 5, 6, 7, 9}
+    result = {}
+    source_puzzles = [fixture["puzzle"] for fixture in examples.values()
+                      if is_standard_fixture(fixture)]
+    for puzzle in source_puzzles:
+        if not needed - result.keys():
+            break
+        n = len(puzzle["cells"])
+        givens = given_values(puzzle)
+        if n != 9 or count_solutions(n, givens, []) != 1:
+            continue
+        solution = list(map(int, puzzle["metadata"]["solution"]))
+        for number in sorted(needed - result.keys()):
+            method = LESSON_METHODS[number]
+            masks = clue_domains(n, givens)
+            witnesses = []
+
+            def reduce(cell, allowed, name, source):
+                removed = masks[cell] - set(allowed)
+                if not removed:
+                    return False
+                if solution[cell] in removed:
+                    raise ValueError("Classical pattern eliminates a true digit")
+                before = [set(domain) for domain in masks]
+                masks[cell].difference_update(removed)
+                witnesses.append((before, {
+                    "method": name, "cell": cell,
+                    "removed": sorted(removed),
+                    "remaining": sorted(masks[cell]), "source": source,
+                }))
+                return True
+
+            if number == 3:  # Genuine naked pair in a single house.
+                for house_id, unit in enumerate(houses(n)):
+                    unsolved = [i for i in unit if len(masks[i]) > 1]
+                    for pair in combinations(unsolved, 2):
+                        digits = masks[pair[0]] | masks[pair[1]]
+                        if len(digits) != 2:
+                            continue
+                        for cell in unit:
+                            if cell not in pair:
+                                reduce(cell, masks[cell] - digits, "naked_subset",
+                                       {"house": house_id, "size": 2,
+                                        "cells": list(pair),
+                                        "digits": sorted(digits)})
+            elif number == 5:
+                hidden_subsets(n, houses(n), masks, reduce)
+            elif number == 6:
+                units = houses(n)
+                for a, first in enumerate(units):
+                    for b in range(a+1, len(units)):
+                        common = set(first) & set(units[b])
+                        if len(common) < 2 or len(common) >= n:
+                            continue
+                        for source_id, dest_id in ((a, b), (b, a)):
+                            for digit in range(1,n+1):
+                                positions = [i for i in units[source_id]
+                                             if digit in masks[i]]
+                                if positions and all(i in common for i in positions):
+                                    for cell in units[dest_id]:
+                                        if cell not in common:
+                                            reduce(cell, masks[cell]-{digit},
+                                                   "locked_candidate",
+                                                   {"sourceHouse":source_id,
+                                                    "targetHouse":dest_id,
+                                                    "digit":digit})
+            elif number in (7, 9):
+                basic_fish(n, masks, reduce, maximum=4)
+
+            for before, step in witnesses:
+                if not matching_example(number, step):
+                    continue
+                try:
+                    result[number] = make_fixture(
+                        number, puzzle, before, step, constraints=[])
+                    break
+                except ValueError:
+                    continue
     return result
 
 
@@ -528,15 +681,25 @@ def generate():
     examples.update(anchor_examples())
     examples.update(anchored_line_examples())
     examples.update(anchored_classic_examples())
-    # Prefer the existing independently certified class examples to broad
-    # workshop traces for the same method, but don't overwrite size 2/3.
+    # Seek additional authentic pair/hidden-pair/locked/fish patterns using
+    # only independent, uniquely solvable classic Sudoku givens.
+    examples.update(find_standard_classic_patterns(examples))
+    # For classic techniques, drop variant clues only if a new standard-only
+    # solver trace independently reproduces the same named deduction.
+    for number in range(1, 13):
+        examples[number] = standardize_classic_example(number, examples[number])
+    # Prefer genuine standard Sudoku fixtures over workshop variants for
+    # Sudopedia's classic topics, including named subset cardinalities.
     for fixture in examples.values():
         method = fixture["method"]
-        method_examples.setdefault(method, fixture)
         source = fixture["proof"].get("source")
         size = source.get("size") if isinstance(source, dict) else None
-        if isinstance(size, int):
-            method_examples.setdefault(f"{method}:{size}", fixture)
+        keys = [method] + ([f"{method}:{size}"] if isinstance(size, int) else [])
+        for key in keys:
+            previous = method_examples.get(key)
+            if previous is None or (is_standard_fixture(fixture) and
+                                    not is_standard_fixture(previous)):
+                method_examples[key] = fixture
     method_examples.update(certified_single_examples())
     for id_, fixture in examples.items():
         if fixture["method"] != LESSON_METHODS[id_]:

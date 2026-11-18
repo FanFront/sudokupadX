@@ -106,10 +106,13 @@ test('lesson two is a real hidden single, not the impossible 128/369 row',()=>{
   assert.equal(board.goal.digit,'6');
 });
 
-test('variant lesson boards preserve their original rule geometry and recorded method',()=>{
+test('certified variant lesson boards preserve their geometry and method',()=>{
+  let tested=0;
   for(const id of availableLessonPracticeIds()){
+    if(id<=12||id>25||!hasVerifiedLessonPractice(id))continue;
     const task=createLessonPractice(id);
-    if(id<=12||id>25)continue;
+    assert.equal(task.practiceKind,'targeted');
+    tested++;
     const puzzle=task.puzzle;
     assert.ok(puzzle.cages.length+puzzle.lines.length+
       puzzle.overlays.length+puzzle.arrows.length>0,
@@ -117,6 +120,7 @@ test('variant lesson boards preserve their original rule geometry and recorded m
     assert.equal(typeof task.proof.method,'string');
     assert.ok(task.proof.removed.length>0);
   }
+  assert.ok(tested>0,'at least one variant-specific proof must be offered');
   assert.ok(hasVerifiedLessonPractice(26),'Full House must be playable');
 });
 
