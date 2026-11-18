@@ -739,12 +739,10 @@ function updateControls() {
     !buildClearRedPlusUpdates(puzzle,progress,conflicts,
       index=>!lockedBossGate(puzzle,index,localStorage)).length;
   const typed=usesTypedHintEngine(puzzle);
-  const small=puzzle.rows<=9&&puzzle.cols<=9&&puzzle.rows!==9;
-  for(const option of $('hintTier').options){
-    option.disabled=(typed&&Number(option.value)===5)||
-      (small&&Number(option.value)>2);
-  }
-  if(small&&Number($('hintTier').value)>2)$('hintTier').value='2';
+  // Rust's classic Sudoku solver handles 4×4, 6×6 and 9×9 using the
+  // same logical tiers; do not silently downgrade small-board hints.
+  for(const option of $('hintTier').options)
+    option.disabled=typed&&Number(option.value)===5;
   if(typed&&Number($('hintTier').value)===5)$('hintTier').value='4';
   $('zoomLabel').textContent=Math.round(camera.scale*100)+'%';
   updateSelection();
