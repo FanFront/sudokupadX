@@ -54,13 +54,19 @@ export function availableLessonPracticeIds(){
     .filter(id=>lessonPracticeMode(id)!=='unavailable');
 }
 
+// A verified exercise must demonstrate the *selected* lesson's technique.
+// A basic review remains playable through the UI, but is not certification.
 export function hasVerifiedLessonPractice(id){
-  return lessonPracticeMode(id)!=='unavailable';
+  return lessonPracticeMode(id)==='targeted';
 }
 
-export function createLessonPractice(id,{randomize=false,random=Math.random}={}) {
+export function createLessonPractice(id,{
+  randomize=false,random=Math.random,allowReview=false
+}={}) {
   if(!knownLessonId(id))throw Error('课程编号无效');
+  const unavailable='本课暂无通过唯一解和指定技巧推理验证的专项训练棋盘。';
   let specific=certifiedFixture(id);
+  if(!specific&&!allowReview)throw Error(unavailable);
   let practiceKind=specific?'targeted':'review';
   const source=specific||reviewFixture();
   if(!source)throw Error('没有经过验证的基础数独练习盘面');
@@ -72,7 +78,8 @@ export function createLessonPractice(id,{randomize=false,random=Math.random}={})
   try {
     candidates=normalizeLessonCandidates(fixture);
   } catch(error) {
-    if(!specific||!reviewFixture())throw error;
+    if(!specific||!allowReview||!reviewFixture())throw Error(
+      !allowReview?unavailable:String(error?.message||error));
     // Older workshop traces can select an elimination that was already
     // forced by a *given* in a row/column/box. They are not valid specialist
     // practice after cleanup. Offer a labeled basic review instead.
