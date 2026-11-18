@@ -52,9 +52,15 @@ def build(seed=DEFAULT_SEED, count=DEFAULT_COUNT, max_attempts=180, progress=Non
             try:
                 constraints = variants.make_constraints(9, solution, rng)
                 # Reject inconsistent geometry before spending time digging.
-                deduce(9, dict(enumerate(solution)), constraints, trace=False)
-                givens = variants.dig(9, solution, constraints, rng)
-                accepted = variants.quality(9, givens, constraints, solution, failures)
+                # Bulk-library authoring is deliberately capped at tier 3.
+                # The canonical workshop/lesson generator keeps full tier-4
+                # deductions to preserve its certified trace and curriculum.
+                deduce(9, dict(enumerate(solution)), constraints,
+                       trace=False, max_tier=3)
+                givens = variants.dig(9, solution, constraints, rng,
+                                      max_tier=3)
+                accepted = variants.quality(9, givens, constraints, solution,
+                                            failures, max_tier=3)
             except ValueError as exc:
                 failures[str(exc)] += 1
                 continue
