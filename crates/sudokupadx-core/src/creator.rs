@@ -528,17 +528,17 @@ impl Solver {
         Ok(changed)
     }
     fn fish(&mut self,max_size:usize)->Result<bool,String>{
-        if self.n!=9 {return Ok(false);}
+        let n=self.n;
         let mut changed=false;
-        for axis in 0..2 {for digit in 1..=9u8{
-            let locations:Vec<Vec<usize>>=(0..9).map(|line|
-                (0..9).filter(|&col|{
-                    let cell=if axis==0{line*9+col}else{col*9+line};
+        for axis in 0..2 {for digit in 1..=n as u8{
+            let locations:Vec<Vec<usize>>=(0..n).map(|line|
+                (0..n).filter(|&col|{
+                    let cell=if axis==0{line*n+col}else{col*n+line};
                     self.masks[cell]&bit(digit)!=0
                 }).collect()
             ).collect();
-            for size in 2..=max_size{
-                let possible:Vec<usize>=(0..9)
+            for size in 2..=max_size.min(n-1){
+                let possible:Vec<usize>=(0..n)
                     .filter(|&i|locations[i].len()>=2&&locations[i].len()<=size)
                     .collect();
                 let method=match size {2=>"x_wing",3=>"swordfish",_=>"jellyfish"};
@@ -546,13 +546,13 @@ impl Solver {
                     let covers:BTreeSet<usize>=base.iter()
                         .flat_map(|&i|locations[i].iter().copied()).collect();
                     if covers.len()!=size{continue;}
-                    for line in 0..9{
+                    for line in 0..n{
                         if base.contains(&line){continue;}
                         for &cover in &covers{
-                            let cell=if axis==0{line*9+cover}else{cover*9+line};
+                            let cell=if axis==0{line*n+cover}else{cover*n+line};
                             self.reason=base.iter().flat_map(|&i|
                                 locations[i].iter().map(move |&col|
-                                    if axis==0{i*9+col}else{col*9+i})).collect();
+                                    if axis==0{i*n+col}else{col*n+i})).collect();
                             changed|=self.reduce(cell,!bit(digit),method)?;
                         }
                     }
@@ -562,12 +562,12 @@ impl Solver {
         Ok(changed)
     }
     fn xy_wing(&mut self)->Result<bool,String>{
-        if self.n!=9{return Ok(false);}
+        let n=self.n;
         let mut changed=false;
-        let bivalues:Vec<usize>=(0..81).filter(|&i|count(self.masks[i])==2).collect();
+        let bivalues:Vec<usize>=(0..n*n).filter(|&i|count(self.masks[i])==2).collect();
         for &pivot in &bivalues{
             let adjacent:Vec<_>=bivalues.iter().copied()
-                .filter(|&j|linked(9,pivot,j)).collect();
+                .filter(|&j|linked(n,pivot,j)).collect();
             for &a in &adjacent{
                 let common=self.masks[pivot]&self.masks[a];
                 if count(common)!=1{continue;}
@@ -575,9 +575,9 @@ impl Solver {
                 let z=self.masks[a]&!common;
                 for &b in &adjacent{
                     if b==a||self.masks[b]!=(other|z) {continue;}
-                    for cell in 0..81{
+                    for cell in 0..n*n{
                         if cell!=pivot&&cell!=a&&cell!=b &&
-                           linked(9,cell,a)&&linked(9,cell,b){
+                           linked(n,cell,a)&&linked(n,cell,b){
                             self.reason=vec![pivot,a,b];
                             changed|=self.reduce(cell,!z,"xy_wing")?;
                         }
@@ -588,31 +588,31 @@ impl Solver {
         Ok(changed)
     }
     fn skyscraper(&mut self)->Result<bool,String>{
-        if self.n!=9{return Ok(false);}
+        let n=self.n;
         let mut changed=false;
-        for axis in 0..2 {for digit in 1..=9u8 {
-            let links:Vec<Vec<usize>>=(0..9).map(|line|
-                (0..9).filter(|&col|{
-                    let cell=if axis==0{line*9+col}else{col*9+line};
+        for axis in 0..2 {for digit in 1..=n as u8 {
+            let links:Vec<Vec<usize>>=(0..n).map(|line|
+                (0..n).filter(|&col|{
+                    let cell=if axis==0{line*n+col}else{col*n+line};
                     self.masks[cell]&bit(digit)!=0
                 }).collect()).collect();
-            for a in 0..9{
+            for a in 0..n{
                 if links[a].len()!=2{continue;}
-                for b in a+1..9{
+                for b in a+1..n{
                     if links[b].len()!=2{continue;}
                     let shared:Vec<_>=links[a].iter().copied()
                         .filter(|c|links[b].contains(c)).collect();
                     if shared.len()!=1{continue;}
                     let ca=*links[a].iter().find(|&&c|c!=shared[0]).unwrap();
                     let cb=*links[b].iter().find(|&&c|c!=shared[0]).unwrap();
-                    let roof_a=if axis==0{a*9+ca}else{ca*9+a};
-                    let roof_b=if axis==0{b*9+cb}else{cb*9+b};
-                    for cell in 0..81{
+                    let roof_a=if axis==0{a*n+ca}else{ca*n+a};
+                    let roof_b=if axis==0{b*n+cb}else{cb*n+b};
+                    for cell in 0..n*n{
                         if cell!=roof_a&&cell!=roof_b&&
-                            linked(9,cell,roof_a)&&linked(9,cell,roof_b){
+                            linked(n,cell,roof_a)&&linked(n,cell,roof_b){
                             self.reason=vec![roof_a,roof_b,
-                                if axis==0{a*9+shared[0]}else{shared[0]*9+a},
-                                if axis==0{b*9+shared[0]}else{shared[0]*9+b}];
+                                if axis==0{a*n+shared[0]}else{shared[0]*n+a},
+                                if axis==0{b*n+shared[0]}else{shared[0]*n+b}];
                             changed|=self.reduce(cell,!bit(digit),"skyscraper")?;
                         }
                     }
@@ -622,22 +622,22 @@ impl Solver {
         Ok(changed)
     }
     fn xyz_wing(&mut self)->Result<bool,String>{
-        if self.n!=9{return Ok(false);}
+        let n=self.n;
         let mut changed=false;
-        let two:Vec<usize>=(0..81).filter(|&i|count(self.masks[i])==2).collect();
-        for pivot in 0..81{
+        let two:Vec<usize>=(0..n*n).filter(|&i|count(self.masks[i])==2).collect();
+        for pivot in 0..n*n{
             if count(self.masks[pivot])!=3{continue;}
             let wings:Vec<usize>=two.iter().copied()
-                .filter(|&i|linked(9,pivot,i)&&self.masks[i]&!self.masks[pivot]==0)
+                .filter(|&i|linked(n,pivot,i)&&self.masks[i]&!self.masks[pivot]==0)
                 .collect();
             for x in 0..wings.len(){for y in x+1..wings.len(){
                 let a=wings[x];let b=wings[y];
                 let shared=self.masks[a]&self.masks[b];
                 if count(shared)!=1||(self.masks[a]|self.masks[b])!=self.masks[pivot]
                     {continue;}
-                for cell in 0..81{
+                for cell in 0..n*n{
                     if cell!=pivot&&cell!=a&&cell!=b&&
-                        linked(9,cell,pivot)&&linked(9,cell,a)&&linked(9,cell,b){
+                        linked(n,cell,pivot)&&linked(n,cell,a)&&linked(n,cell,b){
                         self.reason=vec![pivot,a,b];
                         changed|=self.reduce(cell,!shared,"xyz_wing")?;
                     }
@@ -647,25 +647,25 @@ impl Solver {
         Ok(changed)
     }
     fn xy_chains(&mut self)->Result<bool,String>{
-        if self.n!=9{return Ok(false);}
+        let n=self.n;
         // Paths of bivalue strong links alternating across weak peer links.
         // A path starting with candidate d and ending with candidate d
         // excludes d from cells seeing both ends.
         let snapshot=self.masks.clone();
         let mut eliminations=Vec::new();
-        fn dfs(masks:&[Mask],path:&mut Vec<usize>,link:u8,target:u8,
+        fn dfs(n:usize,masks:&[Mask],path:&mut Vec<usize>,link:u8,target:u8,
                out:&mut Vec<(usize,Mask,Vec<usize>)>,max_depth:usize) {
             if path.len()>=max_depth{return;}
             let current=*path.last().unwrap();
-            for next in 0..81{
+            for next in 0..n*n{
                 if path.contains(&next)||count(masks[next])!=2||
-                    !linked(9,current,next)||masks[next]&bit(link)==0 {continue;}
+                    !linked(n,current,next)||masks[next]&bit(link)==0 {continue;}
                 let next_link=sole(masks[next]&!bit(link));
                 if next_link==target&&path.len()>=2{
                     let start=path[0];
-                    for cell in 0..81{
+                    for cell in 0..n*n{
                         if cell!=start&&cell!=next&&
-                            linked(9,cell,start)&&linked(9,cell,next){
+                            linked(n,cell,start)&&linked(n,cell,next){
                             let mut witness=path.clone();
                             witness.push(next);
                             out.push((cell,bit(target),witness));
@@ -673,16 +673,16 @@ impl Solver {
                     }
                 }else{
                     path.push(next);
-                    dfs(masks,path,next_link,target,out,max_depth);
+                    dfs(n,masks,path,next_link,target,out,max_depth);
                     path.pop();
                 }
             }
         }
-        for i in 0..81{
+        for i in 0..n*n{
             if count(snapshot[i])!=2{continue;}
-            for target in values(snapshot[i],9){
+            for target in values(snapshot[i],n){
                 let link=sole(snapshot[i]&!bit(target));
-                dfs(&snapshot,&mut vec![i],link,target,&mut eliminations,6);
+                dfs(n,&snapshot,&mut vec![i],link,target,&mut eliminations,6);
             }
         }
         let mut changed=false;
@@ -1477,9 +1477,6 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
        request.variants.iter().any(|k|!supports(request.size,k)){
         return Err("含有重复或当前尺寸不支持的变体规则".into());
     }
-    if request.tier>=3&&request.size!=9{
-        return Err("当前等级 3–5 仅开放 9×9；4×4 与 6×6 使用等级 1–2".into());
-    }
     let density=request.density.as_deref().unwrap_or("medium");
     if !matches!(density,"light"|"medium"|"heavy"){
         return Err("标记密度需为 light / medium / heavy".into());
@@ -1511,6 +1508,143 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
 #[cfg(test)]
 mod tests{
     use super::*;
+
+    fn canonical_small_solution(n:usize)->Vec<u8>{
+        let (h,w)=boxes(n);
+        (0..n*n).map(|i|((i/n*w+i/n/h+i%n)%n+1) as u8).collect()
+    }
+
+    #[test]
+    fn smaller_fish_eliminates_only_false_candidates(){
+        for n in [4,6]{
+            let solution=canonical_small_solution(n);
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            let digit=1u8;
+            // Two base rows contain only two candidate columns for digit 1.
+            let first=(0..n).find(|&col|solution[col]==digit).unwrap();
+            let second=(0..n).find(|&col|solution[n+col]==digit).unwrap();
+            assert_ne!(first,second);
+            for row in [0,1] {
+                for col in [first,second]{
+                    masks[row*n+col]|=bit(digit);
+                }
+            }
+            let target=2*n+first;
+            assert_ne!(solution[target],digit);
+            masks[target]|=bit(digit);
+            let mut solver=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(solver.fish(2).unwrap(),"X-Wing did not run on {n}x{n}");
+            assert_eq!(solver.masks[target]&bit(digit),0);
+            for (cell,&answer) in solution.iter().enumerate(){
+                assert_ne!(solver.masks[cell]&bit(answer),0,
+                    "X-Wing removed true digit from {n}x{n} cell {cell}");
+            }
+        }
+    }
+
+    #[test]
+    fn wing_patterns_and_advanced_hints_operate_on_small_boards(){
+        for n in [4,6]{
+            let solution=canonical_small_solution(n);
+            assert_eq!(&solution[0..4],&[1,2,3,4]);
+            // The four cells of row one form a small valid pattern:
+            // XY pivot {1,3}, wings {1,2}, {2,3}, target {2,4}.
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            masks[0]=bit(1)|bit(3);
+            masks[1]=bit(1)|bit(2);
+            masks[2]=bit(2)|bit(3);
+            masks[3]=bit(2)|bit(4);
+            let mut solver=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(solver.xy_wing().unwrap(),"XY-Wing missing on {n}x{n}");
+            assert_eq!(solver.masks[3],bit(4));
+            for (i,&answer) in solution.iter().enumerate(){
+                assert_ne!(solver.masks[i]&bit(answer),0);
+            }
+
+            // XYZ pivot {1,2,3}; wings {1,2} and {1,3};
+            // all three are peers of the target containing false 1.
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            masks[0]=bit(1)|bit(2)|bit(3);
+            masks[1]=bit(1)|bit(2);
+            masks[2]=bit(1)|bit(3);
+            masks[3]=bit(1)|bit(4);
+            let mut solver=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(solver.xyz_wing().unwrap(),"XYZ-Wing missing on {n}x{n}");
+            assert_eq!(solver.masks[3],bit(4));
+
+            // No hard-coded 81-cell indexing or errors in the remaining
+            // size-independent advanced detectors.
+            let empty=vec![0u8;n*n];
+            assert!(solve(n,&empty,&[],4,false,None).is_ok());
+            assert!(next_hint(n,&empty,&[],4).is_ok());
+        }
+    }
+
+    #[test]
+    fn small_board_skyscraper_and_xy_chains_remove_only_false_digits(){
+        for n in [4,6]{
+            let solution=canonical_small_solution(n);
+            // A three-cell bivalue chain in row one: {1,2} — {2,3}
+            // — {3,1}. The fourth cell sees both ends, so 1 is excluded.
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            masks[0]=bit(1)|bit(2);
+            masks[1]=bit(2)|bit(3);
+            masks[2]=bit(3)|bit(1);
+            masks[3]=bit(4)|bit(1);
+            let mut chain=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(chain.xy_chains().unwrap(),"XY-Chain skipped {n}x{n}");
+            assert_eq!(chain.masks[3]&bit(1),0);
+            for (cell,&answer) in solution.iter().enumerate(){
+                assert_ne!(chain.masks[cell]&bit(answer),0);
+            }
+
+            // Find two parallel strong links with one common column and
+            // separate roofs, plus a target seeing both roofs. Construct
+            // candidates that retain a full valid solution as a witness.
+            let mut witness=None;
+            for d in 1..=n as u8{
+                for a in 0..n{
+                    let ca=(0..n).find(|&c|solution[a*n+c]==d).unwrap();
+                    for b in a+1..n{
+                        let cb=(0..n).find(|&c|solution[b*n+c]==d).unwrap();
+                        for common in 0..n{
+                            if common==ca||common==cb{continue;}
+                            let p=a*n+ca;let q=b*n+cb;
+                            for target in 0..n*n{
+                                if target/n==a||target/n==b||solution[target]==d{
+                                    continue;
+                                }
+                                if linked(n,target,p)&&linked(n,target,q){
+                                    witness=Some((d,a,b,ca,cb,common,target));
+                                    break;
+                                }
+                            }
+                            if witness.is_some(){break;}
+                        }
+                        if witness.is_some(){break;}
+                    }
+                    if witness.is_some(){break;}
+                }
+                if witness.is_some(){break;}
+            }
+            let (digit,a,b,ca,cb,common,target)=
+                witness.expect("small grid must permit skyscraper geometry");
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            masks[a*n+common]|=bit(digit);
+            masks[b*n+common]|=bit(digit);
+            // Roof cells contain the real digit, and the target does not.
+            assert_eq!(solution[a*n+ca],digit);
+            assert_eq!(solution[b*n+cb],digit);
+            masks[target]|=bit(digit);
+            let mut sky=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(sky.skyscraper().unwrap(),"Skyscraper skipped {n}x{n}");
+            assert_eq!(sky.masks[target]&bit(digit),0);
+            for (cell,&answer) in solution.iter().enumerate(){
+                assert_ne!(sky.masks[cell]&bit(answer),0);
+            }
+        }
+    }
+
     #[test]
     fn solved_grids_are_real_sudokus(){
         for n in [4,6,9]{

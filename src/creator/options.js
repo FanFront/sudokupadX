@@ -63,14 +63,19 @@ const METHOD_RULE={killer_sum:'killer',kropki:'kropki',thermo:'thermo',
   anti_whisper_anchors:'anti_whisper_anchors'};
 export function availableTechniques(size,tier,selectedVariants=[]){
   if(Number(tier)===5)return TECHNIQUES.slice(0,1);
+  const n=Number(size);
+  if(![4,6,9].includes(n))return [];
   return TECHNIQUES.filter(([name,,level])=>level<=Number(tier)&&
+    // A fish of size n covers all rows/columns and has no outside cells
+    // left to eliminate. The named 4-line Jellyfish is thus not a 4×4
+    // deduction; smaller fish, wings and chains remain useful.
+    (name!=='jellyfish'||n>4)&&
     (!METHOD_RULE[name]||selectedVariants.includes(METHOD_RULE[name])));
 }
 export function validateCreatorOptions({size,tier,variants,focus,density,attempts}){
   size=Number(size);tier=Number(tier);attempts=Number(attempts);
   if(![4,6,9].includes(size)||![1,2,3,4,5].includes(tier))
     throw Error('无效棋盘或技巧等级');
-  if(size!==9&&tier>=3)throw Error('目前等级 3–5 仅支持 9×9');
   const supported=new Set(availableVariants(size).map(([name])=>name));
   if(!Array.isArray(variants)||variants.some(v=>!supported.has(v))||
      new Set(variants).size!==variants.length)throw Error('包含无效或重复的变体规则');
