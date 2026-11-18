@@ -7,7 +7,9 @@ The deduction engine NEVER branches; solution counting branches separately.
 from __future__ import annotations
 
 from collections import Counter
+from functools import lru_cache
 from itertools import combinations, product
+import json
 
 from variant_techniques import EXTRA_VARIANTS, propagate_extra, kropki_triple_partitions
 from variant_structures import (sum_structures, propagate_sum_structures,
@@ -29,6 +31,71 @@ from sudopedia_als import (als_xy_wings, als_xy_chains, death_blossoms)
 
 
 BOXES = {4: (2, 2), 6: (2, 3), 9: (3, 3)}
+
+@lru_cache(maxsize=128)
+def _prepared_geometry(n, serialized):
+    """Compile invariant house/constraint geometry once per authored layout.
+
+    A clue-removal pass invokes the solver up to n*n times on the exact same
+    constraints. Outie/innie reconstruction depends on geometry and totals,
+    not on the current givens.
+    """
+    constraints = json.loads(serialized)
+    validate_constraints(n, constraints)
+    units = houses(n)
+    intersections = []
+    for a, first in enumerate(units):
+        for b in range(a + 1, len(units)):
+            common = set(first) & set(units[b])
+            if 1 < len(common) < n:
+                intersections.append((a, b, frozenset(common)))
+    structures = sum_structures(n, units, constraints)
+    return units, intersections, structures
+
+
+@lru_cache(maxsize=8192)
+def _distinct_sum_supports(domains, total):
+    """All supports of an all-different sum, pruning impossible partial sums.
+
+    Equivalent to Cartesian-product checking without inspecting every
+    combination in a large Killer cage on every propagation round.
+    """
+    if not isinstance(total, int):
+        raise ValueError("Invalid cage total")
+    supports = [set() for _ in domains]
+    if not domains or any(not domain for domain in domains):
+        return tuple(frozenset() for _ in domains)
+    available = [tuple(sorted(domain)) for domain in domains]
+    if sum(min(domain) for domain in available) > total:
+        return tuple(frozenset() for _ in domains)
+    if sum(max(domain) for domain in available) < total:
+        return tuple(frozenset() for _ in domains)
+    chosen = [0] * len(domains)
+
+    def visit(position, current_sum, used):
+        if position == len(domains):
+            if current_sum == total:
+                for index, value in enumerate(chosen):
+                    supports[index].add(value)
+            return
+        remaining = available[position + 1:]
+        for digit in available[position]:
+            bit = 1 << digit
+            if used & bit:
+                continue
+            target = current_sum + digit
+            if target > total:
+                continue
+            # Bounds ignore all-different, thus never reject a valid tuple.
+            if remaining and (target + sum(a[0] for a in remaining) > total
+                              or target + sum(a[-1] for a in remaining) < total):
+                continue
+            chosen[position] = digit
+            visit(position + 1, target, used | bit)
+
+    visit(0, 0, 0)
+    return tuple(frozenset(group) for group in supports)
+
 VARIANTS = ("killer", "thermo", "kropki") + EXTRA_VARIANTS + LINE_VARIANTS
 
 
@@ -79,7 +146,7 @@ def validate_constraints(n, constraints):
 
 
 def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
-           disabled_methods=()):
+           disabled_methods=(), fast=False):
     """Propagate human-readable local rules; never assume a candidate.
 
     The trace lists the actual candidate removals or hidden single placements,
@@ -87,17 +154,10 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
     """
     if max_tier is not None and max_tier not in (1, 2, 3, 4):
         raise ValueError("Technique tier must be 1 through 4")
-    units = houses(n)
-    validate_constraints(n, constraints)
-    structural_rules = sum_structures(n, units, constraints)
-    intersections = []
-    for a, first in enumerate(units):
-        for b, second in enumerate(units):
-            if a >= b:
-                continue
-            common = set(first) & set(second)
-            if 1 < len(common) < n:
-                intersections.append((a, b, common))
+    # Include every rule field: different sums and line geometry never
+    # share a prepared layout, even when the given digits are identical.
+    geometry = json.dumps(constraints, sort_keys=True, separators=(',', ':'))
+    units, intersections, structural_rules = _prepared_geometry(n, geometry)
     if domains is None:
         if any(not isinstance(i, int) or i not in range(n*n) or
                not isinstance(d, int) or d not in range(1, n+1)
@@ -175,15 +235,18 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
         # Classical consequences of variant restrictions: subsets,
         # 2/3/4-line fish, and three-cell wing patterns. These are
         # unconditional deductions, never hypothetical branch guesses.
-        if max_tier is None or max_tier >= 2:
-            changed |= hidden_subsets(n, units, masks, reduce)
-        if max_tier is None or max_tier >= 3:
-            changed |= basic_fish(n, masks, reduce,
-                                  maximum=5 if max_tier is None or max_tier >= 4 else 3)
-            changed |= xy_wings(n, masks, reduce)
-            changed |= skyscrapers(n, masks, reduce)
-        if max_tier is None or max_tier >= 4:
-            changed |= xyz_wings(n, masks, reduce)
+        # Feasibility-only passes postpone expensive pattern searches until
+        # cheap deductions stall. Full proof traces retain their old order.
+        if not fast or not changed:
+            if max_tier is None or max_tier >= 2:
+                changed |= hidden_subsets(n, units, masks, reduce)
+            if max_tier is None or max_tier >= 3:
+                changed |= basic_fish(n, masks, reduce,
+                                      maximum=5 if max_tier is None or max_tier >= 4 else 3)
+                changed |= xy_wings(n, masks, reduce)
+                changed |= skyscrapers(n, masks, reduce)
+            if max_tier is None or max_tier >= 4:
+                changed |= xyz_wings(n, masks, reduce)
 
         # A candidate confined to a row/box intersection cannot occur
         # elsewhere in the other house (pointing / claiming).
@@ -212,12 +275,8 @@ def deduce(n, givens, constraints, domains=None, trace=True, max_tier=None,
         for index, clue in enumerate(constraints):
             kind, cells = clue["type"], clue["cells"]
             if kind == "killer":
-                supports = [set() for _ in cells]
-                for choices in product(*(sorted(masks[i]) for i in cells)):
-                    if sum(choices) != clue["sum"] or len(set(choices)) != len(choices):
-                        continue
-                    for support, d in zip(supports, choices):
-                        support.add(d)
+                domains_key = tuple(tuple(sorted(masks[i])) for i in cells)
+                supports = _distinct_sum_supports(domains_key, clue["sum"])
                 for i, allowed in zip(cells, supports):
                     changed |= reduce(i, allowed, "killer_sum", index)
             elif kind in ("thermo", "kropki"):
@@ -305,7 +364,10 @@ def count_solutions(n, givens, constraints, limit=2):
 
     def branch(domains):
         try:
-            result = deduce(n, {}, constraints, domains, trace=False)
+            # Exact counting remains complete through branching. Expensive
+            # tier-4 fish/chain/ALS deductions are never required for proof.
+            result = deduce(n, {}, constraints, domains, trace=False,
+                            max_tier=3, fast=True)
         except ValueError:
             return 0
         if result["solved"]:
