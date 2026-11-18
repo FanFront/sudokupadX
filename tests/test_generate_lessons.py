@@ -89,7 +89,9 @@ class VerifiedLessonsTests(unittest.TestCase):
         for method, fixture in examples.items():
             self.assertEqual(fixture["method"], method)
             self.assertEqual(fixture["goal"]["kind"], "fill")
-            self.assertTrue(fixture["proof"]["removed"])
+            self.assertEqual(fixture["proof"]["removed"], [])
+            self.assertEqual(fixture["masks"][fixture["goal"]["index"]],
+                             [int(fixture["goal"]["digit"])])
             self.assertEqual(fixture["goal"]["digit"], str(
                 fixture["puzzle"]["metadata"]["solution"][fixture["goal"]["index"]]))
             n = fixture["n"]
