@@ -1581,6 +1581,71 @@ mod tests{
     }
 
     #[test]
+    fn small_board_skyscraper_and_xy_chains_remove_only_false_digits(){
+        for n in [4,6]{
+            let solution=canonical_small_solution(n);
+            // A three-cell bivalue chain in row one: {1,2} — {2,3}
+            // — {3,1}. The fourth cell sees both ends, so 1 is excluded.
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            masks[0]=bit(1)|bit(2);
+            masks[1]=bit(2)|bit(3);
+            masks[2]=bit(3)|bit(1);
+            masks[3]=bit(4)|bit(1);
+            let mut chain=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(chain.xy_chains().unwrap(),"XY-Chain skipped {n}x{n}");
+            assert_eq!(chain.masks[3]&bit(1),0);
+            for (cell,&answer) in solution.iter().enumerate(){
+                assert_ne!(chain.masks[cell]&bit(answer),0);
+            }
+
+            // Find two parallel strong links with one common column and
+            // separate roofs, plus a target seeing both roofs. Construct
+            // candidates that retain a full valid solution as a witness.
+            let mut witness=None;
+            for d in 1..=n as u8{
+                for a in 0..n{
+                    let ca=(0..n).find(|&c|solution[a*n+c]==d).unwrap();
+                    for b in a+1..n{
+                        let cb=(0..n).find(|&c|solution[b*n+c]==d).unwrap();
+                        for common in 0..n{
+                            if common==ca||common==cb{continue;}
+                            let p=a*n+ca;let q=b*n+cb;
+                            for target in 0..n*n{
+                                if target/n==a||target/n==b||solution[target]==d{
+                                    continue;
+                                }
+                                if linked(n,target,p)&&linked(n,target,q){
+                                    witness=Some((d,a,b,ca,cb,common,target));
+                                    break;
+                                }
+                            }
+                            if witness.is_some(){break;}
+                        }
+                        if witness.is_some(){break;}
+                    }
+                    if witness.is_some(){break;}
+                }
+                if witness.is_some(){break;}
+            }
+            let (digit,a,b,ca,cb,common,target)=
+                witness.expect("small grid must permit skyscraper geometry");
+            let mut masks:Vec<Mask>=solution.iter().copied().map(bit).collect();
+            masks[a*n+common]|=bit(digit);
+            masks[b*n+common]|=bit(digit);
+            // Roof cells contain the real digit, and the target does not.
+            assert_eq!(solution[a*n+ca],digit);
+            assert_eq!(solution[b*n+cb],digit);
+            masks[target]|=bit(digit);
+            let mut sky=Solver::from_masks(n,masks,&[],4).unwrap();
+            assert!(sky.skyscraper().unwrap(),"Skyscraper skipped {n}x{n}");
+            assert_eq!(sky.masks[target]&bit(digit),0);
+            for (cell,&answer) in solution.iter().enumerate(){
+                assert_ne!(sky.masks[cell]&bit(answer),0);
+            }
+        }
+    }
+
+    #[test]
     fn solved_grids_are_real_sudokus(){
         for n in [4,6,9]{
             let mut rng=Rng::new(4321);
