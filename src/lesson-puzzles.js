@@ -86,7 +86,9 @@ export function createLessonPractice(id,{randomize=false,random=Math.random}={})
   if(!/^[1-9]$/.test(goal.digit) || !['fill','remove'].includes(goal.kind) ||
      !Array.isArray(fixture.masks) || fixture.masks.length!==n*n ||
      !Array.isArray(puzzle.cells) || puzzle.cells.length!==n ||
-     proof.method!==fixture.method || !proof.removed?.length ||
+     proof.method!==fixture.method ||
+     (!proof.removed?.length && !(goal.kind==='fill' &&
+       ['full_house','last_digit','naked_single'].includes(proof.method))) ||
      !Array.isArray(fixture.focus) ||
      !fixture.focus.includes(goal.index) ||
      !solution || solution.length!==n*n){
@@ -135,8 +137,8 @@ export function createLessonPractice(id,{randomize=false,random=Math.random}={})
     ...puzzle.metadata,
     title:(practiceKind==='review'?'基础复习 ':'技巧练习 ')+id+' · '+nameZh+' · '+goalLabel,
     author:'SudokuPadX 中文数独课堂',
-    rules:'本题来自经过唯一解验证的真实数独。盘面候选数是在无猜测求解器的中途步骤中获得的完整状态，'+
-      '不是任意设置的数字。蓝色格为相关位置，黄色格为目标。'+task+
+    rules:'本题来自经过唯一解验证的真实数独。所有候选数已排除与提示数字冲突的行、列、宫数字；'+
+      '专项步骤由真实逻辑推理证明。蓝色格为相关位置，黄色格为目标。'+task+
       '\n技巧：'+nameZh+'。\n'+(puzzle.metadata.rules||''),
     msgcorrect:'训练只要求完成黄色目标格中的一步逻辑推理，不要求解完整盘面。'
   };
