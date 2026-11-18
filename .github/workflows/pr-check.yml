@@ -4,8 +4,34 @@ on:
     branches: [main]
 permissions:
   contents: read
+# Replace stale PR runs rather than queue multiple generators.
+concurrency:
+  group: sudokupadx-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
+  offline-assets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            public/puzzles
+            src/lesson-fixtures.js
+          key: offline-puzzles-${{ runner.os }}-${{ hashFiles('scripts/*.py', 'docs/*.zh-CN.md') }}
+      - name: Generate or restore verified offline puzzle library
+        run: python3 scripts/prepare_assets.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: certified-offline-puzzles
+          path: |
+            public/puzzles
+            src/lesson-fixtures.js
+          include-hidden-files: true
+          retention-days: 1
   frontend:
+    needs: offline-assets
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -14,12 +40,10 @@ jobs:
         with:
           node-version: '22'
       - run: npm install
-      - uses: actions/cache@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: |
-            public/puzzles
-            src/lesson-fixtures.js
-          key: offline-puzzles-${{ runner.os }}-${{ hashFiles('scripts/*.py', 'docs/*.zh-CN.md') }}
+          name: certified-offline-puzzles
+          path: .
       - run: npm test
       - run: npm run build
       - run: test -s dist/puzzles/prologue-empty-house.scl
@@ -47,12 +71,10 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - run: npm install
-      - uses: actions/cache@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: |
-            public/puzzles
-            src/lesson-fixtures.js
-          key: offline-puzzles-${{ runner.os }}-${{ hashFiles('scripts/*.py', 'docs/*.zh-CN.md') }}
+          name: certified-offline-puzzles
+          path: .
       - run: cargo install wasm-pack --locked
       - run: npm run build:web
       - run: npm install --no-save playwright
