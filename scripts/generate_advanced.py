@@ -40,7 +40,8 @@ DENSITIES = (0.55, 0.40, 0.75, 0.30, 0.65, 0.90)
 
 def can_solve(solution, givens, rules, tier):
     try:
-        result = deduce(9, givens, rules, trace=False, max_tier=tier)
+        result = deduce(9, givens, rules, trace=False, max_tier=tier,
+                        fast=True)
         return result["solved"] and result["values"] == solution
     except ValueError:
         return False

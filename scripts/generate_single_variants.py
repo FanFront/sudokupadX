@@ -216,7 +216,8 @@ def dig_minimal(solution, constraints, rng, max_tier=3):
     for cell in indices:
         digit=givens.pop(cell)
         try:
-            proof=deduce(9,givens,constraints,trace=False,max_tier=max_tier)
+            proof=deduce(9,givens,constraints,trace=False,max_tier=max_tier,
+                         fast=True)
             if not proof["solved"] or proof["values"]!=solution:
                 givens[cell]=digit
         except ValueError:
@@ -247,7 +248,8 @@ def acceptable(kind, solution, constraints, givens):
         for i in givens:
             trial=dict(givens)
             del trial[i]
-            if deduce(9,trial,constraints,trace=False,max_tier=3)["solved"]:
+            if deduce(9,trial,constraints,trace=False,max_tier=3,
+                          fast=True)["solved"]:
                 return None
         tier=minimum_tier(9,givens,constraints,deduce)
         education=lesson_profile(9,proof)

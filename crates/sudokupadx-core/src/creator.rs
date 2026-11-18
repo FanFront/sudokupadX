@@ -1209,16 +1209,38 @@ fn givens_grid(n:usize,solution:&[u8],rules:&[Rule],tier:u8,
                rng:&mut Rng)->Vec<u8>{
     let mut givens=solution.to_vec();
     let mut cells:Vec<usize>=(0..n*n).collect();rng.shuffle(&mut cells);
-    for i in cells{
-        let digit=givens[i];givens[i]=0;
-        let acceptable=if tier==5{
-            exact_count(n,&givens,rules,8000)
-                .map(|(count,_)|count==1).unwrap_or(false)
-        }else{
-            solve(n,&givens,rules,tier,false,None)
+    // Every accepted deletion must still be certified against the exact
+    // solution. Try several clues at once while the board is dense, then
+    // fall back to individual deletions whenever a batch is too ambitious.
+    // This avoids restarting the solver n*n times for trivially easy early
+    // removals; it never accepts an unverified puzzle.
+    let acceptable = |grid:&[u8]| -> bool {
+        if tier==5 {
+            exact_count(n,grid,rules,8000)
+                .map(|(count,answer)|count==1&&answer==solution)
+                .unwrap_or(false)
+        } else {
+            solve(n,grid,rules,tier,false,None)
                 .map(|p|p.solved&&p.values==solution).unwrap_or(false)
-        };
-        if !acceptable {givens[i]=digit;}
+        }
+    };
+    let mut cursor=0;
+    while cursor<cells.len(){
+        let width=if cursor<n*n/2 {4} else {1};
+        let end=(cursor+width).min(cells.len());
+        let group=&cells[cursor..end];
+        let saved:Vec<u8>=group.iter().map(|&i|givens[i]).collect();
+        for &i in group{givens[i]=0;}
+        if acceptable(&givens) {
+            cursor=end;
+            continue;
+        }
+        for (&i,&digit) in group.iter().zip(saved.iter()){givens[i]=digit;}
+        for &i in group{
+            let digit=givens[i];givens[i]=0;
+            if !acceptable(&givens){givens[i]=digit;}
+        }
+        cursor=end;
     }
     givens
 }
