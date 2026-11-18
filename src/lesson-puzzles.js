@@ -35,7 +35,16 @@ function reviewFixture(){
 
 export function lessonPracticeMode(id){
   if(!knownLessonId(id))return 'unavailable';
-  if(certifiedFixture(id))return 'targeted';
+  const source=certifiedFixture(id);
+  if(source){
+    try {
+      normalizeLessonCandidates(structuredClone(source));
+      return 'targeted';
+    } catch {
+      // A legacy snapshot may be valid as a raw solver trace but make
+      // a poor *player* exercise once peer-conflicting notes are cleaned.
+    }
+  }
   return reviewFixture()?'review':'unavailable';
 }
 
