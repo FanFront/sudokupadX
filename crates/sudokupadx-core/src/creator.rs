@@ -549,7 +549,7 @@ impl Solver {
                     for line in 0..n{
                         if base.contains(&line){continue;}
                         for &cover in &covers{
-                            let cell=if axis==0{line*n+cover}else{cover*9+line};
+                            let cell=if axis==0{line*n+cover}else{cover*n+line};
                             self.reason=base.iter().flat_map(|&i|
                                 locations[i].iter().map(move |&col|
                                     if axis==0{i*n+col}else{col*n+i})).collect();
@@ -598,7 +598,7 @@ impl Solver {
                 }).collect()).collect();
             for a in 0..n{
                 if links[a].len()!=2{continue;}
-                for b in a+1..9{
+                for b in a+1..n{
                     if links[b].len()!=2{continue;}
                     let shared:Vec<_>=links[a].iter().copied()
                         .filter(|c|links[b].contains(c)).collect();
@@ -653,19 +653,19 @@ impl Solver {
         // excludes d from cells seeing both ends.
         let snapshot=self.masks.clone();
         let mut eliminations=Vec::new();
-        fn dfs(masks:&[Mask],path:&mut Vec<usize>,link:u8,target:u8,
+        fn dfs(n:usize,masks:&[Mask],path:&mut Vec<usize>,link:u8,target:u8,
                out:&mut Vec<(usize,Mask,Vec<usize>)>,max_depth:usize) {
             if path.len()>=max_depth{return;}
             let current=*path.last().unwrap();
-            for next in 0..81{
+            for next in 0..n*n{
                 if path.contains(&next)||count(masks[next])!=2||
-                    !linked(9,current,next)||masks[next]&bit(link)==0 {continue;}
+                    !linked(n,current,next)||masks[next]&bit(link)==0 {continue;}
                 let next_link=sole(masks[next]&!bit(link));
                 if next_link==target&&path.len()>=2{
                     let start=path[0];
-                    for cell in 0..81{
+                    for cell in 0..n*n{
                         if cell!=start&&cell!=next&&
-                            linked(9,cell,start)&&linked(9,cell,next){
+                            linked(n,cell,start)&&linked(n,cell,next){
                             let mut witness=path.clone();
                             witness.push(next);
                             out.push((cell,bit(target),witness));
@@ -673,16 +673,16 @@ impl Solver {
                     }
                 }else{
                     path.push(next);
-                    dfs(masks,path,next_link,target,out,max_depth);
+                    dfs(n,masks,path,next_link,target,out,max_depth);
                     path.pop();
                 }
             }
         }
-        for i in 0..81{
+        for i in 0..n*n{
             if count(snapshot[i])!=2{continue;}
-            for target in values(snapshot[i],9){
+            for target in values(snapshot[i],n){
                 let link=sole(snapshot[i]&!bit(target));
-                dfs(&snapshot,&mut vec![i],link,target,&mut eliminations,6);
+                dfs(n,&snapshot,&mut vec![i],link,target,&mut eliminations,6);
             }
         }
         let mut changed=false;
