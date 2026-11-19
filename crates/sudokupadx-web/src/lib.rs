@@ -79,6 +79,14 @@ impl WasmPuzzleEngine {
         to_json(&hint)
     }
 
+    pub fn hint_step_focus(&self,tier:u8,focus:&str)->Result<String,JsValue>{
+        let session=self.session.as_ref().ok_or_else(||js_error("No puzzle is open."))?;
+        let (n,grid,rules,notes)=session.hint_input().map_err(js_error)?;
+        let hint=core::creator::next_hint_with_focus(
+            n,&grid,&rules,tier,&notes,Some(focus)).map_err(js_error)?;
+        to_json(&hint)
+    }
+
     pub fn check_progress(&mut self) -> Result<String, JsValue> {
         let session = self.session.as_ref().ok_or_else(|| js_error("No puzzle is open."))?;
         to_json(&session.check_progress())
