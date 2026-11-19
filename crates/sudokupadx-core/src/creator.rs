@@ -1659,6 +1659,16 @@ mod tests{
     }
 
     #[test]
+    fn focused_hint_rejects_unknown_methods_and_low_tiers() {
+        let grid=vec![0u8;81];
+        assert!(next_hint_with_focus(9,&grid,&[],4,&[],Some("guess")).is_err());
+        assert!(next_hint_with_focus(9,&grid,&[],3,&[],Some("x_chain")).is_err());
+        let answer=next_hint_with_focus(9,&grid,&[],4,&[],Some("colour")).unwrap();
+        assert_eq!(answer.status,"stalled");
+        assert!(answer.step.is_none());
+    }
+
+    #[test]
     fn smaller_fish_eliminates_only_false_candidates(){
         for n in [4,6]{
             let solution=canonical_small_solution(n);

@@ -305,6 +305,12 @@ mod tests {
                 p.kind=="chain" && p.nodes.len()>=4 &&
                 p.edges.iter().any(|e|e.strong)&&
                 p.edges.iter().any(|e|!e.strong)), "n={n}");
+            let before=step.proof.as_ref().unwrap().candidates.as_ref().unwrap();
+            assert_eq!(before.len(),n*n,"n={n}");
+            assert!(step.removed.iter().all(|d|
+                before[step.cell].contains(d)),"n={n}");
+            assert!(step.proof.as_ref().unwrap().nodes.iter().all(|node|
+                before[node.cell].contains(&node.digit)),"n={n}");
         }
     }
 
