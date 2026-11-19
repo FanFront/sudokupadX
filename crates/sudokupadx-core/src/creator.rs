@@ -1056,6 +1056,10 @@ pub struct CreateRequest {
     pub seed: Option<u64>,
     #[serde(default)]
     pub attempts: Option<usize>,
+    /// Training only: requiring a real trace step is sufficient; it need not
+    /// be the unique method that can finish the entire puzzle.
+    #[serde(default)]
+    pub practice: bool,
 }
 #[derive(Clone,Debug,Serialize)]
 #[serde(rename_all="camelCase")]
@@ -1381,7 +1385,7 @@ fn givens_grid(n:usize,solution:&[u8],rules:&[Rule],tier:u8,
     givens
 }
 fn certify(n:usize,givens:&[u8],solution:&[u8],rules:&[Rule],
-           tier:u8,focus:Option<&str>) -> Option<Proof>{
+           tier:u8,focus:Option<&str>,practice:bool) -> Option<Proof>{
     let full=solve(n,givens,rules,tier.min(4),true,None).ok()?;
     if tier<5{
         if !full.solved||full.values!=solution{return None;}
@@ -1391,8 +1395,10 @@ fn certify(n:usize,givens:&[u8],solution:&[u8],rules:&[Rule],
         }
         if let Some(method)=focus{
             if !full.methods.contains_key(method){return None;}
-            let without=solve(n,givens,rules,tier,false,Some(method)).ok()?;
-            if without.solved{return None;}
+            if !practice{
+                let without=solve(n,givens,rules,tier,false,Some(method)).ok()?;
+                if without.solved{return None;}
+            }
         }
     }else if full.solved {
         // Level 5 is search-required relative to this level-4 curriculum.
@@ -1631,6 +1637,12 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
             return Err("选择的重点技巧不属于当前等级".into());
         }
     }
+    if request.practice && (!request.variants.is_empty() ||
+        !request.focus.as_deref().is_some_and(|method|
+            matches!(method,"x_chain"|"xy_chain"|"aic"|
+                "simple_coloring"|"medusa_wrap"|"medusa_trap"))){
+        return Err("专项练习仅支持原生链与染色证明，不得添加其他变体规则".into());
+    }
     let attempts=request.attempts.unwrap_or(24);
     if attempts==0||attempts>80{return Err("尝试次数需在 1–80 之间".into());}
     let seed=request.seed.unwrap_or(20261104);
@@ -1642,7 +1654,8 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
             !=request.variants.len() {continue;}
         let givens=givens_grid(request.size,&solution,&rules,request.tier,&mut rng);
         if let Some(proof)=certify(request.size,&givens,&solution,&rules,
-                                  request.tier,request.focus.as_deref()){
+                                  request.tier,request.focus.as_deref(),
+                                  request.practice){
             return Ok(render_puzzle(&request,seed,&givens,&solution,&rules,&proof,attempt));
         }
     }
@@ -1834,7 +1847,7 @@ mod tests{
         let request=CreateRequest{
             id:"personal-demo-1".into(),size:4,tier:1,variants:vec![],
             focus:None,density:Some("light".into()),seed:Some(9932),
-            attempts:Some(3),
+            attempts:Some(3),practice:false,
         };
         let output=generate_puzzle(request).unwrap();
         assert_eq!(output.details["tier"],1);
@@ -2007,7 +2020,7 @@ mod tests{
                 id:format!("integration-{}",kind.replace('_',"-")),
                 size:9,tier:1,variants:vec![kind.to_owned()],
                 focus:None,density:Some("light".into()),
-                seed:Some(20261105),attempts:Some(1)
+                seed:Some(20261105),attempts:Some(1),practice:false
             };
             let proof=solve(9,&solution,&rules,1,true,None).unwrap();
             let output=render_puzzle(&request,20261105,&solution,
@@ -2031,7 +2044,7 @@ mod tests{
                 id:format!("small-variant-{}",kind.replace('_',"-")),
                 size:4,tier:1,variants:vec![kind.to_string()],
                 focus:None,density:Some("heavy".into()),
-                seed:Some(3000+offset as u64),attempts:Some(80)
+                seed:Some(3000+offset as u64),attempts:Some(80),practice:false
             };
             let output=generate_puzzle(request)
                 .unwrap_or_else(|err|panic!("Cannot generate {kind}: {err}"));
@@ -2081,7 +2094,7 @@ mod tests{
     fn reject_unsupported_and_false_technique_labels(){
         let request=CreateRequest{
             id:"personal-invalid".into(),size:4,tier:5,variants:vec![],
-            focus:None,density:None,seed:Some(2),attempts:Some(2)
+            focus:None,density:None,seed:Some(2),attempts:Some(2),practice:false
         };
         assert!(generate_puzzle(request).is_err());
         assert!(!allowed_focus("invented_method"));

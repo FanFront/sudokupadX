@@ -1478,7 +1478,7 @@ async function beginLessonPractice(id,{size=9}={}){
     const seed=Math.floor(Math.random()*0xffffffff);
     const request={id:'sudokupadx-chain-lesson-'+id+'-'+size+'-'+seed,
       size,tier:4,variants:[],focus:nativeMethod,
-      density:'light',seed,attempts:80};
+      density:'light',seed,attempts:80,practice:true};
     const result=await startGeneration(request).promise;
     practice=createNativeChainPractice(result,id,nativeMethod);
   }else{

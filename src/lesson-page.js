@@ -191,8 +191,10 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     const verified=mode!=='unavailable',review=mode==='review';
     const heading=element('div','lesson-exercise-heading');
     heading.append(element('strong','',
+      nativeMethod?'Rust 链与染色专项生成':
       review?'标准数独基础复习':verified?'随机实战训练':'练习验证中'));
     heading.append(element('span','',
+      nativeMethod?'本机生成可证明的专项盘面，失败不会冒充训练':
       review?'专项技巧待验证，可先训练已证明的基础技能':
         verified?'每次进入都基于已验证证明随机变换棋盘':
           '未发布不可靠的候选数示例'));
