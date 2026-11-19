@@ -8,7 +8,8 @@ export function hintImpact(step,notes=[]){
     !marked.length||marked.includes(d));
   const placement=!step.assumptionBased&&!step.forceElimination&&
     step.method!=='search_contradiction'&&
-    step.remaining?.length===1&&step.before?.length>1;
+    (step.placement===true||
+      step.remaining?.length===1&&step.before?.length>1);
   // A locked digit can exclude one candidate in several different cells.
   // Count that as a multi-removal even when the representative target has
   // only one deletion. Affected cells contain the current target as well.

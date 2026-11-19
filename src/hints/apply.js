@@ -34,7 +34,8 @@ export function buildHintPlusUpdates(puzzle,progress,response,canPlaceIndex=()=>
   const removed=new Set((step.removed||[]).map(String));
   const placement=!step.forceElimination&&
     step.method!=='search_contradiction'&&
-    step.before?.length>1&&step.remaining?.length===1;
+    (step.placement===true||
+      step.before?.length>1&&step.remaining?.length===1);
   const forced=placement?String(step.remaining[0]):null;
   const indices=[...new Set([step.cell,...(step.affectedCells||[])])];
   const updates=[];

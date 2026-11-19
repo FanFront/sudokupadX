@@ -107,7 +107,8 @@ export function describeHint(response,size,cells=[]){
       :ruleText[step.method]||'遵循已知数独规则。');
   const conditional=step.assumptionBased===true;
   const placement=!conditional&&!step.forceElimination&&
-    step.remaining?.length===1&&step.before?.length>1;
+    (step.placement===true||
+      step.remaining?.length===1&&step.before?.length>1);
   const action=step.method==='search_contradiction'
     ?'经反证，可排除 '+removed
     :placement?'确定填入 '+remaining:'排除候选数 '+removed;
@@ -128,7 +129,7 @@ export function describeHint(response,size,cells=[]){
       (step.method==='pencil_subset'
         ?'中心手记'+(step.subsetSize===2?'数对':
           step.subsetSize===3?'三数组':step.subsetSize+' 数组')
-        :TECHNIQUES[step.method]||step.method)+' · 技巧等级 '+level+' · 建议 '+impact.label,
+        :TECHNIQUES[step.method]||step.label||step.method)+' · 技巧等级 '+level+' · 建议 '+impact.label,
     description:(conditional?'【条件推理，不是已证明的排除】 ':'')+
       cellName(step.cell,size)+'：'+rationale+
       ' 由此'+action+'。'+(sourceCells.length?
