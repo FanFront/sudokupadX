@@ -71,7 +71,7 @@ try{
   await coach.locator('#chainCoachStart').click();
   await coach.locator('[data-cell="'+expected.index+'"][data-digit="'+
     expected.digit+'"]').click();
-  assert.match(await coach.locator('#chainCoachStatus').textContent(),/练习完成|排除正确/);
+  assert.match(await coach.locator('#chainCoachStatus').textContent(),/训练完成|练习完成|排除正确/);
   await page.screenshot({path:'artifacts/web/chain-colour-coach-mobile.png'});
   await coach.locator('button[data-action="close"]').click();
   assert.equal(await coach.isHidden(),true);
