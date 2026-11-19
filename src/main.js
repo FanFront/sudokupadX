@@ -18,7 +18,8 @@ import {setupOnlineLibrary} from './online-ui.js';
 import {filterBundledEntries, bundledEntrySubtitle} from './bundled-library.js';
 import {setupLessonPage} from './lesson-page.js';
 import {setupCreatorUI} from './creator/ui.js';
-import {computeBrowserHint,computeAdventureHint} from './hints/runner.js';
+import {computeBrowserHint,computeAdventureHint,computeClassicHint,analyzeClassicBoard} from './hints/runner.js';
+import {eligibleClassicNine,currentClassicBoard,chooseClassicHint,formatClassicAnalysis} from './hints/sudoku-core-adapter.js';
 import {usesTypedHintEngine} from './hints/mode.js';
 import {findPencilSubsetHint,preferPencilSubset} from './hints/pencil-subsets.js';
 import {adventureHintCoverage} from './hints/coverage.js';
@@ -121,6 +122,8 @@ async function requestHint(applyAutomatically=false){
   const visible=[...progress.visible];
   const cells=progress.cells.map(cloneCell);
   const typed=usesTypedHintEngine(puzzle);
+  const classicBoard=eligibleClassicNine(puzzle,visible)?currentClassicBoard(puzzle,cells):null;
+  $('hintAnalyzeButton').hidden=!classicBoard;
   $('hintSupportNote').textContent=typed
     ?'绿色：依据格；橙色：目标格。旧版冒险与首领题采用题目明确声明的约束类型，不会根据颜色猜测规则；迷雾下的数字不参与推理。此路径不使用等级 5 穷举。'
     :'绿色：依据格；橙色：目标格。中心/角标手记只用来跳过重复排除，不作为已证明的事实。普通提示不改盘面。';
@@ -139,15 +142,25 @@ async function requestHint(applyAutomatically=false){
       ?computeAdventureHint(puzzle,{cells,visible},tier,focus)
       :native?{promise:call('hint_step',{tier})}
         :computeBrowserHint(activeRawInput,cells,tier);
-    hintTask=task;
-    const baseResult=await task.promise;
+    const coreTask=classicBoard&&tier>1?computeClassicHint(classicBoard,tier):null;
+    hintTask={cancel(){
+      task.cancel?.();
+      coreTask?.cancel();
+    }};
+    const [originalResult,coreResult]=await Promise.all([
+      task.promise,
+      coreTask?coreTask.promise.catch(()=>null):Promise.resolve(null)
+    ]);
     if(serial!==hintSerial)return;
     hintTask=null;
+    const baseResult=chooseClassicHint(originalResult,coreResult,cells);
     // Center-note 34/35/45 triples work on Rust and adventure paths.
     // Unverified pencil lists remain conditional, not solver axioms.
     const pencil=findPencilSubsetHint(puzzle,{cells,visible},tier,focus);
     const result=preferPencilSubset(baseResult,pencil,focus,cells);
     const data=describeHint(result,puzzle.cols,cells);
+    if(result?.step?.source==='sudoku-core')
+      $('hintSupportNote').textContent+=' 已使用 sudoku-core 独立验证的标准数独逻辑；不适用于变体或未揭开的谜题。';
     $('hintSupportNote').textContent+=' 建议等级：A 确定数字 ＞ B 批量排除 ＞ C 单一排除；技巧等级是使用的推理复杂度，与建议等级不同。';
     if(result?.step?.assumptionBased)
       $('hintSupportNote').textContent+=' 本次为条件式中心手记推理，'+
@@ -197,6 +210,42 @@ async function requestHint(applyAutomatically=false){
     $('hintCandidates').textContent='';
     requestDraw();
   }
+}
+
+async function analyzeCurrentClassicBoard(){
+  if(!puzzle||!progress||pending||lessonPractice)return;
+  const visible=[...progress.visible];
+  const cells=progress.cells.map(cloneCell);
+  if(!eligibleClassicNine(puzzle,visible))return;
+  const board=currentClassicBoard(puzzle,cells);
+  if(!board)return;
+  const serial=++hintSerial;
+  if(hintTask)hintTask.cancel?.();
+  currentHint=null;
+  $('hintPanel').hidden=false;
+  $('hintTitle').textContent='正在分析标准数独…';
+  $('hintDescription').textContent='基于当前大数字重新评估难度，不读取手写候选数。';
+  $('hintCandidates').textContent='';
+  requestDraw();
+  const task=analyzeClassicBoard(board);
+  hintTask=task;
+  try{
+    const result=await task.promise;
+    if(serial!==hintSerial)return;
+    hintTask=null;
+    const report=formatClassicAnalysis(result);
+    $('hintTitle').textContent=report.title;
+    $('hintDescription').textContent=report.description;
+    $('hintCandidates').textContent=report.details;
+    $('hintSupportNote').textContent='此评级来自 sudoku-core 的标准 9×9 技巧模型，仅描述当前剩余盘面，不替代 SudokuPadX 的变体规则验证或生成器技巧等级。';
+  }catch(error){
+    if(serial!==hintSerial)return;
+    hintTask=null;
+    $('hintTitle').textContent='标准数独分析失败';
+    $('hintDescription').textContent=String(error?.message||error);
+    $('hintCandidates').textContent='';
+  }
+  requestDraw();
 }
 
 function refreshConflicts() {
@@ -1549,6 +1598,7 @@ $('hintButton').addEventListener('click',()=>requestHint());
 $('hintPlusButton').addEventListener('click',()=>requestHint(true));
 $('hintClose').addEventListener('click',clearHint);
 $('hintTier').addEventListener('change',()=>{if(!$('hintPanel').hidden)requestHint();});
+$('hintAnalyzeButton').addEventListener('click',analyzeCurrentClassicBoard);
 $('checkButton').addEventListener('click',async()=>{
   if(pending||!puzzle||!progress)return;
   pending=true;
