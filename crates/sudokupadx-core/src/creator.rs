@@ -775,7 +775,6 @@ impl Solver {
                 dfs(n,&snapshot,&mut vec![i],link,target,&mut eliminations,6);
             }
         }
-        let mut changed=false;
         for (cell,mask,witness) in eliminations{
             self.reason=witness.clone();
             let mut incoming=values(mask,n)[0];
@@ -787,9 +786,13 @@ impl Solver {
                 incoming=outgoing;
             }
             let certificate=StepProof::chain(nodes);
-            changed|=self.reduce_with_proof(cell,!mask,"xy_chain",certificate)?;
+            if self.reduce_with_proof(cell,!mask,"xy_chain",certificate)?{
+                // Rebuild the candidate graph after each deduction. A second
+                // witness from the original snapshot may no longer exist.
+                return Ok(true);
+            }
         }
-        Ok(changed)
+        Ok(false)
     }
     fn run(mut self)->Result<Proof,String>{
         for iteration in 0..150 {
