@@ -91,13 +91,17 @@ pub struct StepProof {
     pub kind: String,
     pub nodes: Vec<ProofNode>,
     pub edges: Vec<ProofLink>,
+    /// Domains at the exact moment of the deduction. These are solver-
+    /// proven candidates, NOT unverified player pencil marks.
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub candidates: Option<Vec<Vec<u8>>>,
 }
 impl StepProof {
     fn chain(nodes: Vec<ProofNode>) -> Self {
         let edges=(1..nodes.len()).map(|i|ProofLink{
             from:i-1,to:i,strong:i%2==1
         }).collect();
-        Self{kind:"chain".into(),nodes,edges}
+        Self{kind:"chain".into(),nodes,edges,candidates:None}
     }
     fn colouring_cells(n:usize,digit:u8,component:&[(usize,u8)],
         graph:&[BTreeSet<usize>])->Self {
@@ -116,7 +120,7 @@ impl StepProof {
         }
         edges.sort_by_key(|e|(e.from,e.to));
         let _=n;
-        Self{kind:"colour".into(),nodes,edges}
+        Self{kind:"colour".into(),nodes,edges,candidates:None}
     }
     fn colouring(n:usize,component:&[(usize,u8)],graph:&[BTreeSet<usize>])->Self{
         let nodes:Vec<ProofNode>=component.iter().map(|&(node,colour)|ProofNode{
@@ -133,7 +137,7 @@ impl StepProof {
             }
         }
         edges.sort_by_key(|e|(e.from,e.to));
-        Self{kind:"colour".into(),nodes,edges}
+        Self{kind:"colour".into(),nodes,edges,candidates:None}
     }
 }
 #[derive(Clone,Debug,Serialize)]
@@ -241,8 +245,13 @@ impl Solver {
     }
     fn reduce_with_proof(&mut self,i:usize,allowed:Mask,method:&str,
         proof:StepProof)->Result<bool,String> {
+        let snapshot=if self.trace {
+            Some(self.masks.iter().map(|&mask|values(mask,self.n)).collect())
+        }else{None};
         let changed=self.reduce(i,allowed,method)?;
         if changed && self.trace {
+            let mut proof=proof;
+            proof.candidates=snapshot;
             if let Some(step)=self.steps.last_mut() {step.proof=Some(proof);}
         }
         Ok(changed)
@@ -841,6 +850,21 @@ pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
 /// solver as assumed facts: incomplete notes must not create false proofs.
 pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
     notes:&[Vec<u8>]) -> Result<HintResponse,String> {
+    next_hint_with_focus(n,grid,rules,tier,notes,None)
+}
+
+/// Select a named chain/colour deduction from the SAME native Rust solver
+/// trace used by the standard hint, generator and lesson engine. No outside
+/// sudoku-core, SudokuCoach board, or simulated proof is involved.
+pub fn next_hint_with_focus(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
+    notes:&[Vec<u8>],focus:Option<&str>) -> Result<HintResponse,String> {
+    if let Some(method)=focus {
+        if !matches!(method,"chain"|"colour"|"x_chain"|"xy_chain"|
+            "aic"|"simple_coloring"|"medusa_wrap"|"medusa_trap") {
+            return Err("未知的链与染色技巧".into());
+        }
+        if tier<4 {return Err("链与染色需要最高技巧等级 4".into());}
+    }
     if !matches!(n,4|6|9) || !(1..=5).contains(&tier) || grid.len()!=n*n {
         return Err("仅支持 4×4 / 6×6 / 9×9 与提示等级 1–5".into());
     }
@@ -884,9 +908,22 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
             remaining:(1..=n as u8).filter(|d|!removed.contains(d)).collect(),
             before:(1..=n as u8).collect(),removed,sources,proof:None});
     }
-    // The trace contains the other independently derived logical steps.
-    // The solver never treats a player's pencil marks as proof.
-    options.extend(proof.trace.iter().cloned());
+    // Focused native chain/colour hints do not include generic peer
+    // eliminations or other methods, even if those would rank higher.
+    // Every returned certificate retains its exact intermediate domains.
+    if let Some(method)=focus {
+        let matches=|key:&str| match method {
+            "chain"=>matches!(key,"x_chain"|"xy_chain"|"aic"),
+            "colour"=>matches!(key,"simple_coloring"|"medusa_wrap"|"medusa_trap"),
+            _=>key==method,
+        };
+        options.clear();
+        options.extend(proof.trace.iter().filter(|step|
+            matches(&step.method)&&step.proof.is_some()).cloned());
+    }else{
+        // Pencil marks never enter the proof solver.
+        options.extend(proof.trace.iter().cloned());
+    }
     let mut best:Option<((u8,u8,usize,u8,usize),&Step)>=None;
     for (index,step) in options.iter().enumerate() {
         let marked=notes.get(step.cell).filter(|marks|!marks.is_empty());
@@ -914,6 +951,10 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
         return Ok(HintResponse{
             status:"step".into(),level:level_of(&step.method),step:Some(step.clone())
         });
+    }
+    if focus.is_some() {
+        return Ok(HintResponse{
+            status:"stalled".into(),step:None,level:4});
     }
     // The solver may still have deductions, but all candidate removals are
     // already absent from every annotated cell. Never recycle a stale hint or
@@ -1547,9 +1588,17 @@ fn render_puzzle(request:&CreateRequest,seed:u64,givens:&[u8],
             "logicProfile":logic
         }
     });
+    let native_lesson_step=request.focus.as_deref().filter(|method|
+        matches!(*method,"x_chain"|"xy_chain"|"aic"|
+            "simple_coloring"|"medusa_wrap"|"medusa_trap"))
+        .and_then(|method|proof.trace.iter().find(|step|
+            step.method==method && step.proof.as_ref()
+                .and_then(|p|p.candidates.as_ref()).is_some()))
+        .cloned();
     CreateResponse{
         puzzle,
         details:json!({"id":request.id,"title":title,"size":n,"tier":request.tier,
+            "trainingStep":native_lesson_step,
             "givens":given_count,"marks":rules.len(),
             "variants":request.variants,"focus":request.focus,
             "seed":seed,"attempt":attempt,"searchRequired":request.tier==5,
