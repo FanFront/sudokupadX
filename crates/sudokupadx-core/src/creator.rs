@@ -99,6 +99,25 @@ impl StepProof {
         }).collect();
         Self{kind:"chain".into(),nodes,edges}
     }
+    fn colouring_cells(n:usize,digit:u8,component:&[(usize,u8)],
+        graph:&[BTreeSet<usize>])->Self {
+        let nodes=component.iter().map(|&(cell,colour)|ProofNode{
+            cell,digit,colour:Some(colour)
+        }).collect::<Vec<_>>();
+        let mut edges=Vec::new();
+        let indices:std::collections::HashMap<usize,usize>=component.iter()
+            .enumerate().map(|(i,&(cell,_))|(cell,i)).collect();
+        for (&cell,&from) in &indices {
+            for neighbour in &graph[cell] {
+                if let Some(&to)=indices.get(neighbour) {
+                    if from<to {edges.push(ProofLink{from,to,strong:true});}
+                }
+            }
+        }
+        edges.sort_by_key(|e|(e.from,e.to));
+        let _=n;
+        Self{kind:"colour".into(),nodes,edges}
+    }
     fn colouring(n:usize,component:&[(usize,u8)],graph:&[BTreeSet<usize>])->Self{
         let nodes:Vec<ProofNode>=component.iter().map(|&(node,colour)|ProofNode{
             cell:node/n,digit:(node%n+1) as u8,colour:Some(colour)
@@ -749,8 +768,17 @@ impl Solver {
         }
         let mut changed=false;
         for (cell,mask,witness) in eliminations{
-            self.reason=witness;
-            changed|=self.reduce(cell,!mask,"xy_chain")?;
+            self.reason=witness.clone();
+            let mut incoming=values(mask,n)[0];
+            let mut nodes=Vec::new();
+            for &node in &witness {
+                let outgoing=sole(snapshot[node]&!bit(incoming));
+                nodes.push(ProofNode{cell:node,digit:incoming,colour:None});
+                nodes.push(ProofNode{cell:node,digit:outgoing,colour:None});
+                incoming=outgoing;
+            }
+            let certificate=StepProof::chain(nodes);
+            changed|=self.reduce_with_proof(cell,!mask,"xy_chain",certificate)?;
         }
         Ok(changed)
     }

@@ -411,6 +411,34 @@ mod tests {
     }
 
     #[test]
+    fn generic_aic_links_are_emitted_on_all_board_sizes() {
+        for (n,left,right,third,fourth) in [
+            (4,0,2,6,4),
+            (6,0,1,13,12),
+            (9,0,1,64,72),
+        ] {
+            let mut masks=vec![full(n);n*n];
+            let second=units(n).into_iter().find(|h|
+                h.contains(&third)&&h.contains(&fourth)&&!h.contains(&right))
+                .unwrap();
+            for &cell in &units(n)[0] {
+                if cell!=left&&cell!=right{masks[cell]&=!bit(1);}
+            }
+            for &cell in &second {
+                if cell!=third&&cell!=fourth{masks[cell]&=!bit(1);}
+            }
+            let mut solver=Solver::from_masks(n,masks,&[],4).unwrap();
+            solver.trace=true;
+            assert!(solver.aic_ext().unwrap(),"n={n}");
+            let proof=solver.steps.last().and_then(|step|step.proof.as_ref()).unwrap();
+            assert_eq!(proof.kind,"chain");
+            assert!(proof.edges.iter().any(|e|e.strong));
+            assert!(proof.edges.iter().any(|e|!e.strong));
+            assert!(proof.nodes.iter().all(|node|node.cell<n*n&&node.digit<=n as u8));
+        }
+    }
+
+    #[test]
     fn aic_crosses_between_different_digits(){
         let mut d=blank();let houses=units(9);
         d[0]=bit(1)|bit(2)|bit(3);

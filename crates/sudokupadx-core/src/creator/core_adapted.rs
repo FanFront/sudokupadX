@@ -139,7 +139,7 @@ impl Solver {
                     self.reason=component.clone();
                     let component_nodes:Vec<_>=component.iter()
                         .map(|&node|(node,color[node].unwrap())).collect();
-                    let proof=StepProof::colouring(n,&component_nodes,&graph);
+                    let proof=StepProof::colouring_cells(n,digit,&component_nodes,&graph);
                     if self.reduce_with_proof(target,!mask,"simple_coloring",proof)? {
                         return Ok(true);
                     }
@@ -155,7 +155,7 @@ impl Solver {
                         self.reason=component.clone();
                         let component_nodes:Vec<_>=component.iter()
                             .map(|&node|(node,color[node].unwrap())).collect();
-                        let proof=StepProof::colouring(n,&component_nodes,&graph);
+                        let proof=StepProof::colouring_cells(n,digit,&component_nodes,&graph);
                         if self.reduce_with_proof(target,!mask,"simple_coloring",proof)? {
                             return Ok(true);
                         }
