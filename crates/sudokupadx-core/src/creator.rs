@@ -1990,8 +1990,8 @@ mod tests{
         assert_eq!(solutions,1);
         assert!(!solve(9,&givens,&[],4,false,None).unwrap().solved,
             "Level 4 must genuinely stall before claiming level 5");
-        assert!(certify(9,&givens,&answer,&[],5,None).is_some());
-        assert!(certify(9,&answer,&answer,&[],5,None).is_none(),
+        assert!(certify(9,&givens,&answer,&[],5,None,false).is_some());
+        assert!(certify(9,&answer,&answer,&[],5,None,false).is_none(),
             "Full grid cannot be mislabeled level 5");
     }
     #[test]
