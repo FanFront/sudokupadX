@@ -6,7 +6,7 @@ use super::*;
 impl Solver {
     /// One row conjugate and one column conjugate meet in a box. Their
     /// remote ends cannot both be false (Two-String Kite).
-    fn two_string_kite(&mut self) -> Result<bool,String> {
+    pub(super) fn two_string_kite(&mut self) -> Result<bool,String> {
         let n=self.n;
         for digit in 1..=n as u8 {
             let mask=bit(digit);
@@ -50,7 +50,7 @@ impl Solver {
 
     /// Two non-peer AB cells: an A-conjugate pair seen respectively by the
     /// two cells forces B into at least one wing (W-Wing).
-    fn w_wing(&mut self) -> Result<bool,String> {
+    pub(super) fn w_wing(&mut self) -> Result<bool,String> {
         let n=self.n;
         let bivalue:Vec<usize>=(0..n*n)
             .filter(|&i|count(self.masks[i])==2).collect();
@@ -90,7 +90,7 @@ impl Solver {
     /// Conjugate links define opposite truth-colours. A target seeing both
     /// colours cannot hold the digit (colour trap); two same-colour peers
     /// prove that colour false (colour wrap).
-    fn simple_coloring(&mut self) -> Result<bool,String> {
+    pub(super) fn simple_coloring(&mut self) -> Result<bool,String> {
         let n=self.n;
         for digit in 1..=n as u8 {
             let mask=bit(digit);
