@@ -140,6 +140,21 @@ try{
     await page.screenshot({path:`artifacts/web/${id}.png`});
     assert.equal(await page.locator('#gameScreen').isVisible(),true);
     assert.equal(await page.locator('#homeScreen').isHidden(),true);
+    if(id==='generated-9x9-001'){
+      // The live Canvas must route focused chain hints into native Rust/WASM.
+      await page.locator('#hintButton').click();
+      await page.locator('#hintTechnique').selectOption('x_chain');
+      await page.waitForFunction(()=>{
+        const title=document.querySelector('#hintTitle')?.textContent||'';
+        return title && !title.includes('正在计算');
+      },null,{timeout:30000});
+      assert.doesNotMatch(await page.locator('#hintTitle').textContent(),/无法安全提示/);
+      assert.equal(await page.locator('#hintProofPanel').isHidden(),
+        await page.locator('#hintProofPanel').getAttribute('hidden')!==null);
+      assert.equal(await page.locator('#chainCoachDialog').count(),0);
+      await page.screenshot({path:'artifacts/web/native-chain-hint-board.png'});
+      await page.locator('#hintClose').click();
+    }
     if(id==='digits-of-despair'){
       const before=await page.locator('#puzzleTitle').textContent();
       await page.locator('#rulesButton').click();
