@@ -72,6 +72,72 @@ impl Rule {
 }
 #[derive(Clone,Debug,Serialize)]
 #[serde(rename_all="camelCase")]
+pub struct ProofNode {
+    pub cell: usize,
+    pub digit: u8,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub colour: Option<u8>,
+}
+#[derive(Clone,Debug,Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct ProofLink {
+    pub from: usize,
+    pub to: usize,
+    pub strong: bool,
+}
+#[derive(Clone,Debug,Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct StepProof {
+    pub kind: String,
+    pub nodes: Vec<ProofNode>,
+    pub edges: Vec<ProofLink>,
+}
+impl StepProof {
+    fn chain(nodes: Vec<ProofNode>) -> Self {
+        let edges=(1..nodes.len()).map(|i|ProofLink{
+            from:i-1,to:i,strong:i%2==1
+        }).collect();
+        Self{kind:"chain".into(),nodes,edges}
+    }
+    fn colouring_cells(n:usize,digit:u8,component:&[(usize,u8)],
+        graph:&[BTreeSet<usize>])->Self {
+        let nodes=component.iter().map(|&(cell,colour)|ProofNode{
+            cell,digit,colour:Some(colour)
+        }).collect::<Vec<_>>();
+        let mut edges=Vec::new();
+        let indices:std::collections::HashMap<usize,usize>=component.iter()
+            .enumerate().map(|(i,&(cell,_))|(cell,i)).collect();
+        for (&cell,&from) in &indices {
+            for neighbour in &graph[cell] {
+                if let Some(&to)=indices.get(neighbour) {
+                    if from<to {edges.push(ProofLink{from,to,strong:true});}
+                }
+            }
+        }
+        edges.sort_by_key(|e|(e.from,e.to));
+        let _=n;
+        Self{kind:"colour".into(),nodes,edges}
+    }
+    fn colouring(n:usize,component:&[(usize,u8)],graph:&[BTreeSet<usize>])->Self{
+        let nodes:Vec<ProofNode>=component.iter().map(|&(node,colour)|ProofNode{
+            cell:node/n,digit:(node%n+1) as u8,colour:Some(colour)
+        }).collect();
+        let indices:std::collections::HashMap<usize,usize>=component.iter()
+            .enumerate().map(|(i,&(node,_))|(node,i)).collect();
+        let mut edges=Vec::new();
+        for (&node,&from) in &indices {
+            for other in &graph[node] {
+                if let Some(&to)=indices.get(other) {
+                    if from<to {edges.push(ProofLink{from,to,strong:true});}
+                }
+            }
+        }
+        edges.sort_by_key(|e|(e.from,e.to));
+        Self{kind:"colour".into(),nodes,edges}
+    }
+}
+#[derive(Clone,Debug,Serialize)]
+#[serde(rename_all="camelCase")]
 pub struct Step {
     pub method: String,
     pub cell: usize,
@@ -79,6 +145,8 @@ pub struct Step {
     pub remaining: Vec<u8>,
     pub before: Vec<u8>,
     pub sources: Vec<usize>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub proof: Option<StepProof>,
 }
 #[derive(Clone,Debug)]
 struct Proof {
@@ -93,7 +161,7 @@ fn level_of(method: &str) -> u8 {
         "naked_subset"|"hidden_subset"|"locked_candidate" => 2,
         "x_wing"|"swordfish"|"xy_wing"|"skyscraper"|
         "two_string_kite" => 3,
-        "jellyfish"|"xyz_wing"|"xy_chain"|
+        "jellyfish"|"xyz_wing"|"xy_chain"|"x_chain"|
         "w_wing"|"simple_coloring"|
         "aic"|"medusa_wrap"|"medusa_trap"|"franken_fish"|
         "mutant_fish"|"empty_rectangle"|"wxyz_wing"|"sue_de_coq"|
@@ -110,7 +178,7 @@ fn allowed_focus(method: &str) -> bool {
         "anti_knight_anchors"|"anti_whisper_anchors"|
         "naked_subset"|"hidden_subset"|"locked_candidate"|
         "x_wing"|"swordfish"|"xy_wing"|"skyscraper"|
-        "two_string_kite"|"w_wing"|"simple_coloring"|
+        "two_string_kite"|"w_wing"|"simple_coloring"|"x_chain"|
         "jellyfish"|"xyz_wing"|"xy_chain"|
         "aic"|"medusa_wrap"|"medusa_trap"|"franken_fish"|
         "mutant_fish"|"empty_rectangle"|"wxyz_wing"|"sue_de_coq"|
@@ -166,9 +234,18 @@ impl Solver {
             self.steps.push(Step{method:method.to_owned(),cell:i,
                 removed:values(before&!after,self.n),
                 remaining:values(after,self.n),
-                before:values(before,self.n),sources:self.reason.clone()});
+                before:values(before,self.n),sources:self.reason.clone(),
+                proof:None});
         }
         Ok(true)
+    }
+    fn reduce_with_proof(&mut self,i:usize,allowed:Mask,method:&str,
+        proof:StepProof)->Result<bool,String> {
+        let changed=self.reduce(i,allowed,method)?;
+        if changed && self.trace {
+            if let Some(step)=self.steps.last_mut() {step.proof=Some(proof);}
+        }
+        Ok(changed)
     }
     fn binary(&mut self,a:usize,b:usize,kind:&str,
               relation:impl Fn(u8,u8)->bool)->Result<bool,String>{
@@ -691,8 +768,17 @@ impl Solver {
         }
         let mut changed=false;
         for (cell,mask,witness) in eliminations{
-            self.reason=witness;
-            changed|=self.reduce(cell,!mask,"xy_chain")?;
+            self.reason=witness.clone();
+            let mut incoming=values(mask,n)[0];
+            let mut nodes=Vec::new();
+            for &node in &witness {
+                let outgoing=sole(snapshot[node]&!bit(incoming));
+                nodes.push(ProofNode{cell:node,digit:incoming,colour:None});
+                nodes.push(ProofNode{cell:node,digit:outgoing,colour:None});
+                incoming=outgoing;
+            }
+            let certificate=StepProof::chain(nodes);
+            changed|=self.reduce_with_proof(cell,!mask,"xy_chain",certificate)?;
         }
         Ok(changed)
     }
@@ -716,6 +802,7 @@ impl Solver {
                 if !changed{changed|=self.xy_chains()?;}
                 if !changed{changed|=self.w_wing()?;}
                 if !changed{changed|=self.simple_coloring()?;}
+                if !changed{changed|=self.x_chain()?;}
                 if !changed{changed|=self.advanced_patterns()?;}
                 if !changed{changed|=self.als_advanced()?;}
             }
@@ -795,7 +882,7 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
         removed.sort_unstable();
         options.push(Step{method:"peer_elimination".into(),cell,
             remaining:(1..=n as u8).filter(|d|!removed.contains(d)).collect(),
-            before:(1..=n as u8).collect(),removed,sources});
+            before:(1..=n as u8).collect(),removed,sources,proof:None});
     }
     // The trace contains the other independently derived logical steps.
     // The solver never treats a player's pencil marks as proof.
@@ -873,7 +960,8 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
                 return Ok(HintResponse{status:"step".into(),level:5,
                     step:Some(Step{method:"search_contradiction".into(),cell,
                         removed:vec![candidate],remaining:values(after,n),
-                        before:values(proof.masks[cell],n),sources:vec![cell]})});
+                        before:values(proof.masks[cell],n),sources:vec![cell],
+                        proof:None})});
             }
         }
     }

@@ -24,6 +24,7 @@ import {usesTypedHintEngine} from './hints/mode.js';
 import {findPencilSubsetHint,preferPencilSubset} from './hints/pencil-subsets.js';
 import {adventureHintCoverage} from './hints/coverage.js';
 import {describeHint} from './hints/format.js';
+import {drawProofLinks,drawProofNodes,describeProofLinks,proofLabel} from './hints/proof-view.js';
 import {buildHintPlusUpdates,buildClearRedPlusUpdates} from './hints/apply.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
@@ -49,6 +50,7 @@ let selectionMode = readSelectionMode(localStorage);
 let highlightedNumber = null;
 let lastBoardTap = null;
 let currentHint = null;
+let showHintProofLines = true;
 let hintTask = null;
 let hintSerial = 0;
 let mode = 'value';
@@ -94,6 +96,7 @@ function clearHint(){
   if(hintTask){hintTask.cancel?.();hintTask=null;}
   currentHint=null;
   $('hintPanel').hidden=true;
+  $('hintProofPanel').hidden=true;
   requestDraw();
 }
 function focusHintTarget(index){
@@ -107,11 +110,28 @@ function focusHintTarget(index){
   camera.y=frame.clientHeight/2-(Math.floor(index/puzzle.cols)+.5)*CELL*camera.scale;
   scheduleViewSave();
 }
+function showHintProof(proof,size){
+  const panel=$('hintProofPanel');
+  panel.hidden=!proof;
+  if(!proof)return;
+  $('hintProofName').textContent=proofLabel(proof);
+  $('hintProofToggle').textContent=showHintProofLines?'隐藏连线':'显示连线';
+  $('hintProofToggle').setAttribute('aria-pressed',String(showHintProofLines));
+  const rows=describeProofLinks(proof,size);
+  const list=$('hintProofLinks');
+  list.replaceChildren();
+  for(const row of rows.slice(0,80)){
+    const item=document.createElement('li');
+    item.textContent=row;
+    list.append(item);
+  }
+}
 async function requestHint(applyAutomatically=false){
   if(!puzzle||!progress||pending||lessonPractice)return;
   const serial=++hintSerial;
   if(hintTask){hintTask.cancel?.();hintTask=null;}
   currentHint=null;
+  showHintProof(null);
   $('hintPanel').hidden=false;
   $('hintTitle').textContent='正在计算逻辑步骤…';
   $('hintDescription').textContent='正在基于当前大数字与题面规则验证下一步，并跳过中心候选数中已经完成的排除。';
@@ -166,6 +186,7 @@ async function requestHint(applyAutomatically=false){
       $('hintSupportNote').textContent+=' 本次为条件式中心手记推理，'+
         '请先核实紫色格候选数已列全；它不是已验证的必然排除。';
     currentHint=result.status==='step'?data:null;
+    showHintProof(currentHint?.proof,puzzle.cols);
     if((typed||applyAutomatically)&&currentHint)focusHintTarget(data.target);
     $('hintTitle').textContent=data.title;
     $('hintDescription').textContent=data.description;
@@ -222,6 +243,7 @@ async function analyzeCurrentClassicBoard(){
   const serial=++hintSerial;
   if(hintTask)hintTask.cancel?.();
   currentHint=null;
+  showHintProof(null);
   $('hintPanel').hidden=false;
   $('hintTitle').textContent='正在分析标准数独…';
   $('hintDescription').textContent='基于当前大数字重新评估难度，不读取手写候选数。';
@@ -985,10 +1007,14 @@ function draw() {
   // original givens, player values or corner/center pencil marks.
   drawPenLines(ctx,penLines,CELL,clip);
   drawPenMarks(ctx,penMarks,CELL,clip);
+  if(currentHint?.proof)drawProofLinks(ctx,currentHint.proof,puzzle.cols,
+    CELL,showHintProofLines,index=>isVisible(progress,index));
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c;
     drawCellInk(idx,c*CELL,r*CELL,!isVisible(progress,idx));
   }
+  if(currentHint?.proof)drawProofNodes(ctx,currentHint.proof,puzzle.cols,
+    CELL,index=>isVisible(progress,index));
   if(currentHint && currentHint.target>=0){
     ctx.save();
     for(const source of currentHint.sources){
@@ -1599,6 +1625,11 @@ $('hintPlusButton').addEventListener('click',()=>requestHint(true));
 $('hintClose').addEventListener('click',clearHint);
 $('hintTier').addEventListener('change',()=>{if(!$('hintPanel').hidden)requestHint();});
 $('hintAnalyzeButton').addEventListener('click',analyzeCurrentClassicBoard);
+$('hintProofToggle').addEventListener('click',()=>{
+  showHintProofLines=!showHintProofLines;
+  showHintProof(currentHint?.proof,puzzle?.cols||9);
+  requestDraw();
+});
 $('checkButton').addEventListener('click',async()=>{
   if(pending||!puzzle||!progress)return;
   pending=true;

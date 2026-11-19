@@ -1,5 +1,6 @@
 // Readable Chinese explanations reference the actual witness cells returned by Rust.
 import {hintImpact} from './priority.js';
+import {normalizeCandidateProof} from './proof-view.js';
 export const TECHNIQUES=Object.freeze({
   peer_elimination:'已知数排除',hidden_single:'隐性唯一数',
   naked_single:'显性唯一数',
@@ -9,7 +10,10 @@ export const TECHNIQUES=Object.freeze({
   locked_candidate:'区块排除',
   x_wing:'X-Wing',swordfish:'Swordfish',jellyfish:'Jellyfish',
   xy_wing:'XY-Wing',xyz_wing:'XYZ-Wing',skyscraper:'Skyscraper',
-  xy_chain:'XY-Chain',two_string_kite:'Two-String Kite',
+  xy_chain:'XY-Chain',x_chain:'X-Chain',aic:'AIC 交替推理链',
+  medusa_wrap:'3D Medusa · 同色矛盾',
+  medusa_trap:'3D Medusa · 双色陷阱',
+  two_string_kite:'Two-String Kite',
   w_wing:'W-Wing',simple_coloring:'Simple Colouring',
   killer_sum:'杀手笼求和',kropki:'黑白点',
   thermo:'温度计',renban:'连续数线',whisper:'低语线',
@@ -43,6 +47,10 @@ const ruleText={
   xyz_wing:'三候选枢纽格与两个双候选翼格形成三择结构，同时看见三格的目标格不能包含共同数字。',
   skyscraper:'同一数字在两条行或列中各有两个位置，形成摩天楼强链。两端都可见的目标格可排除它。',
   xy_chain:'双候选格之间的强弱链接形成交替链，链首链尾共同可见的目标格可排除指定数字。',
+  x_chain:'同一候选数字通过强、弱链接交替推理，两端至少一处为真，故两端共同可见的候选可删去。',
+  aic:'跨格和格内候选组成交替强弱链接，两端的真假关系迫使目标候选不成立。',
+  medusa_wrap:'不同候选通过强链接交替染色；同一色的候选互相排斥，因此该颜色全部不成立。',
+  medusa_trap:'不同候选通过强链接交替染色；目标候选同时受到两色的排斥，因此必定为假。',
   two_string_kite:'行强链接和列强链接在同宫相接，两个远端至少一处包含该数字，因此它们共同可见的格可排除该数字。',
   w_wing:'两格拥有相同的双候选数，一条同数字强链接连接它们各自的关联格，因此两翼至少一个含有另一候选数。',
   simple_coloring:'同一数字的强链接可交替着色；同色格冲突或目标同时看到两色，可以证明相应候选应排除。',
@@ -142,6 +150,7 @@ export function describeHint(response,size,cells=[]){
     target:step.cell,sources:sourceCells,
     affectedCells,removed:effectiveRemoved,
     placement:placement&&step.method!=='search_contradiction',
-    assumptionBased:conditional,level,suggestionRank:impact.rank
+    assumptionBased:conditional,level,suggestionRank:impact.rank,
+    proof:normalizeCandidateProof(step.proof,size)
   };
 }

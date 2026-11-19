@@ -215,6 +215,13 @@ export function setupLessonPage({showHome,showGame,launchPractice,
       body.append(element('p','lesson-exercise-context',
         '此技巧目前还没有通过完整盘面、唯一解及指定推理步骤三重验证的练习。为避免误导，暂不展示原先手工编造的候选数棋盘。理论讲解仍可阅读。'));
     }
+    if(selected.stage==='advanced-chains'||
+       /(?:chain|medusa|染色|推理链)/i.test(selected.title)){
+      const visual=element('button','lesson-start-practice',
+        '进入链与染色可视化训练 · 20 个验证局面');
+      visual.id='lessonChainCoach';visual.type='button';
+      body.append(visual);
+    }
     const status=element('p','lesson-practice-message',
       verified?'不会覆盖正在游玩的谜题；返回课程时恢复原来的棋盘。':
         '需要有可复现的求解器推理证明，才能开放这一节的实战练习。');
@@ -289,6 +296,12 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     saveProgress();renderList();renderDetail();
   });
   $('lessonExercise').addEventListener('click',async event=>{
+    const visual=event.target.closest('#lessonChainCoach');
+    if(visual){
+      const {openChainCoach}=await import('./chain-coach/ui.js');
+      openChainCoach({title:selected.title});
+      return;
+    }
     const button=event.target.closest('#lessonStartPractice');
     if(!button||practiceLoading)return;
     if(typeof launchPractice!=='function'){
@@ -323,6 +336,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
 
   document.addEventListener('keydown',event=>{
     if($('lessonScreen').hidden)return;
+    if(document.getElementById('chainCoachDialog')?.open)return;
     if(event.key==='Escape'){
       event.preventDefault();close();
     }

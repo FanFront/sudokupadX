@@ -52,7 +52,11 @@ export const TECHNIQUES=[
   ['xyz_wing','XYZ-Wing',4],
   ['xy_chain','XY-Chain',4],
   ['w_wing','W-Wing',4],
-  ['simple_coloring','双色链 Simple Colouring',4]
+  ['simple_coloring','双色链 Simple Colouring',4],
+  ['x_chain','单数链 X-Chain',4],
+  ['medusa_wrap','立体染色：同色冲突',4],
+  ['medusa_trap','立体染色：双色陷阱',4],
+  ['aic','交替推理链 AIC',4]
 ];
 export function availableVariants(size){
   return VARIANTS.filter(([, ,sizes])=>sizes.includes(Number(size)));
