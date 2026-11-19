@@ -8,19 +8,20 @@ fn bits(cells:&[usize])->u128 {
     cells.iter().fold(0u128,|a,&i|a|(1u128<<i))
 }
 fn weak(n:usize,a:usize,b:usize)->bool {
-    let ac=a/9;let bc=b/9;let ad=a%9;let bd=b%9;
+    let ac=a/n;let bc=b/n;let ad=a%n;let bd=b%n;
     (ac==bc && ad!=bd) || (ad==bd && ac!=bc && linked(n,ac,bc))
 }
 
 impl Solver {
     pub(super) fn advanced_patterns(&mut self)->Result<bool,String>{
-        if self.n!=9{return Ok(false);}
-        if self.wxyz_wing_ext()?{return Ok(true);}
-        if self.sue_de_coq_ext()?{return Ok(true);}
-        if self.empty_rectangle_ext()?{return Ok(true);}
+        if self.n==9{
+            if self.wxyz_wing_ext()?{return Ok(true);}
+            if self.sue_de_coq_ext()?{return Ok(true);}
+            if self.empty_rectangle_ext()?{return Ok(true);}
+        }
         if self.medusa_ext()?{return Ok(true);}
         if self.aic_ext()?{return Ok(true);}
-        if self.general_fish_ext()?{return Ok(true);}
+        if self.n==9 && self.general_fish_ext()?{return Ok(true);}
         Ok(false)
     }
 
@@ -152,22 +153,23 @@ impl Solver {
     }
 
     fn strong_candidate_graph(&self)->Vec<BTreeSet<usize>>{
-        let mut graph=vec![BTreeSet::new();729];
-        for cell in 0..81{
+        let n=self.n;
+        let mut graph=vec![BTreeSet::new();n*n*n];
+        for cell in 0..n*n{
             if count(self.masks[cell])==2 {
-                let ds=values(self.masks[cell],9);
-                let a=cell*9+(ds[0]-1) as usize;
-                let b=cell*9+(ds[1]-1) as usize;
+                let ds=values(self.masks[cell],n);
+                let a=cell*n+(ds[0]-1) as usize;
+                let b=cell*n+(ds[1]-1) as usize;
                 graph[a].insert(b);graph[b].insert(a);
             }
         }
         for house in &self.units {
-            for d in 1..=9u8{
+            for d in 1..=n as u8{
                 let cs:Vec<_>=house.iter().copied()
                     .filter(|&i|self.masks[i]&bit(d)!=0).collect();
                 if cs.len()==2{
-                    let a=cs[0]*9+(d-1) as usize;
-                    let b=cs[1]*9+(d-1) as usize;
+                    let a=cs[0]*n+(d-1) as usize;
+                    let b=cs[1]*n+(d-1) as usize;
                     graph[a].insert(b);graph[b].insert(a);
                 }
             }
@@ -177,10 +179,11 @@ impl Solver {
 
     fn color_components(&self, graph:&[BTreeSet<usize>])
         ->Vec<Vec<(usize,u8)>>{
-        let mut seen=vec![false;729];let mut result=Vec::new();
-        for start in 0..729{
+        let total=self.n*self.n*self.n;
+        let mut seen=vec![false;total];let mut result=Vec::new();
+        for start in 0..total{
             if seen[start]||graph[start].is_empty(){continue;}
-            let mut colors=vec![None;729];
+            let mut colors=vec![None;total];
             let mut queue=VecDeque::from([start]);
             let mut nodes=Vec::new();let mut consistent=true;
             colors[start]=Some(0);
@@ -208,20 +211,22 @@ impl Solver {
     fn medusa_ext(&mut self)->Result<bool,String>{
         let graph=self.strong_candidate_graph();
         for component in self.color_components(&graph){
-            if component.iter().map(|(node,_)|node%9).collect::<BTreeSet<_>>().len()<2{
+            let n=self.n;
+            if component.iter().map(|(node,_)|node%n).collect::<BTreeSet<_>>().len()<2{
                 continue;
             }
             let sides:Vec<Vec<usize>>=(0..=1).map(|color|
                 component.iter().filter(|(_,c)|*c==color)
                     .map(|(node,_)|*node).collect()
             ).collect();
-            let reason:Vec<usize>=component.iter().map(|(node,_)|node/9).collect();
+            let reason:Vec<usize>=component.iter().map(|(node,_)|node/n).collect();
+            let proof=StepProof::colouring(n,&component,&graph);
             for (shade,group) in sides.iter().enumerate(){
-                if combinations(group,2).iter().any(|pair|weak(9,pair[0],pair[1])){
+                if combinations(group,2).iter().any(|pair|weak(n,pair[0],pair[1])){
                     for &node in group{
                         self.reason=reason.clone();
-                        let digit=(node%9+1) as u8;
-                        if self.reduce(node/9,!bit(digit),"medusa_wrap")?{
+                        let digit=(node%n+1) as u8;
+                        if self.reduce_with_proof(node/n,!bit(digit),"medusa_wrap",proof.clone())?{
                             return Ok(true);
                         }
                     }
@@ -229,13 +234,13 @@ impl Solver {
                 }
             }
             let active:BTreeSet<_>=component.iter().map(|(node,_)|*node).collect();
-            for cell in 0..81{
-                for digit in values(self.masks[cell],9){
-                    let node=cell*9+(digit-1) as usize;
+            for cell in 0..n*n{
+                for digit in values(self.masks[cell],n){
+                    let node=cell*n+(digit-1) as usize;
                     if active.contains(&node){continue;}
-                    if sides.iter().all(|side|side.iter().any(|&other|weak(9,node,other))){
+                    if sides.iter().all(|side|side.iter().any(|&other|weak(n,node,other))){
                         self.reason=reason.clone();
-                        if self.reduce(cell,!bit(digit),"medusa_trap")?{
+                        if self.reduce_with_proof(cell,!bit(digit),"medusa_trap",proof.clone())?{
                             return Ok(true);
                         }
                     }
@@ -246,20 +251,22 @@ impl Solver {
     }
 
     fn aic_ext(&mut self)->Result<bool,String>{
+        let n=self.n;
+        let total_nodes=n*n*n;
         let graph=self.strong_candidate_graph();
-        let active:Vec<usize>=(0..729).filter(|&i|!graph[i].is_empty()).collect();
+        let active:Vec<usize>=(0..total_nodes).filter(|&i|!graph[i].is_empty()).collect();
         if active.is_empty(){return Ok(false);}
-        let mut weak_all=vec![BTreeSet::new();729];
+        let mut weak_all=vec![BTreeSet::new();total_nodes];
         for &node in &active{
-            let cell=node/9;let digit=(node%9+1) as u8;
-            for other in 0..81{
-                if other!=cell&&linked(9,cell,other)&&
+            let cell=node/n;let digit=(node%n+1) as u8;
+            for other in 0..n*n{
+                if other!=cell&&linked(n,cell,other)&&
                     self.masks[other]&bit(digit)!=0{
-                    weak_all[node].insert(other*9+(digit-1) as usize);
+                    weak_all[node].insert(other*n+(digit-1) as usize);
                 }
             }
-            for d in values(self.masks[cell]&!bit(digit),9){
-                weak_all[node].insert(cell*9+(d-1) as usize);
+            for d in values(self.masks[cell]&!bit(digit),n){
+                weak_all[node].insert(cell*n+(d-1) as usize);
             }
         }
         let active_set: BTreeSet<usize>=active.iter().copied().collect();
@@ -275,9 +282,12 @@ impl Solver {
                 if edges>=3&&edges%2==1{
                     for &target in weak_all[start].intersection(&weak_all[node]){
                         if path.contains(&target){continue;}
-                        self.reason=path.iter().map(|c|c/9).collect();
-                        let digit=(target%9+1) as u8;
-                        if self.reduce(target/9,!bit(digit),"aic")?{
+                        self.reason=path.iter().map(|c|c/n).collect();
+                        let digit=(target%n+1) as u8;
+                        let proof=StepProof::chain(path.iter().map(|&node|
+                            ProofNode{cell:node/n,digit:(node%n+1) as u8,
+                                colour:None}).collect());
+                        if self.reduce_with_proof(target/n,!bit(digit),"aic",proof)?{
                             return Ok(true);
                         }
                     }

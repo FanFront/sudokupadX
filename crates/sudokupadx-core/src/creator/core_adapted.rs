@@ -94,13 +94,13 @@ impl Solver {
         let n=self.n;
         for digit in 1..=n as u8 {
             let mask=bit(digit);
-            let mut graph=vec![Vec::<usize>::new();n*n];
+            let mut graph=vec![BTreeSet::<usize>::new();n*n];
             for house in &self.units {
                 let ends:Vec<usize>=house.iter().copied()
                     .filter(|&i|self.masks[i]&mask!=0).collect();
                 if ends.len()==2 {
-                    graph[ends[0]].push(ends[1]);
-                    graph[ends[1]].push(ends[0]);
+                    graph[ends[0]].insert(ends[1]);
+                    graph[ends[1]].insert(ends[0]);
                 }
             }
             let mut color=vec![None::<u8>;n*n];
@@ -137,7 +137,10 @@ impl Solver {
                     if !wraps[color[target].unwrap() as usize]||
                        count(self.masks[target])<=1 {continue;}
                     self.reason=component.clone();
-                    if self.reduce(target,!mask,"simple_coloring")? {
+                    let component_nodes:Vec<_>=component.iter()
+                        .map(|&node|(node,color[node].unwrap())).collect();
+                    let proof=StepProof::colouring(n,&component_nodes,&graph);
+                    if self.reduce_with_proof(target,!mask,"simple_coloring",proof)? {
                         return Ok(true);
                     }
                 }
@@ -150,7 +153,10 @@ impl Solver {
                         color[node]==Some(1)&&linked(n,node,target));
                     if sees_0&&sees_1 {
                         self.reason=component.clone();
-                        if self.reduce(target,!mask,"simple_coloring")? {
+                        let component_nodes:Vec<_>=component.iter()
+                            .map(|&node|(node,color[node].unwrap())).collect();
+                        let proof=StepProof::colouring(n,&component_nodes,&graph);
+                        if self.reduce_with_proof(target,!mask,"simple_coloring",proof)? {
                             return Ok(true);
                         }
                     }
@@ -159,6 +165,65 @@ impl Solver {
         }
         Ok(false)
     }
+    /// X-Chain: alternating strong/weak links of ONE digit. Both endpoints
+    /// cannot be false, so any third candidate seeing both is false.
+    pub(super) fn x_chain(&mut self)->Result<bool,String>{
+        let n=self.n;
+        let mut explored=0usize;
+        for digit in 1..=n as u8 {
+            let mask=bit(digit);
+            let candidates:Vec<usize>=(0..n*n)
+                .filter(|&cell|count(self.masks[cell])>1&&self.masks[cell]&mask!=0)
+                .collect();
+            let mut strong=vec![BTreeSet::<usize>::new();n*n];
+            for house in &self.units {
+                let ends:Vec<usize>=house.iter().copied()
+                    .filter(|cell|candidates.contains(cell)).collect();
+                if ends.len()==2 {
+                    strong[ends[0]].insert(ends[1]);
+                    strong[ends[1]].insert(ends[0]);
+                }
+            }
+            for &start in &candidates {
+                if strong[start].is_empty(){continue;}
+                let mut queue=std::collections::VecDeque::from([vec![start]]);
+                while let Some(path)=queue.pop_front(){
+                    explored+=1;
+                    if explored>30_000{return Ok(false);}
+                    let node=*path.last().unwrap();
+                    let edges=path.len()-1;
+                    if edges>=3 && edges%2==1 {
+                        for &target in &candidates {
+                            if path.contains(&target) ||
+                               !linked(n,target,start)||
+                               !linked(n,target,node) {continue;}
+                            let proof=StepProof::chain(path.iter().map(|&cell|
+                                ProofNode{cell,digit,colour:None}).collect());
+                            self.reason=path.clone();
+                            if self.reduce_with_proof(target,!mask,"x_chain",proof)?{
+                                return Ok(true);
+                            }
+                        }
+                    }
+                    if edges>=7{continue;}
+                    let next:Vec<usize>=if edges%2==0{
+                        strong[node].iter().copied().collect()
+                    }else{
+                        candidates.iter().copied().filter(|&other|
+                            other!=node&&linked(n,node,other)).collect()
+                    };
+                    for neighbour in next {
+                        if !path.contains(&neighbour){
+                            let mut branch=path.clone();branch.push(neighbour);
+                            queue.push_back(branch);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(false)
+    }
+
 }
 
 #[cfg(test)]
@@ -215,6 +280,31 @@ mod tests {
             },&[],4).unwrap();
             // The extra candidate removes the only certified bridge.
             assert!(!without.w_wing().unwrap(),"size {n}");
+        }
+    }
+
+    #[test]
+    fn x_chain_has_a_candidate_level_certificate_for_all_sizes(){
+        for (n,first,second,third,fourth) in [
+            (4,0,2,6,4),
+            (6,0,1,13,12),
+            (9,0,1,64,72)
+        ] {
+            let mut masks=local(n);
+            only(&mut masks,&units(n)[0],1,&[first,second]);
+            let strong_house=units(n).into_iter().find(|house|
+                house.contains(&third)&&house.contains(&fourth)&&
+                !house.contains(&second)).unwrap();
+            only(&mut masks,&strong_house,1,&[third,fourth]);
+            let mut solver=Solver::from_masks(n,masks,&[],4).unwrap();
+            solver.trace=true;
+            assert!(solver.x_chain().unwrap(),"n={n}");
+            let step=solver.steps.last().unwrap();
+            assert_eq!(step.method,"x_chain");
+            assert!(step.proof.as_ref().is_some_and(|p|
+                p.kind=="chain" && p.nodes.len()>=4 &&
+                p.edges.iter().any(|e|e.strong)&&
+                p.edges.iter().any(|e|!e.strong)), "n={n}");
         }
     }
 
