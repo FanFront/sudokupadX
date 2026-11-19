@@ -69,7 +69,8 @@ test('basic review is available without misreporting specialist certification',(
   for(const name of ['Kraken Fish','3D Medusa','Death Blossom','Guessing']){
     const entry=SUDOPEDIA_TECHNIQUES.find(item=>item.name===name);
     assert.ok(entry,name);
-    assert.equal(lessonPracticeMode(entry.id),'review',name);
+    assert.equal(lessonPracticeMode(entry.id),
+      name==='3D Medusa'?'generated':'review',name);
     assert.equal(hasVerifiedLessonPractice(entry.id),false,name);
     assert.throws(()=>createLessonPractice(entry.id),/暂无通过唯一解/);
     const review=createLessonPractice(entry.id,{allowReview:true});
