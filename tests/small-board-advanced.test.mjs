@@ -36,3 +36,17 @@ test('small board UI no longer silently forces difficulty level two',()=>{
   assert.doesNotMatch(creator,/option\.disabled=Number\(\$\('creatorSize'\)\.value\)!==9/);
   assert.doesNotMatch(main,/small&&Number\(\$\('hintTier'\)\.value\)>2/);
 });
+
+
+test('size-generalized imported tactics are selectable at their real tiers',()=>{
+  for(const size of [4,6,9]){
+    const entries=availableTechniques(size,4,[]).map(([name])=>name);
+    assert.ok(entries.includes('two_string_kite'),String(size));
+    assert.ok(entries.includes('w_wing'),String(size));
+    assert.ok(entries.includes('simple_coloring'),String(size));
+    assert.equal(validateCreatorOptions(options(size,3,'two_string_kite')).focus,'two_string_kite');
+    assert.equal(validateCreatorOptions(options(size,4,'w_wing')).focus,'w_wing');
+    assert.equal(validateCreatorOptions(options(size,4,'simple_coloring')).focus,'simple_coloring');
+    assert.throws(()=>validateCreatorOptions(options(size,3,'w_wing')),/重点技巧/);
+  }
+});

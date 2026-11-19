@@ -47,9 +47,12 @@ export const TECHNIQUES=[
   ['swordfish','Swordfish',3],
   ['xy_wing','XY-Wing',3],
   ['skyscraper','摩天楼 Skyscraper',3],
+  ['two_string_kite','双弦风筝 Two-String Kite',3],
   ['jellyfish','Jellyfish',4],
   ['xyz_wing','XYZ-Wing',4],
-  ['xy_chain','XY-Chain',4]
+  ['xy_chain','XY-Chain',4],
+  ['w_wing','W-Wing',4],
+  ['simple_coloring','双色链 Simple Colouring',4]
 ];
 export function availableVariants(size){
   return VARIANTS.filter(([, ,sizes])=>sizes.includes(Number(size)));

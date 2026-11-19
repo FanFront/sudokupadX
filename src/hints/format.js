@@ -9,7 +9,9 @@ export const TECHNIQUES=Object.freeze({
   locked_candidate:'区块排除',
   x_wing:'X-Wing',swordfish:'Swordfish',jellyfish:'Jellyfish',
   xy_wing:'XY-Wing',xyz_wing:'XYZ-Wing',skyscraper:'Skyscraper',
-  xy_chain:'XY-Chain',killer_sum:'杀手笼求和',kropki:'黑白点',
+  xy_chain:'XY-Chain',two_string_kite:'Two-String Kite',
+  w_wing:'W-Wing',simple_coloring:'Simple Colouring',
+  killer_sum:'杀手笼求和',kropki:'黑白点',
   thermo:'温度计',renban:'连续数线',whisper:'低语线',
   arrow:'箭头求和',xv:'XV 和',entropic:'熵线',reverse_thermo:'逆温度计',
   modular:'模三线',between:'夹心线',region_sum:'区域等和线',
@@ -41,6 +43,9 @@ const ruleText={
   xyz_wing:'三候选枢纽格与两个双候选翼格形成三择结构，同时看见三格的目标格不能包含共同数字。',
   skyscraper:'同一数字在两条行或列中各有两个位置，形成摩天楼强链。两端都可见的目标格可排除它。',
   xy_chain:'双候选格之间的强弱链接形成交替链，链首链尾共同可见的目标格可排除指定数字。',
+  two_string_kite:'行强链接和列强链接在同宫相接，两个远端至少一处包含该数字，因此它们共同可见的格可排除该数字。',
+  w_wing:'两格拥有相同的双候选数，一条同数字强链接连接它们各自的关联格，因此两翼至少一个含有另一候选数。',
+  simple_coloring:'同一数字的强链接可交替着色；同色格冲突或目标同时看到两色，可以证明相应候选应排除。',
   killer_sum:'依据笼内数字之和及互不重复要求，排除不能参与合法组合的候选数。',
   kropki:'白点两端相差 1，黑点两端为两倍关系；目标候选数无法与另一端形成合法配对。',
   thermo:'温度计从圆头到末端严格递增，超出可能顺序的数字不可填入。',
@@ -102,7 +107,8 @@ export function describeHint(response,size,cells=[]){
       :ruleText[step.method]||'遵循已知数独规则。');
   const conditional=step.assumptionBased===true;
   const placement=!conditional&&!step.forceElimination&&
-    step.remaining?.length===1&&step.before?.length>1;
+    (step.placement===true||
+      step.remaining?.length===1&&step.before?.length>1);
   const action=step.method==='search_contradiction'
     ?'经反证，可排除 '+removed
     :placement?'确定填入 '+remaining:'排除候选数 '+removed;
@@ -123,7 +129,7 @@ export function describeHint(response,size,cells=[]){
       (step.method==='pencil_subset'
         ?'中心手记'+(step.subsetSize===2?'数对':
           step.subsetSize===3?'三数组':step.subsetSize+' 数组')
-        :TECHNIQUES[step.method]||step.method)+' · 技巧等级 '+level+' · 建议 '+impact.label,
+        :TECHNIQUES[step.method]||step.label||step.method)+' · 技巧等级 '+level+' · 建议 '+impact.label,
     description:(conditional?'【条件推理，不是已证明的排除】 ':'')+
       cellName(step.cell,size)+'：'+rationale+
       ' 由此'+action+'。'+(sourceCells.length?
