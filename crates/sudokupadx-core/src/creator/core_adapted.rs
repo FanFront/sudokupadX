@@ -179,7 +179,7 @@ mod tests {
         // sees the distant ends A/D but belongs to neither conjugate unit.
         for (n,a,b,c,d,target,col) in [
             (4,0,2,7,11,8,3),
-            (6,0,1,8,14,12,2),
+            (6,0,1,8,14,13,2),
             (9,0,1,11,20,9,2),
         ] {
             let mut masks=local(n);
