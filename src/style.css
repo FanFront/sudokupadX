@@ -914,3 +914,90 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
 .hint-proof-details summary{cursor:pointer;min-height:26px}
 .hint-proof-details ol{padding-inline-start:22px;max-height:115px;overflow:auto;margin:4px 0}
 .hint-proof-details li{padding:3px 0}
+
+/* SudokuCoach-inspired chain/colour practical board, scoped to its own dialog. */
+.chain-coach-dialog{border:1px solid #c6d7d1;border-radius:15px;padding:0;
+  width:min(960px,calc(100vw - 20px));max-width:960px;max-height:min(94dvh,900px);
+  background:#f4f8f3;color:#294337;box-shadow:0 20px 72px #112a2880}
+.chain-coach-dialog::backdrop{background:rgba(11,30,40,.64)}
+.chain-coach-wrap{padding:clamp(12px,2vw,24px);display:grid;gap:14px}
+.chain-coach-header,.chain-coach-toolbar,.chain-coach-board-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chain-coach-header h2{font-size:clamp(19px,3vw,26px);margin:3px 0 0}
+.chain-coach-header small{font-size:12px;color:#507367}
+.chain-coach-header button{min-width:40px;min-height:40px;border-radius:9px}
+.chain-coach-toolbar{flex-wrap:wrap;font-size:12px}
+.chain-coach-toolbar label{display:flex;gap:8px;align-items:center}
+.chain-coach-toolbar select{padding:6px;border-radius:8px;max-width:210px}
+.chain-coach-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(195px,.75fr);
+  gap:16px;align-items:start}
+.chain-coach-board-card{min-width:0;display:grid;gap:9px}
+.chain-coach-board-head{font-size:13px;color:#496c5d}
+.chain-coach-board{position:relative;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));
+  grid-template-rows:repeat(9,minmax(0,1fr));aspect-ratio:1;
+  width:min(100%,535px);border:2px solid #305544;background:#fff;overflow:hidden}
+.chain-coach-cell{position:relative;min-width:0;min-height:0;display:grid;place-items:center;
+  border-right:1px solid #c3d2c8;border-bottom:1px solid #c3d2c8}
+.chain-coach-cell.box-right{border-right:2px solid #305544}
+.chain-coach-cell.box-bottom{border-bottom:2px solid #305544}
+.chain-coach-cell.is-focus{background:#e9f4e6}
+.chain-coach-cell>strong{font-size:clamp(12px,2.5vw,27px);line-height:1}
+.chain-coach-cell>strong.given{color:#2e4238}
+.chain-coach-cell>strong.deduced{color:#27679b}
+.chain-coach-candidates{display:grid;grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(3,1fr);width:100%;height:100%;place-items:stretch}
+.chain-coach-candidates .candidate,.chain-coach-candidates .empty{
+  position:relative;display:grid;place-items:center;
+  width:100%;height:100%;min-width:0;min-height:0;
+  padding:0;border:0;border-radius:2px;background:transparent;
+  font-size:clamp(7px,1.25vw,13px);font-weight:600;line-height:1;color:#516778}
+.chain-coach-candidates .candidate{cursor:pointer}
+.chain-coach-candidates .candidate:disabled{cursor:default;opacity:1}
+.chain-coach-candidates .candidate.proof-colour-0,
+.chain-coach-candidates .candidate.proof-node{background:#bed9f8;color:#153753}
+.chain-coach-candidates .candidate.proof-colour-1,
+.chain-coach-candidates .candidate.proof-end{background:#e0c7f3;color:#46255f}
+.chain-coach-candidates .candidate.target{box-shadow:inset 0 0 0 2px #ee9a36;color:#a33421}
+.chain-coach-candidates .candidate.removed{background:#ffcfbb;color:#9c3b1e;text-decoration:line-through}
+.chain-coach-candidates .candidate:focus-visible{outline:2px solid #167a72;outline-offset:0;z-index:5}
+.chain-coach-proof-lines{position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;z-index:2}
+.chain-coach-proof-lines line{stroke:#2368ab;stroke-width:1.65;stroke-linecap:round;
+  vector-effect:non-scaling-stroke}
+.chain-coach-proof-lines line.weak{stroke:#794d9b;stroke-dasharray:3 3}
+.chain-coach-legend{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;
+  font-size:12px;color:#486151}
+.chain-coach-legend[hidden],.chain-coach-link-list[hidden]{display:none}
+.chain-coach-legend span{display:inline-flex;gap:5px;align-items:center}
+.chain-coach-legend i{display:inline-block;width:14px;height:12px;border-radius:2px}
+.chain-coach-legend .coach-blue{background:#bed9f8}
+.chain-coach-legend .coach-purple{background:#e0c7f3}
+.chain-coach-legend .coach-link-strong{height:0;width:20px;border-top:2px solid #2368ab}
+.chain-coach-legend .coach-link-weak{height:0;width:20px;border-top:2px dashed #794d9b}
+.chain-coach-legend button{font:inherit;font-size:12px;min-height:30px}
+.chain-coach-link-list{font-size:12px;color:#486151}
+.chain-coach-link-list ol{max-height:140px;overflow:auto;padding-inline-start:24px}
+.chain-coach-link-list li{padding:3px 0}
+.chain-coach-side{display:grid;gap:10px;font-size:14px;line-height:1.65}
+.chain-coach-side h3{font-size:20px;margin:0;color:#245b45}
+.chain-coach-side>strong{font-size:12px;text-transform:uppercase;color:#648575}
+.chain-coach-side p{margin:0}
+.chain-coach-side>small{font-size:12px;color:#678477}
+.chain-coach-status{padding:10px;background:#e7f2eb;border-radius:9px;min-height:45px}
+.chain-coach-status.wrong{background:#fff0dd;color:#8c401d}
+.chain-coach-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chain-coach-actions button{min-height:39px;padding:7px 9px;border-radius:8px}
+.chain-coach-actions button:first-child,.chain-coach-actions button:nth-child(2){
+  background:#245b45;color:#fff}
+.chain-coach-actions button[hidden]{display:none}
+@media(max-width:700px){
+ .chain-coach-dialog{max-height:96dvh}
+ .chain-coach-layout{grid-template-columns:1fr}
+ .chain-coach-board{width:min(100%,460px);margin-inline:auto}
+ .chain-coach-wrap{gap:10px}
+ .chain-coach-side{gap:7px}
+ .chain-coach-side h3{font-size:17px}
+ .chain-coach-actions{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .chain-coach-actions button{font-size:12px;padding:6px 3px}
+ .chain-coach-candidates .candidate{font-size:clamp(8px,2.3vw,14px)}
+}
