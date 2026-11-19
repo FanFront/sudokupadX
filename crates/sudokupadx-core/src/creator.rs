@@ -10,6 +10,7 @@ use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 mod advanced;
 mod als_advanced;
+mod core_adapted;
 
 const DIGITS: usize = 9;
 type Mask = u16;
@@ -90,8 +91,10 @@ struct Proof {
 fn level_of(method: &str) -> u8 {
     match method {
         "naked_subset"|"hidden_subset"|"locked_candidate" => 2,
-        "x_wing"|"swordfish"|"xy_wing"|"skyscraper" => 3,
+        "x_wing"|"swordfish"|"xy_wing"|"skyscraper"|
+        "two_string_kite" => 3,
         "jellyfish"|"xyz_wing"|"xy_chain"|
+        "w_wing"|"simple_coloring"|
         "aic"|"medusa_wrap"|"medusa_trap"|"franken_fish"|
         "mutant_fish"|"empty_rectangle"|"wxyz_wing"|"sue_de_coq"|
         "als_xy_wing"|"als_xy_chain"|"death_blossom" => 4,
@@ -107,6 +110,7 @@ fn allowed_focus(method: &str) -> bool {
         "anti_knight_anchors"|"anti_whisper_anchors"|
         "naked_subset"|"hidden_subset"|"locked_candidate"|
         "x_wing"|"swordfish"|"xy_wing"|"skyscraper"|
+        "two_string_kite"|"w_wing"|"simple_coloring"|
         "jellyfish"|"xyz_wing"|"xy_chain"|
         "aic"|"medusa_wrap"|"medusa_trap"|"franken_fish"|
         "mutant_fish"|"empty_rectangle"|"wxyz_wing"|"sue_de_coq"|
@@ -704,11 +708,14 @@ impl Solver {
                 changed|=self.fish(3)?;
                 if !changed{changed|=self.xy_wing()?;}
                 if !changed{changed|=self.skyscraper()?;}
+                if !changed{changed|=self.two_string_kite()?;}
             }
             if !changed && self.tier>=4{
                 changed|=self.fish(4)?;
                 if !changed{changed|=self.xyz_wing()?;}
                 if !changed{changed|=self.xy_chains()?;}
+                if !changed{changed|=self.w_wing()?;}
+                if !changed{changed|=self.simple_coloring()?;}
                 if !changed{changed|=self.advanced_patterns()?;}
                 if !changed{changed|=self.als_advanced()?;}
             }
