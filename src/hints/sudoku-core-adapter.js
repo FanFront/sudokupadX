@@ -1,6 +1,7 @@
 // Conservative adapter for MIT sudoku-core v4.x. Only the certified, fully
 // visible, non-variant 9x9 grids use it. No player notes are solver premises.
 import {hintImpact} from './priority.js';
+import {normalizeCandidateProof} from './proof-view.js';
 
 const N=9;
 const techniqueTable=Object.freeze({
@@ -112,6 +113,7 @@ export function adaptCoreTeaching(tip,board,tier=4,unique=false){
   const sources=[...new Set([...(tip.step.patternCells||[]),...(tip.relatedCells||[]),
     ...(tip.step.regionCells||[])].filter(validCell))];
   const label=String(tip.label||title);
+  const proof=normalizeCandidateProof(tip.step.proof,N);
   for(const u of relevant) {
     if(!Number.isInteger(u.filledValue)||u.filledValue<1||u.filledValue>9)continue;
     const before=candidates[u.index];
@@ -119,7 +121,8 @@ export function adaptCoreTeaching(tip,board,tier=4,unique=false){
     return {status:'step',level,step:{
       method,cell:u.index,removed:before.filter(d=>d!==u.filledValue),
       remaining:[u.filledValue],before:[...before],sources,
-      placement:true,source:'sudoku-core',label,reason
+      placement:true,source:'sudoku-core',label,reason,
+      ...(proof?{proof}:{})
     }};
   }
   for(const u of relevant){
@@ -135,7 +138,8 @@ export function adaptCoreTeaching(tip,board,tier=4,unique=false){
       method,cell:u.index,removed:[digit],
       remaining:before.filter(d=>d!==digit),before:[...before],sources,
       affectedCells:[...new Set(affected)],forceElimination:true,
-      source:'sudoku-core',label,reason
+      source:'sudoku-core',label,reason,
+      ...(proof?{proof}:{})
     }};
   }
   return null;
