@@ -105,6 +105,19 @@ async fn hint_step(
     ).await.map_err(|error|format!("提示计算中断：{error}"))?
 }
 
+// Technique-focused hints use the SAME Rust solver and session snapshot as
+// the normal hint. The focus only filters certified steps, never changes rules.
+#[tauri::command]
+async fn hint_step_focus(
+    tier:u8, focus:String, state:State<'_, AppState>
+) -> Result<sudokupadx_core::creator::HintResponse,String> {
+    let (n,grid,rules,notes)=with_session(&state,|session|session.hint_input())?;
+    tauri::async_runtime::spawn_blocking(move ||
+        sudokupadx_core::creator::next_hint_with_focus(
+            n,&grid,&rules,tier,&notes,Some(&focus))
+    ).await.map_err(|error|format!("专项提示计算中断：{error}"))?
+}
+
 // The CPU-heavy creator runs on a worker thread, not Android's UI thread.
 #[tauri::command]
 async fn generate_puzzle(
@@ -327,7 +340,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            open_puzzle, update_cell, update_cells, update_notes, check_progress, hint_step, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters,
+            open_puzzle, update_cell, update_cells, update_notes, check_progress, hint_step, hint_step_focus, undo, redo, restore_progress, generate_puzzle, fetch_logic_masters_page, search_logic_masters,
             fetch_wpf_index, fetch_wpf_type, fetch_wpf_pdf
         ])
         .run(tauri::generate_context!())

@@ -5,6 +5,7 @@ import {LESSON_FIXTURES,TECHNIQUE_FIXTURES} from './lesson-fixtures.js';
 import {SUDOPEDIA_TECHNIQUES,SUDOPEDIA_BY_ID} from './sudopedia-catalog.js';
 import {randomizeLessonFixture} from './lesson-randomizer.js';
 import {normalizeLessonCandidates} from './lesson-candidates.js';
+import {nativeChainMethod} from './lesson-native-chain.js';
 
 const baseCell=()=>({value:null,corner:[],center:[],color:null});
 
@@ -35,6 +36,7 @@ function reviewFixture(){
 
 export function lessonPracticeMode(id){
   if(!knownLessonId(id))return 'unavailable';
+  if(nativeChainMethod(id))return 'generated';
   const source=certifiedFixture(id);
   if(source){
     try {

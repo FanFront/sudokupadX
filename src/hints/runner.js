@@ -1,5 +1,5 @@
 // Browser inference happens off the UI thread, independently of the live board.
-export function computeBrowserHint(input,cells,tier){
+export function computeBrowserHint(input,cells,tier,focus=null){
   const worker=new Worker(new URL('./worker.js',import.meta.url),{type:'module'});
   let settled=false,rejectTask;
   const promise=new Promise((resolve,reject)=>{
@@ -16,7 +16,7 @@ export function computeBrowserHint(input,cells,tier){
       reject(Error(error.message||'WASM 提示线程异常'));
     };
   });
-  worker.postMessage({input,cells,tier});
+  worker.postMessage({input,cells,tier,focus});
   return {promise,cancel(){
     if(settled)return;
     settled=true;worker.terminate();

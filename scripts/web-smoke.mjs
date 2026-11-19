@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
 import {LESSON_IDS} from '../src/lesson-data.js';
-import {coachExample} from '../src/chain-coach/model.js';
 
 const root=process.env.WEB_SMOKE_URL || 'http://127.0.0.1:4173/sudokupadX/';
 const cases=[
@@ -53,29 +52,15 @@ try{
   assert.equal(await page.locator('#lessonScreen').isVisible(),true);
   assert.equal(await page.locator('#homeScreen').isHidden(),true);
   assert.equal(await page.locator('#lessonList .lesson-entry').count(),LESSON_IDS.length);
-  // The real mobile browser must show SudokuCoach-inspired interactive
-  // candidate-level colour/chain practice, not merely static lesson copy.
+  // Chain and colouring lessons must use the REAL SudokuPadX board,
+  // not a detached SudokuCoach modal or downloaded JS engine.
   await page.locator('#lessonFilters button[data-stage="advanced-chains"]').click();
-  await page.locator('#lessonList .lesson-entry').first().click();
-  await page.locator('#lessonChainCoach').click();
-  const coach=page.locator('#chainCoachDialog');
-  await coach.waitFor({state:'visible'});
-  assert.equal(await coach.locator('.chain-coach-cell').count(),81);
-  await coach.locator('#chainCoachTopic').selectOption('simple-colouring');
-  assert.ok(await coach.locator('.proof-colour-0').count()>0);
-  assert.ok(await coach.locator('.proof-colour-1').count()>0);
-  await coach.locator('#chainCoachTopic').selectOption('xy-chain');
-  assert.ok(await coach.locator('.chain-coach-proof-lines line.strong').count()>0);
-  assert.ok(await coach.locator('.chain-coach-proof-lines line.weak').count()>0);
-  const expected=coachExample('xy-chain',0).updates[0];
-  await coach.locator('#chainCoachStart').click();
-  await coach.locator('[data-cell="'+expected.index+'"][data-digit="'+
-    expected.digit+'"]').click();
-  assert.match(await coach.locator('#chainCoachStatus').textContent(),/训练完成|练习完成|排除正确/);
-  await page.screenshot({path:'artifacts/web/chain-colour-coach-mobile.png'});
-  await coach.locator('button[data-action="close"]').click();
-  assert.equal(await coach.isHidden(),true);
-  assert.equal(await page.locator('#lessonScreen').isVisible(),true);
+  const nativeChain=page.locator('#lessonList .lesson-entry').filter({hasText:'X-Chain'}).first();
+  await nativeChain.click();
+  assert.equal(await page.locator('#lessonPracticeSize').isVisible(),true);
+  const nativeSizes=await page.locator('#lessonPracticeSize option').allTextContents();
+  assert.deepEqual(nativeSizes,['4×4','6×6','9×9']);
+  assert.equal(await page.locator('#lessonChainCoach').count(),0);
   await page.locator('#lessonFilters button[data-stage="patterns"]').click();
   assert.equal(await page.locator('#lessonList .lesson-entry').count(),6);
   await page.locator('#lessonList [data-id="7"]').click();
@@ -155,6 +140,21 @@ try{
     await page.screenshot({path:`artifacts/web/${id}.png`});
     assert.equal(await page.locator('#gameScreen').isVisible(),true);
     assert.equal(await page.locator('#homeScreen').isHidden(),true);
+    if(id==='generated-9x9-001'){
+      // The live Canvas must route focused chain hints into native Rust/WASM.
+      await page.locator('#hintButton').click();
+      await page.locator('#hintTechnique').selectOption('x_chain');
+      await page.waitForFunction(()=>{
+        const title=document.querySelector('#hintTitle')?.textContent||'';
+        return title && !title.includes('正在计算');
+      },null,{timeout:30000});
+      assert.doesNotMatch(await page.locator('#hintTitle').textContent(),/无法安全提示/);
+      assert.equal(await page.locator('#hintProofPanel').isHidden(),
+        await page.locator('#hintProofPanel').getAttribute('hidden')!==null);
+      assert.equal(await page.locator('#chainCoachDialog').count(),0);
+      await page.screenshot({path:'artifacts/web/native-chain-hint-board.png'});
+      await page.locator('#hintClose').click();
+    }
     if(id==='digits-of-despair'){
       const before=await page.locator('#puzzleTitle').textContent();
       await page.locator('#rulesButton').click();

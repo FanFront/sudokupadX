@@ -24,7 +24,9 @@ import {usesTypedHintEngine} from './hints/mode.js';
 import {findPencilSubsetHint,preferPencilSubset} from './hints/pencil-subsets.js';
 import {adventureHintCoverage} from './hints/coverage.js';
 import {describeHint} from './hints/format.js';
-import {drawProofLinks,drawProofNodes,describeProofLinks,proofLabel} from './hints/proof-view.js';
+import {drawProofLinks,drawProofNodes,describeProofLinks,proofLabel,candidatePosition} from './hints/proof-view.js';
+import {nativeChainMethod,createNativeChainPractice} from './lesson-native-chain.js';
+import {startGeneration} from './creator/runner.js';
 import {buildHintPlusUpdates,buildClearRedPlusUpdates} from './hints/apply.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
@@ -137,7 +139,8 @@ async function requestHint(applyAutomatically=false){
   $('hintDescription').textContent='正在基于当前大数字与题面规则验证下一步，并跳过中心候选数中已经完成的排除。';
   $('hintCandidates').textContent='';
   requestDraw();
-  const tier=Number($('hintTier').value);
+  const technique=$('hintTechnique').value;
+  const tier=technique?4:Number($('hintTier').value);
   const focus=selected;
   const visible=[...progress.visible];
   const cells=progress.cells.map(cloneCell);
@@ -158,11 +161,14 @@ async function requestHint(applyAutomatically=false){
   try{
     // Legacy standalone 9×9 linked/Boss SCLs lack local-generator solverRules.
     // Route them to independently verified typed constraints on both platforms.
+    const targetTechnique=typed?'':technique;
     const task=typed
       ?computeAdventureHint(puzzle,{cells,visible},tier,focus)
-      :native?{promise:call('hint_step',{tier})}
-        :computeBrowserHint(activeRawInput,cells,tier);
-    const coreTask=classicBoard&&tier>1?computeClassicHint(classicBoard,tier):null;
+      :native?{promise:call(targetTechnique?'hint_step_focus':'hint_step',
+          targetTechnique?{tier,focus:targetTechnique}:{tier})}
+        :computeBrowserHint(activeRawInput,cells,tier,targetTechnique);
+    const coreTask=!targetTechnique&&classicBoard&&tier>1?
+      computeClassicHint(classicBoard,tier):null;
     hintTask={cancel(){
       task.cancel?.();
       coreTask?.cancel();
@@ -173,12 +179,19 @@ async function requestHint(applyAutomatically=false){
     ]);
     if(serial!==hintSerial)return;
     hintTask=null;
-    const baseResult=chooseClassicHint(originalResult,coreResult,cells);
-    // Center-note 34/35/45 triples work on Rust and adventure paths.
-    // Unverified pencil lists remain conditional, not solver axioms.
-    const pencil=findPencilSubsetHint(puzzle,{cells,visible},tier,focus);
-    const result=preferPencilSubset(baseResult,pencil,focus,cells);
+    const baseResult=technique?originalResult:
+      chooseClassicHint(originalResult,coreResult,cells);
+    // Focused chain/colour output must NOT be displaced by a pencil subset
+    // or an unrelated third-party 9×9 deduction.
+    const pencil=technique?null:
+      findPencilSubsetHint(puzzle,{cells,visible},tier,focus);
+    const result=technique?baseResult:
+      preferPencilSubset(baseResult,pencil,focus,cells);
     const data=describeHint(result,puzzle.cols,cells);
+    if(technique){
+      $('hintSupportNote').textContent+=' 本步强弱链接与染色来自 SudokuPadX 原生 Rust / WASM 求解器，'+
+        '棋盘将显示该步骤开始前已推导出的候选数；不会利用玩家手记作证明。';
+    }
     if(result?.step?.source==='sudoku-core')
       $('hintSupportNote').textContent+=' 已使用 sudoku-core 独立验证的标准数独逻辑；不适用于变体或未揭开的谜题。';
     $('hintSupportNote').textContent+=' 建议等级：A 确定数字 ＞ B 批量排除 ＞ C 单一排除；技巧等级是使用的推理复杂度，与建议等级不同。';
@@ -315,8 +328,25 @@ function drawCellInk(index,x,y,fogLayer=false) {
       :ink.fogged?'#f0f6ff':ink.given?'#263345':'#2560a1';
     ctx.fillText(String(ink.value),x+CELL/2,y+CELL/2+1,CELL*.9);
   } else {
-    drawNoteRow(ink,'corner',x,y,conflicts.noteSymbols[index],ink.fogged);
-    drawNoteRow(ink,'center',x,y,conflicts.noteSymbols[index],ink.fogged);
+    if(lessonPractice?.visualProof){
+      const n=puzzle.cols;
+      const columns=n===4?2:3;
+      const rows=Math.ceil(n/columns);
+      ctx.save();
+      ctx.font='600 '+Math.max(10,CELL*.20)+'px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle=ink.fogged?'#e2ecfc':'#48617e';
+      for(const digitText of ink.center||[]){
+        const digit=Number(digitText);
+        if(!Number.isInteger(digit)||digit<1||digit>n)continue;
+        const p=candidatePosition(index,digit,n,CELL);
+        ctx.fillText(digitText,p.x,p.y,Math.min(CELL/columns,CELL/rows));
+      }
+      ctx.restore();
+    }else{
+      drawNoteRow(ink,'corner',x,y,conflicts.noteSymbols[index],ink.fogged);
+      drawNoteRow(ink,'center',x,y,conflicts.noteSymbols[index],ink.fogged);
+    }
   }
 }
 function validSymbol(s) {return /^[0-9A-Z]$/.test(s);}
@@ -810,6 +840,8 @@ function updateControls() {
     !buildClearRedPlusUpdates(puzzle,progress,conflicts,
       index=>!lockedBossGate(puzzle,index,localStorage)).length;
   const typed=usesTypedHintEngine(puzzle);
+  $('hintTechnique').disabled=typed||Boolean(lessonPractice);
+  if(typed)$('hintTechnique').value='';
   // Rust's classic Sudoku solver handles 4×4, 6×6 and 9×9 using the
   // same logical tiers; do not silently downgrade small-board hints.
   for(const option of $('hintTier').options)
@@ -1007,13 +1039,14 @@ function draw() {
   // original givens, player values or corner/center pencil marks.
   drawPenLines(ctx,penLines,CELL,clip);
   drawPenMarks(ctx,penMarks,CELL,clip);
-  if(currentHint?.proof)drawProofLinks(ctx,currentHint.proof,puzzle.cols,
+  const boardProof=currentHint?.proof||lessonPractice?.visualProof;
+  if(boardProof)drawProofLinks(ctx,boardProof,puzzle.cols,
     CELL,showHintProofLines,index=>isVisible(progress,index));
   for(let r=r0;r<r1;r++)for(let c=c0;c<c1;c++){
     const idx=r*puzzle.cols+c;
     drawCellInk(idx,c*CELL,r*CELL,!isVisible(progress,idx));
   }
-  if(currentHint?.proof)drawProofNodes(ctx,currentHint.proof,puzzle.cols,
+  if(boardProof)drawProofNodes(ctx,boardProof,puzzle.cols,
     CELL,index=>isVisible(progress,index));
   if(currentHint && currentHint.target>=0){
     ctx.save();
@@ -1417,18 +1450,40 @@ function practiceBanner(active){
   $('backButton').hidden=Boolean(active)||$('backButton').hidden;
   if(!active){
     $('lessonPracticeStatus').classList.remove('complete');
+    $('lessonProofDetails').hidden=true;
     return;
   }
   $('lessonPracticeName').textContent='第 '+active.id+' 课 · '+active.goalLabel;
   $('lessonPracticeStatus').textContent=active.task;
   $('lessonPracticeStatus').classList.remove('complete');
   $('lessonPracticeHint').textContent='查看思路';
+  const details=$('lessonProofDetails');
+  details.hidden=!active.visualProof;
+  details.open=false;
+  $('lessonProofLinks').replaceChildren();
+  if(active.visualProof)for(const description of describeProofLinks(active.visualProof,active.n)){
+    const item=document.createElement('li');
+    item.textContent=description;
+    $('lessonProofLinks').append(item);
+  }
 }
-async function beginLessonPractice(id){
+async function beginLessonPractice(id,{size=9}={}){
   if(pending||lessonPractice)throw Error('当前正在载入另一道谜题');
-  // A missing technique certificate opens an explicitly labeled basic
-  // review, never a falsely certified exercise for that advanced technique.
-  const practice=createLessonPractice(id,{randomize:true,allowReview:true});
+  const nativeMethod=nativeChainMethod(id);
+  let practice;
+  if(nativeMethod){
+    if(![4,6,9].includes(size))throw Error('仅支持 4×4、6×6、9×9 专项训练');
+    // This is the SAME Rust creator used by the ordinary puzzle generator.
+    // A missing exact technique certificate is an error, not a fake lesson.
+    const seed=Math.floor(Math.random()*0xffffffff);
+    const request={id:'sudokupadx-chain-lesson-'+id+'-'+size+'-'+seed,
+      size,tier:4,variants:[],focus:nativeMethod,
+      density:'light',seed,attempts:80,practice:true};
+    const result=await startGeneration(request).promise;
+    practice=createNativeChainPractice(result,id,nativeMethod);
+  }else{
+    practice=createLessonPractice(id,{randomize:true,allowReview:true});
+  }
   if(puzzle)save();
   const previous=snapshotForLesson();
   lessonPractice={...practice,previous,completed:false};
@@ -1527,7 +1582,7 @@ async function resetLessonPractice(){
 // resets the camera/progress. The rules shortcut saves before hiding play.
 const lessonPage=setupLessonPage({
   showHome,showGame,
-  launchPractice:lesson=>beginLessonPractice(lesson.id)
+  launchPractice:(lesson,options)=>beginLessonPractice(lesson.id,options)
 });
 $('lessonButton').addEventListener('click',()=>lessonPage.open());
 $('lessonPracticeReturn').addEventListener('click',()=>endLessonPractice().catch(notify));
@@ -1624,6 +1679,10 @@ $('hintButton').addEventListener('click',()=>requestHint());
 $('hintPlusButton').addEventListener('click',()=>requestHint(true));
 $('hintClose').addEventListener('click',clearHint);
 $('hintTier').addEventListener('change',()=>{if(!$('hintPanel').hidden)requestHint();});
+$('hintTechnique').addEventListener('change',()=>{
+  if($('hintTechnique').value)$('hintTier').value='4';
+  if(!$('hintPanel').hidden)requestHint();
+});
 $('hintAnalyzeButton').addEventListener('click',analyzeCurrentClassicBoard);
 $('hintProofToggle').addEventListener('click',()=>{
   showHintProofLines=!showHintProofLines;

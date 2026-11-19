@@ -2,6 +2,7 @@ import guideMarkdown from '../docs/techniques.zh-CN.md?raw';
 import advancedGuideMarkdown from '../docs/sudopedia-catalog.zh-CN.md?raw';
 import {STAGES, parseLessonGuide, filterLessons, LESSON_IDS,buildLessonCatalog} from './lesson-data.js';
 import {lessonPracticeMode} from './lesson-puzzles.js';
+import {nativeChainMethod} from './lesson-native-chain.js';
 import {SUDOPEDIA_TECHNIQUES} from './sudopedia-catalog.js';
 
 const PROGRESS_KEY='sudokupadx:lessons:v1';
@@ -132,7 +133,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   const all=buildLessonCatalog(original,advancedGuideMarkdown);
   const completed=getCompleted(storage);
   let selected=all[0];
-  let filter='all',query='', origin='home',practiceLoading=false;
+  let filter='all',query='', origin='home',practiceLoading=false,practiceError='';
 
   try {
     const last=Number(storage.getItem(LAST_KEY));
@@ -186,11 +187,14 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     const root=$('lessonExercise');
     root.replaceChildren();
     const mode=lessonPracticeMode(selected.id);
+    const nativeMethod=nativeChainMethod(selected.id);
     const verified=mode!=='unavailable',review=mode==='review';
     const heading=element('div','lesson-exercise-heading');
     heading.append(element('strong','',
+      nativeMethod?'Rust 链与染色专项生成':
       review?'标准数独基础复习':verified?'随机实战训练':'练习验证中'));
     heading.append(element('span','',
+      nativeMethod?'本机生成可证明的专项盘面，失败不会冒充训练':
       review?'专项技巧待验证，可先训练已证明的基础技能':
         verified?'每次进入都基于已验证证明随机变换棋盘':
           '未发布不可靠的候选数示例'));
@@ -204,8 +208,19 @@ export function setupLessonPage({showHome,showGame,launchPractice,
         review?
           '完成基础复习不会标记本课专项技巧已经掌握。':
           '请在棋盘中完成一次真实的填数或候选删除；遇到困难时可查看推理讲解。'));
+      if(nativeMethod){
+        const sizes=element('label','lesson-exercise-context','原生 Rust 训练尺寸 ');
+        const select=element('select');select.id='lessonPracticeSize';
+        for(const size of [4,6,9]){
+          const option=element('option','',size+'×'+size);
+          option.value=String(size);option.selected=size===9;
+          select.append(option);
+        }
+        sizes.append(select);body.append(sizes);
+      }
       const start=element('button','lesson-start-practice',
         practiceLoading?'正在准备训练棋盘…':
+          nativeMethod?'用 Rust 生成指定技巧棋盘':
           review?'生成随机基础复习棋盘':'生成随机专项训练棋盘');
       start.id='lessonStartPractice';
       start.type='button';
@@ -215,16 +230,9 @@ export function setupLessonPage({showHome,showGame,launchPractice,
       body.append(element('p','lesson-exercise-context',
         '此技巧目前还没有通过完整盘面、唯一解及指定推理步骤三重验证的练习。为避免误导，暂不展示原先手工编造的候选数棋盘。理论讲解仍可阅读。'));
     }
-    if(selected.stage==='advanced-chains'||
-       /(?:chain|medusa|染色|推理链)/i.test(selected.title)){
-      const visual=element('button','lesson-start-practice',
-        '进入链与染色可视化训练 · 20 个验证局面');
-      visual.id='lessonChainCoach';visual.type='button';
-      body.append(visual);
-    }
     const status=element('p','lesson-practice-message',
-      verified?'不会覆盖正在游玩的谜题；返回课程时恢复原来的棋盘。':
-        '需要有可复现的求解器推理证明，才能开放这一节的实战练习。');
+      practiceError|| (verified?'不会覆盖正在游玩的谜题；返回课程时恢复原来的棋盘。':
+        '需要有可复现的求解器推理证明，才能开放这一节的实战练习。'));
     status.id='lessonPracticeFeedback';
     status.setAttribute('role','status');
     body.append(status);
@@ -248,6 +256,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     const next=all.find(item=>item.id===Number(id));
     if(!next)return;
     selected=next;
+    practiceError='';
     saveProgress();
     renderList();renderDetail();
     if(scroll)$('lessonDetail').scrollTop=0;
@@ -296,12 +305,6 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     saveProgress();renderList();renderDetail();
   });
   $('lessonExercise').addEventListener('click',async event=>{
-    const visual=event.target.closest('#lessonChainCoach');
-    if(visual){
-      const {openChainCoach}=await import('./chain-coach/ui.js');
-      openChainCoach({title:selected.title});
-      return;
-    }
     const button=event.target.closest('#lessonStartPractice');
     if(!button||practiceLoading)return;
     if(typeof launchPractice!=='function'){
@@ -309,12 +312,14 @@ export function setupLessonPage({showHome,showGame,launchPractice,
       return;
     }
     practiceLoading=true;
+    practiceError='';
     button.disabled=true;
     try{
-      await launchPractice(selected);
+      const size=Number($('lessonPracticeSize')?.value||9);
+      await launchPractice(selected,{size});
     }catch(error){
-      $('lessonPracticeFeedback').textContent='训练棋盘加载失败：'+
-        String(error?.message||error);
+      practiceError='训练棋盘加载失败：'+String(error?.message||error)+
+        '。请换一个随机种子或调整棋盘尺寸；不会替换成无关技巧。';
     }finally{
       practiceLoading=false;
       if(!$('lessonScreen').hidden)renderExercise();
@@ -336,7 +341,6 @@ export function setupLessonPage({showHome,showGame,launchPractice,
 
   document.addEventListener('keydown',event=>{
     if($('lessonScreen').hidden)return;
-    if(document.getElementById('chainCoachDialog')?.open)return;
     if(event.key==='Escape'){
       event.preventDefault();close();
     }

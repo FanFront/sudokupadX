@@ -91,13 +91,17 @@ pub struct StepProof {
     pub kind: String,
     pub nodes: Vec<ProofNode>,
     pub edges: Vec<ProofLink>,
+    /// Domains at the exact moment of the deduction. These are solver-
+    /// proven candidates, NOT unverified player pencil marks.
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub candidates: Option<Vec<Vec<u8>>>,
 }
 impl StepProof {
     fn chain(nodes: Vec<ProofNode>) -> Self {
         let edges=(1..nodes.len()).map(|i|ProofLink{
             from:i-1,to:i,strong:i%2==1
         }).collect();
-        Self{kind:"chain".into(),nodes,edges}
+        Self{kind:"chain".into(),nodes,edges,candidates:None}
     }
     fn colouring_cells(n:usize,digit:u8,component:&[(usize,u8)],
         graph:&[BTreeSet<usize>])->Self {
@@ -116,7 +120,7 @@ impl StepProof {
         }
         edges.sort_by_key(|e|(e.from,e.to));
         let _=n;
-        Self{kind:"colour".into(),nodes,edges}
+        Self{kind:"colour".into(),nodes,edges,candidates:None}
     }
     fn colouring(n:usize,component:&[(usize,u8)],graph:&[BTreeSet<usize>])->Self{
         let nodes:Vec<ProofNode>=component.iter().map(|&(node,colour)|ProofNode{
@@ -133,7 +137,7 @@ impl StepProof {
             }
         }
         edges.sort_by_key(|e|(e.from,e.to));
-        Self{kind:"colour".into(),nodes,edges}
+        Self{kind:"colour".into(),nodes,edges,candidates:None}
     }
 }
 #[derive(Clone,Debug,Serialize)]
@@ -241,8 +245,13 @@ impl Solver {
     }
     fn reduce_with_proof(&mut self,i:usize,allowed:Mask,method:&str,
         proof:StepProof)->Result<bool,String> {
+        let snapshot=if self.trace {
+            Some(self.masks.iter().map(|&mask|values(mask,self.n)).collect())
+        }else{None};
         let changed=self.reduce(i,allowed,method)?;
         if changed && self.trace {
+            let mut proof=proof;
+            proof.candidates=snapshot;
             if let Some(step)=self.steps.last_mut() {step.proof=Some(proof);}
         }
         Ok(changed)
@@ -766,7 +775,6 @@ impl Solver {
                 dfs(n,&snapshot,&mut vec![i],link,target,&mut eliminations,6);
             }
         }
-        let mut changed=false;
         for (cell,mask,witness) in eliminations{
             self.reason=witness.clone();
             let mut incoming=values(mask,n)[0];
@@ -778,9 +786,13 @@ impl Solver {
                 incoming=outgoing;
             }
             let certificate=StepProof::chain(nodes);
-            changed|=self.reduce_with_proof(cell,!mask,"xy_chain",certificate)?;
+            if self.reduce_with_proof(cell,!mask,"xy_chain",certificate)?{
+                // Rebuild the candidate graph after each deduction. A second
+                // witness from the original snapshot may no longer exist.
+                return Ok(true);
+            }
         }
-        Ok(changed)
+        Ok(false)
     }
     fn run(mut self)->Result<Proof,String>{
         for iteration in 0..150 {
@@ -841,6 +853,21 @@ pub fn next_hint(n:usize,grid:&[u8],rules:&[Rule],tier:u8)
 /// solver as assumed facts: incomplete notes must not create false proofs.
 pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
     notes:&[Vec<u8>]) -> Result<HintResponse,String> {
+    next_hint_with_focus(n,grid,rules,tier,notes,None)
+}
+
+/// Select a named chain/colour deduction from the SAME native Rust solver
+/// trace used by the standard hint, generator and lesson engine. No outside
+/// sudoku-core, SudokuCoach board, or simulated proof is involved.
+pub fn next_hint_with_focus(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
+    notes:&[Vec<u8>],focus:Option<&str>) -> Result<HintResponse,String> {
+    if let Some(method)=focus {
+        if !matches!(method,"chain"|"colour"|"x_chain"|"xy_chain"|
+            "aic"|"simple_coloring"|"medusa_wrap"|"medusa_trap") {
+            return Err("未知的链与染色技巧".into());
+        }
+        if tier<4 {return Err("链与染色需要最高技巧等级 4".into());}
+    }
     if !matches!(n,4|6|9) || !(1..=5).contains(&tier) || grid.len()!=n*n {
         return Err("仅支持 4×4 / 6×6 / 9×9 与提示等级 1–5".into());
     }
@@ -884,9 +911,22 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
             remaining:(1..=n as u8).filter(|d|!removed.contains(d)).collect(),
             before:(1..=n as u8).collect(),removed,sources,proof:None});
     }
-    // The trace contains the other independently derived logical steps.
-    // The solver never treats a player's pencil marks as proof.
-    options.extend(proof.trace.iter().cloned());
+    // Focused native chain/colour hints do not include generic peer
+    // eliminations or other methods, even if those would rank higher.
+    // Every returned certificate retains its exact intermediate domains.
+    if let Some(method)=focus {
+        let matches=|key:&str| match method {
+            "chain"=>matches!(key,"x_chain"|"xy_chain"|"aic"),
+            "colour"=>matches!(key,"simple_coloring"|"medusa_wrap"|"medusa_trap"),
+            _=>key==method,
+        };
+        options.clear();
+        options.extend(proof.trace.iter().filter(|step|
+            matches(&step.method)&&step.proof.is_some()).cloned());
+    }else{
+        // Pencil marks never enter the proof solver.
+        options.extend(proof.trace.iter().cloned());
+    }
     let mut best:Option<((u8,u8,usize,u8,usize),&Step)>=None;
     for (index,step) in options.iter().enumerate() {
         let marked=notes.get(step.cell).filter(|marks|!marks.is_empty());
@@ -914,6 +954,10 @@ pub fn next_hint_with_notes(n:usize,grid:&[u8],rules:&[Rule],tier:u8,
         return Ok(HintResponse{
             status:"step".into(),level:level_of(&step.method),step:Some(step.clone())
         });
+    }
+    if focus.is_some() {
+        return Ok(HintResponse{
+            status:"stalled".into(),step:None,level:4});
     }
     // The solver may still have deductions, but all candidate removals are
     // already absent from every annotated cell. Never recycle a stale hint or
@@ -1015,6 +1059,10 @@ pub struct CreateRequest {
     pub seed: Option<u64>,
     #[serde(default)]
     pub attempts: Option<usize>,
+    /// Training only: requiring a real trace step is sufficient; it need not
+    /// be the unique method that can finish the entire puzzle.
+    #[serde(default)]
+    pub practice: bool,
 }
 #[derive(Clone,Debug,Serialize)]
 #[serde(rename_all="camelCase")]
@@ -1340,7 +1388,7 @@ fn givens_grid(n:usize,solution:&[u8],rules:&[Rule],tier:u8,
     givens
 }
 fn certify(n:usize,givens:&[u8],solution:&[u8],rules:&[Rule],
-           tier:u8,focus:Option<&str>) -> Option<Proof>{
+           tier:u8,focus:Option<&str>,practice:bool) -> Option<Proof>{
     let full=solve(n,givens,rules,tier.min(4),true,None).ok()?;
     if tier<5{
         if !full.solved||full.values!=solution{return None;}
@@ -1350,8 +1398,10 @@ fn certify(n:usize,givens:&[u8],solution:&[u8],rules:&[Rule],
         }
         if let Some(method)=focus{
             if !full.methods.contains_key(method){return None;}
-            let without=solve(n,givens,rules,tier,false,Some(method)).ok()?;
-            if without.solved{return None;}
+            if !practice{
+                let without=solve(n,givens,rules,tier,false,Some(method)).ok()?;
+                if without.solved{return None;}
+            }
         }
     }else if full.solved {
         // Level 5 is search-required relative to this level-4 curriculum.
@@ -1547,9 +1597,17 @@ fn render_puzzle(request:&CreateRequest,seed:u64,givens:&[u8],
             "logicProfile":logic
         }
     });
+    let native_lesson_step=request.focus.as_deref().filter(|method|
+        matches!(*method,"x_chain"|"xy_chain"|"aic"|
+            "simple_coloring"|"medusa_wrap"|"medusa_trap"))
+        .and_then(|method|proof.trace.iter().find(|step|
+            step.method==method && step.proof.as_ref()
+                .and_then(|p|p.candidates.as_ref()).is_some()))
+        .cloned();
     CreateResponse{
         puzzle,
         details:json!({"id":request.id,"title":title,"size":n,"tier":request.tier,
+            "trainingStep":native_lesson_step,
             "givens":given_count,"marks":rules.len(),
             "variants":request.variants,"focus":request.focus,
             "seed":seed,"attempt":attempt,"searchRequired":request.tier==5,
@@ -1582,6 +1640,12 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
             return Err("选择的重点技巧不属于当前等级".into());
         }
     }
+    if request.practice && (!request.variants.is_empty() ||
+        !request.focus.as_deref().is_some_and(|method|
+            matches!(method,"x_chain"|"xy_chain"|"aic"|
+                "simple_coloring"|"medusa_wrap"|"medusa_trap"))){
+        return Err("专项练习仅支持原生链与染色证明，不得添加其他变体规则".into());
+    }
     let attempts=request.attempts.unwrap_or(24);
     if attempts==0||attempts>80{return Err("尝试次数需在 1–80 之间".into());}
     let seed=request.seed.unwrap_or(20261104);
@@ -1593,7 +1657,8 @@ pub fn generate_puzzle(request: CreateRequest)->Result<CreateResponse,String>{
             !=request.variants.len() {continue;}
         let givens=givens_grid(request.size,&solution,&rules,request.tier,&mut rng);
         if let Some(proof)=certify(request.size,&givens,&solution,&rules,
-                                  request.tier,request.focus.as_deref()){
+                                  request.tier,request.focus.as_deref(),
+                                  request.practice){
             return Ok(render_puzzle(&request,seed,&givens,&solution,&rules,&proof,attempt));
         }
     }
@@ -1607,6 +1672,16 @@ mod tests{
     fn canonical_small_solution(n:usize)->Vec<u8>{
         let (h,w)=boxes(n);
         (0..n*n).map(|i|((i/n*w+i/n/h+i%n)%n+1) as u8).collect()
+    }
+
+    #[test]
+    fn focused_hint_rejects_unknown_methods_and_low_tiers() {
+        let grid=vec![0u8;81];
+        assert!(next_hint_with_focus(9,&grid,&[],4,&[],Some("guess")).is_err());
+        assert!(next_hint_with_focus(9,&grid,&[],3,&[],Some("x_chain")).is_err());
+        let answer=next_hint_with_focus(9,&grid,&[],4,&[],Some("colour")).unwrap();
+        assert_eq!(answer.status,"stalled");
+        assert!(answer.step.is_none());
     }
 
     #[test]
@@ -1775,7 +1850,7 @@ mod tests{
         let request=CreateRequest{
             id:"personal-demo-1".into(),size:4,tier:1,variants:vec![],
             focus:None,density:Some("light".into()),seed:Some(9932),
-            attempts:Some(3),
+            attempts:Some(3),practice:false,
         };
         let output=generate_puzzle(request).unwrap();
         assert_eq!(output.details["tier"],1);
@@ -1918,8 +1993,8 @@ mod tests{
         assert_eq!(solutions,1);
         assert!(!solve(9,&givens,&[],4,false,None).unwrap().solved,
             "Level 4 must genuinely stall before claiming level 5");
-        assert!(certify(9,&givens,&answer,&[],5,None).is_some());
-        assert!(certify(9,&answer,&answer,&[],5,None).is_none(),
+        assert!(certify(9,&givens,&answer,&[],5,None,false).is_some());
+        assert!(certify(9,&answer,&answer,&[],5,None,false).is_none(),
             "Full grid cannot be mislabeled level 5");
     }
     #[test]
@@ -1948,7 +2023,7 @@ mod tests{
                 id:format!("integration-{}",kind.replace('_',"-")),
                 size:9,tier:1,variants:vec![kind.to_owned()],
                 focus:None,density:Some("light".into()),
-                seed:Some(20261105),attempts:Some(1)
+                seed:Some(20261105),attempts:Some(1),practice:false
             };
             let proof=solve(9,&solution,&rules,1,true,None).unwrap();
             let output=render_puzzle(&request,20261105,&solution,
@@ -1972,7 +2047,7 @@ mod tests{
                 id:format!("small-variant-{}",kind.replace('_',"-")),
                 size:4,tier:1,variants:vec![kind.to_string()],
                 focus:None,density:Some("heavy".into()),
-                seed:Some(3000+offset as u64),attempts:Some(80)
+                seed:Some(3000+offset as u64),attempts:Some(80),practice:false
             };
             let output=generate_puzzle(request)
                 .unwrap_or_else(|err|panic!("Cannot generate {kind}: {err}"));
@@ -2022,7 +2097,7 @@ mod tests{
     fn reject_unsupported_and_false_technique_labels(){
         let request=CreateRequest{
             id:"personal-invalid".into(),size:4,tier:5,variants:vec![],
-            focus:None,density:None,seed:Some(2),attempts:Some(2)
+            focus:None,density:None,seed:Some(2),attempts:Some(2),practice:false
         };
         assert!(generate_puzzle(request).is_err());
         assert!(!allowed_focus("invented_method"));

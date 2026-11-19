@@ -134,7 +134,9 @@ test('Home and puzzle rules have navigation into an actual offline lesson screen
        'lessonComplete','lessonPrev','lessonNext','lessonFromRulesButton'])
     assert.ok(html.includes('id="'+id+'"'),id+' missing in markup');
   assert.match(main,/const lessonPage=setupLessonPage\(/);
-  assert.match(main,/launchPractice:lesson=>beginLessonPractice\(lesson.id\)/);
+  assert.match(main,/launchPractice:\(lesson,options\)=>beginLessonPractice\(lesson.id,options\)/);
+  assert.match(main,/startGeneration\(request\)\.promise/);
+  assert.match(main,/createNativeChainPractice\(result,id,nativeMethod\)/);
   assert.match(main,/\$\('lessonFromRulesButton'\)\.addEventListener/);
   assert.match(main,/\$\('lessonScreen'\)\.hidden=true;/);
   assert.match(reader,/techniques\.zh-CN\.md\?raw/);
