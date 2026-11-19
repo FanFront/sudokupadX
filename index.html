@@ -182,6 +182,22 @@
           <button id="hintAnalyzeButton" type="button" hidden title="分析当前标准 9×9 盘面的剩余难度和技巧">分析标准数独难度</button>
           <p id="hintDescription">根据当前填写的大数字查找下一步。</p>
           <small id="hintCandidates"></small>
+          <div id="hintProofPanel" class="hint-proof-panel" hidden>
+            <div class="hint-proof-heading">
+              <strong id="hintProofName">交替推理链</strong>
+              <button id="hintProofToggle" type="button" aria-pressed="true">隐藏连线</button>
+            </div>
+            <div class="hint-proof-legend" aria-label="候选数颜色与链接图例">
+              <span><i class="hint-colour-swatch blue"></i>蓝组 / 链中</span>
+              <span><i class="hint-colour-swatch purple"></i>紫组 / 端点</span>
+              <span><i class="hint-link-swatch"></i>强链接</span>
+              <span><i class="hint-link-swatch weak"></i>弱链接</span>
+            </div>
+            <details class="hint-proof-details">
+              <summary>按顺序查看候选数链接</summary>
+              <ol id="hintProofLinks"></ol>
+            </details>
+          </div>
           <small class="hint-footnote" id="hintSupportNote">绿色：依据格；橙色：目标格。中心/角标手记用来跳过重复排除，不作为已证明的事实。普通提示不改盘面；提示+ 自动执行已验证的步骤并填入单候选。等级 5 可能使用穷举反证。</small>
         </section>
         <div class="detail-panel">

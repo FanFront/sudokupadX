@@ -897,3 +897,20 @@ button{color:#e7f3fd;background:#1d3149;border:1px solid #344b63;border-radius:1
  #wpfLibraryPanel .library-section-heading{gap:2px}
  .wpf-controls select{min-width:80px;max-width:145px}
 }
+
+/* Candidate-level chain/colour visualization inspired by SudokuCoach. */
+.hint-proof-panel{display:grid;gap:8px;margin:8px 0 4px;padding:10px;border:1px solid var(--line,#c5d9db);border-radius:10px;background:rgba(226,236,246,.33)}
+.hint-proof-panel[hidden]{display:none}
+.hint-proof-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hint-proof-heading strong{font-size:13px}
+.hint-proof-heading button{font:inherit;font-size:12px;padding:5px 9px;min-height:30px;border-radius:8px}
+.hint-proof-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:12px;color:var(--muted,#536472)}
+.hint-proof-legend span{display:inline-flex;align-items:center;gap:5px}
+.hint-colour-swatch{display:inline-block;width:12px;height:12px;border:1px solid #728ba0;border-radius:3px}
+.hint-colour-swatch.blue{background:#bed9f8}.hint-colour-swatch.purple{background:#e0c7f3}
+.hint-link-swatch{display:inline-block;width:20px;border-top:2px solid #2368ab}
+.hint-link-swatch.weak{border-top:2px dashed #794d9b}
+.hint-proof-details{font-size:12px;color:var(--muted,#536472)}
+.hint-proof-details summary{cursor:pointer;min-height:26px}
+.hint-proof-details ol{padding-inline-start:22px;max-height:115px;overflow:auto;margin:4px 0}
+.hint-proof-details li{padding:3px 0}
