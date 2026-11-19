@@ -5,5 +5,7 @@ export default defineConfig({
   base: process.env.GITHUB_PAGES === 'true' ? '/sudokupadX/' : '/',
   server: {host: '127.0.0.1', port: 1420, strictPort: true},
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
+  // Chain-proof Worker imports a second module: IIFE workers cannot split chunks.
+  worker: {format: 'es'},
   build: {target: 'es2021'}
 });

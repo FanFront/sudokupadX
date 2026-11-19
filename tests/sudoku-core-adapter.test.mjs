@@ -112,3 +112,24 @@ test('analysis report distinguishes unsolvable, incomplete and rated boards',()=
       {title:'W-Wing Strategy',freq:1}
     ]}).description,/L8/);
 });
+
+
+test('upstream matching chain/colour certificates survive the normal hint adapter',()=>{
+  for(const kind of ['colour','chain']){
+    const proof=kind==='colour'?{
+      kind,nodes:[{cell:0,digit:1,colour:0},{cell:1,digit:1,colour:1}],
+      edges:[{from:0,to:1,strong:true}]
+    }:{
+      kind,nodes:[{cell:0,digit:1},{cell:1,digit:1},
+        {cell:2,digit:1},{cell:3,digit:1}],
+      edges:[{from:0,to:1,strong:true},{from:1,to:2,strong:false},
+        {from:2,to:3,strong:true}]
+    };
+    const tip={strategy:kind==='colour'?'Simple Colouring Strategy':'X-Chain Strategy',
+      label:kind,previewCandidates:Array.from({length:81},()=>[1,2,3]),
+      step:{updates:[{index:20,eliminatedCandidate:1}],proof}};
+    const hint=adaptCoreTeaching(tip,Array(81).fill(null),4);
+    assert.equal(hint.step.proof.kind,kind);
+    assert.equal(hint.step.proof.nodes.length,proof.nodes.length);
+  }
+});
