@@ -133,7 +133,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
   const all=buildLessonCatalog(original,advancedGuideMarkdown);
   const completed=getCompleted(storage);
   let selected=all[0];
-  let filter='all',query='', origin='home',practiceLoading=false;
+  let filter='all',query='', origin='home',practiceLoading=false,practiceError='';
 
   try {
     const last=Number(storage.getItem(LAST_KEY));
@@ -231,8 +231,8 @@ export function setupLessonPage({showHome,showGame,launchPractice,
         '此技巧目前还没有通过完整盘面、唯一解及指定推理步骤三重验证的练习。为避免误导，暂不展示原先手工编造的候选数棋盘。理论讲解仍可阅读。'));
     }
     const status=element('p','lesson-practice-message',
-      verified?'不会覆盖正在游玩的谜题；返回课程时恢复原来的棋盘。':
-        '需要有可复现的求解器推理证明，才能开放这一节的实战练习。');
+      practiceError|| (verified?'不会覆盖正在游玩的谜题；返回课程时恢复原来的棋盘。':
+        '需要有可复现的求解器推理证明，才能开放这一节的实战练习。'));
     status.id='lessonPracticeFeedback';
     status.setAttribute('role','status');
     body.append(status);
@@ -256,6 +256,7 @@ export function setupLessonPage({showHome,showGame,launchPractice,
     const next=all.find(item=>item.id===Number(id));
     if(!next)return;
     selected=next;
+    practiceError='';
     saveProgress();
     renderList();renderDetail();
     if(scroll)$('lessonDetail').scrollTop=0;
@@ -311,13 +312,14 @@ export function setupLessonPage({showHome,showGame,launchPractice,
       return;
     }
     practiceLoading=true;
+    practiceError='';
     button.disabled=true;
     try{
       const size=Number($('lessonPracticeSize')?.value||9);
       await launchPractice(selected,{size});
     }catch(error){
-      $('lessonPracticeFeedback').textContent='训练棋盘加载失败：'+
-        String(error?.message||error);
+      practiceError='训练棋盘加载失败：'+String(error?.message||error)+
+        '。请换一个随机种子或调整棋盘尺寸；不会替换成无关技巧。';
     }finally{
       practiceLoading=false;
       if(!$('lessonScreen').hidden)renderExercise();
