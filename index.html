@@ -85,6 +85,10 @@
             <strong id="lessonPracticeName">技巧练习</strong>
             <p id="lessonPracticeStatus" role="status">请观察棋盘并完成目标推理。</p>
           </div>
+          <details id="lessonProofDetails" class="lesson-native-proof" hidden>
+            <summary>查看 Rust 推理链路（强/弱链接）</summary>
+            <ol id="lessonProofLinks"></ol>
+          </details>
           <div class="lesson-practice-actions">
             <button id="lessonPracticeHint" type="button">查看思路</button>
             <button id="lessonPracticeReset" type="button">重做</button>
@@ -177,6 +181,19 @@
               <option value="3">3 · 鱼与翼</option>
               <option value="4" selected>4 · 高级链与翼</option>
               <option value="5">5 · 允许穷举反证</option>
+            </select>
+          </label>
+          <label class="hint-tier-label" for="hintTechnique">原生技巧
+            <select id="hintTechnique">
+              <option value="" selected>自动选择下一步</option>
+              <option value="chain">推理链 · 全部</option>
+              <option value="x_chain">X-Chain 单数链</option>
+              <option value="xy_chain">XY-Chain 双值链</option>
+              <option value="aic">AIC 交替推理链</option>
+              <option value="colour">染色 · 全部</option>
+              <option value="simple_coloring">Simple Colouring 简单染色</option>
+              <option value="medusa_wrap">3D Medusa · 同色冲突</option>
+              <option value="medusa_trap">3D Medusa · 双色陷阱</option>
             </select>
           </label>
           <button id="hintAnalyzeButton" type="button" hidden title="分析当前标准 9×9 盘面的剩余难度和技巧">分析标准数独难度</button>
