@@ -11,7 +11,8 @@ const cases=[
   ['lineage-of-logic','50 × 50'],
   ['super-sudokoid-1','45 × 42'],
   ['super-sudokoid-2','36 × 45'],
-  ['k4995f3fx1','8 × 7'],
+  // Original SCL has eight rows of eight empty slots and 64 solution cells.
+  ['k4995f3fx1','8 × 8'],
   ['utmh5dybvf','9 × 9'],
   ['mfhh567b60','9 × 9'],
   ['k7qc98e00u','9 × 9'],
@@ -119,11 +120,18 @@ try{
     url.searchParams.set('puzzle',id);
     const response=await page.goto(url.href,{waitUntil:'domcontentloaded'});
     assert.ok(response?.ok(),url.href+' failed to load');
-    await page.waitForFunction(expected=>
-      document.querySelector('#boardMeta')?.textContent?.includes(expected) &&
-      document.querySelector('#gameScreen')?.hidden===false &&
-      document.querySelector('#puzzleTitle')?.textContent!=='Loading…',
-      dimensions,{timeout:60000});
+    try {
+      await page.waitForFunction(expected=>
+        document.querySelector('#boardMeta')?.textContent?.split(' · ')[0]===expected &&
+        document.querySelector('#gameScreen')?.hidden===false &&
+        document.querySelector('#puzzleTitle')?.textContent!=='Loading…',
+        dimensions,{timeout:60000});
+    } catch(error) {
+      const actual=await page.locator('#boardMeta').textContent().catch(()=>null);
+      const title=await page.locator('#puzzleTitle').textContent().catch(()=>null);
+      await page.screenshot({path:`artifacts/web/${id}-failure.png`}).catch(()=>{});
+      throw new Error(`Puzzle ${id}: expected ${dimensions}, actual ${actual}; title=${title}; browser errors=${JSON.stringify(errors)}`,{cause:error});
+    }
     // Ensure a substantial, actually painted Canvas, not just a DOM title.
     await page.waitForFunction(()=>{
       const canvas=document.querySelector('#boardCanvas');
@@ -185,7 +193,7 @@ try{
     await page.goto(url.href,{waitUntil:'domcontentloaded'});
     await page.waitForFunction(expected=>
       document.querySelector('#boardMeta')?.textContent?.includes(expected),
-      id==='k4995f3fx1'?'8 × 7':'9 × 9',{timeout:60000});
+      id==='k4995f3fx1'?'8 × 8':'9 × 9',{timeout:60000});
     await page.locator('#rulesButton').click();
     const columns=page.locator('#fullRules .bilingual-column');
     await columns.first().waitFor({timeout:10000});

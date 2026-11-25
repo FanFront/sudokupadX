@@ -246,6 +246,10 @@ export function drawDecorations(ctx, marks, clip) {
         ctx.beginPath();
         if(mark.rounded&&typeof ctx.roundRect==='function')
           ctx.roundRect(x,y,width,height,Math.min(width,height)/2);
+        else if(mark.rounded&&width===height&&typeof ctx.arc==='function')
+          // Older Android WebViews lack roundRect. A circular bulb must
+          // still be centered on its source coordinate, not become a box.
+          ctx.arc(center[0],center[1],width/2,0,Math.PI*2);
         else ctx.rect(x,y,width,height);
         if(typeof background==='string'&&background!=='none'&&background!=='transparent') {
           ctx.fillStyle=background;
@@ -298,8 +302,14 @@ export function drawPuzzleLines(ctx, lines, clip, layer='normal') {
     for(let i=1;i<points.length;i++)ctx.lineTo(...points[i]);
     ctx.strokeStyle=line.color||'#657a8d';
     ctx.lineWidth=Math.max(.5,Math.min(CELL_SIZE,(Number(line.thickness)||3)*CELL_SIZE/64));
-    ctx.lineCap='round';
-    ctx.lineJoin='round';
+    // A flat cap stops at the authored waypoint. The round default
+    // extends by half the stroke width, which can enter the next cell.
+    const cap=line['stroke-linecap'];
+    const join=line['stroke-linejoin'];
+    ctx.lineCap=['butt','round','square'].includes(cap)?cap:
+      (line.rounded===false?'butt':'round');
+    ctx.lineJoin=['bevel','round','miter'].includes(join)?join:
+      (line.rounded===false?'miter':'round');
     const dash=line['stroke-dasharray'];
     if(dash&&typeof ctx.setLineDash==='function') {
       const values=String(dash).split(/[ ,]+/).map(Number).filter(n=>Number.isFinite(n)&&n>=0);

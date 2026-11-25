@@ -61,3 +61,12 @@ fn all_bundled_scl_packages_decode() {
     let translations:serde_json::Value=serde_json::from_str(&locale).unwrap();
     assert_eq!(translations.as_object().unwrap().len(),92);
 }
+
+#[test]
+fn interlinked_original_compact_board_retains_eight_columns() {
+    let packed=include_str!("../../../public/puzzles/new-k4995f3fx1.scl");
+    let puzzle=sudokupadx_core::load(packed).expect("original Interlinked SCL");
+    assert_eq!((puzzle.rows,puzzle.cols),(8,8));
+    assert_eq!(puzzle.cells.len(),64);
+    assert_eq!(puzzle.solution.as_ref().map(Vec::len),Some(64));
+}

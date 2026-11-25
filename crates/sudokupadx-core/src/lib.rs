@@ -86,6 +86,8 @@ fn normalize_compact(text: &str) -> String {
     let mut quote: Option<char> = None;
     let mut escaped = false;
     let mut nesting = Vec::new();
+    // Compact ce rows omit empty cell objects, including the last one.
+    let mut compact_cells_depth = None;
     for (idx, &ch) in chars.iter().enumerate() {
         if let Some(current) = quote {
             output.push(ch);
@@ -99,8 +101,31 @@ fn normalize_compact(text: &str) -> String {
             output.push(ch);
             continue;
         }
-        if ch == '[' || ch == '{' { nesting.push(ch); }
-        if ch == ']' || ch == '}' { nesting.pop(); }
+        if ch == '[' || ch == '{' {
+            if ch == '[' && nesting.as_slice() == ['{'] {
+                if let Some(key) = output.trim_end().strip_suffix(':') {
+                    let key = key.trim_end().rsplit(|c: char|
+                        c == '{' || c == ',').next().unwrap_or("").trim();
+                    if matches!(key, "ce" | "'ce'" | "\"ce\"") {
+                        compact_cells_depth = Some(nesting.len() + 1);
+                    }
+                }
+            }
+            nesting.push(ch);
+        }
+        if ch == ']' || ch == '}' {
+            if ch == ']' && nesting.last() == Some(&'[') {
+                if compact_cells_depth.is_some_and(|depth| nesting.len() == depth + 1)
+                    && output.trim_end().ends_with(',')
+                {
+                    output.push_str("null");
+                }
+                if compact_cells_depth == Some(nesting.len()) {
+                    compact_cells_depth = None;
+                }
+            }
+            nesting.pop();
+        }
         if ch == ',' && nesting.last() == Some(&'[') {
             let previous = output.chars().rev().find(|c| !c.is_whitespace());
             if matches!(previous, Some('[' | ',')) {
@@ -195,7 +220,17 @@ fn marks(v: &Value, field: &str, alias: &str, warnings: &mut Vec<String>) -> Vec
         let mut item = item.clone();
         if let Some(map) = item.as_object_mut() {
             let field_aliases = if field == "lines" {
-                &[("wp", "wayPoints"), ("c", "color"), ("th", "thickness")][..]
+                &[("wp", "wayPoints"), ("c", "color"), ("th", "thickness"),
+                  ("r", "rounded")][..]
+            } else if matches!(field, "overlays" | "underlays") {
+                // PuzzleZipper uses c1/c2 for border/fill, and r for
+                // rounded shapes (including thermometer bulbs). Keep
+                // explicit long names ahead of compact and legacy aliases.
+                &[("ct", "center"), ("w", "width"), ("h", "height"),
+                  ("te", "text"), ("fs", "fontSize"), ("c1", "borderColor"),
+                  ("c2", "backgroundColor"), ("r", "rounded"),
+                  ("c", "backgroundColor"), ("bc", "borderColor"),
+                  ("bs", "borderSize")][..]
             } else {
                 &[("ct", "center"), ("w", "width"), ("h", "height"),
                   ("te", "text"), ("fs", "fontSize"), ("c", "backgroundColor"),
@@ -205,6 +240,24 @@ fn marks(v: &Value, field: &str, alias: &str, warnings: &mut Vec<String>) -> Vec
                 if !map.contains_key(long) {
                     if let Some(value) = map.get(short).cloned() {
                         map.insert(long.to_owned(), value);
+                    }
+                }
+            }
+            // Compact paint values can omit the CSS #, or use #0/#F.
+            for field in ["color", "borderColor", "backgroundColor", "textColor",
+                          "stroke", "fill", "outlineC", "fontC"] {
+                if let Some(value) = map.get_mut(field) {
+                    if let Some(raw) = as_text(value) {
+                        let css = if raw.eq_ignore_ascii_case("#f") {
+                            Some("#ffffff".to_owned())
+                        } else if raw == "#0" {
+                            Some("#000000".to_owned())
+                        } else if matches!(raw.len(), 6 | 8)
+                            && raw.bytes().all(|b| b.is_ascii_hexdigit())
+                        {
+                            Some(format!("#{raw}"))
+                        } else { None };
+                        if let Some(css) = css { *value = Value::String(css); }
                     }
                 }
             }
@@ -335,9 +388,9 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
             cells.push(Cell { given: value });
         }
     }
-    let meta = root.get("metadata").unwrap_or(&Value::Null);
-    let title = meta.get("title").and_then(Value::as_str)
-        .or_else(|| root.get("title").and_then(Value::as_str))
+    let meta = root.get("metadata").or_else(|| root.get("md")).unwrap_or(&Value::Null);
+    let title = meta.get("title").or_else(|| meta.get("t")).and_then(Value::as_str)
+        .or_else(|| root.get("title").or_else(|| root.get("t")).and_then(Value::as_str))
         .unwrap_or("Imported puzzle").to_owned();
     let author = meta.get("author").and_then(Value::as_str).unwrap_or("").to_owned();
     let rules = meta.get("rules").and_then(Value::as_str).unwrap_or("").to_owned();
@@ -345,13 +398,20 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
     let foglight = read_foglight(&root, rows, cols);
     let triggers = read_triggers(&root, rows, cols);
     let sectors = read_sectors(meta, rows, cols);
-    let solution = read_solution(meta, rows, cols);
-    if foglight.is_some() && solution.is_none() && !triggers.is_empty() {
-        warnings.push("Fog starts correctly, but trigger validation needs a full solution.".into());
-    }
-    if root.get("triggereffect").and_then(Value::as_array)
-        .is_some_and(|items| items.len() != triggers.len()) {
+    let solution = read_solution(meta, rows, cols)
+        .or_else(|| read_solution(&root, rows, cols));
+    let script = root.get("triggereffect").or_else(|| root.get("te"));
+    if script.is_some_and(|items| items.as_array()
+        .map_or(true, |items| items.len() != triggers.len())) {
         warnings.push("Some unsupported scripted trigger types were ignored.".into());
+    }
+    if foglight.is_some() {
+        if solution.as_ref().map_or(true, |s| !s.iter().any(Option::is_some)) {
+            warnings.push("Fog starts correctly, but automatic reveals need a valid solution.".into());
+        }
+        // Foglight alone does not identify a reveal policy. Do not synthesize
+        // neighborhood rules for an imported puzzle whose authored trigger
+        // encoding has not been recognized.
     }
     if root.get("fogofwar").is_some() && foglight.is_none() {
         warnings.push("Unsupported fog-of-war variant (not foglight).".into());
@@ -897,11 +957,56 @@ mod tests {
         assert_eq!(doc.underlays[0]["text"], "t,f,n");
     }
     #[test]
+    fn compact_empty_final_column_preserves_nine_by_nine_and_fog() {
+        let row = "[,,,,,,,,]";
+        let cells = std::iter::repeat(row).take(9).collect::<Vec<_>>().join(",");
+        let raw = format!("{{ce:[{cells}],metadata:{{t:'World 01',solution:'{}'}},fl:[[5,8]],l:[{{wp:[[5.5,8.5],[6.5,7.5]],c:cccccc,th:20}}],u:[{{ct:[5.5,8.5],w:0.8,h:0.8,c2:cccccc,r:t}}]}}", "1".repeat(81));
+        let packed = format!("scl{}", lz_str::compress_to_base64(&raw));
+        let board = load(&packed).unwrap();
+        assert_eq!((board.rows, board.cols, board.cells.len()), (9, 9, 81));
+        assert_eq!(board.foglight, Some(vec![53]));
+        assert_eq!(board.solution.as_ref().unwrap().len(), 81);
+        assert_eq!(board.title, "World 01");
+        assert_eq!(board.lines[0]["color"], "#cccccc");
+        assert_eq!(board.underlays[0]["backgroundColor"], "#cccccc");
+        assert_eq!(board.underlays[0]["center"], board.lines[0]["wayPoints"][0]);
+    }
+    #[test]
+    fn compact_final_empty_cell_does_not_shift_givens_or_expand_other_arrays() {
+        let board = load("{ce:[[{v:1},],[,{v:2}]],re:[[[0,0],[0,1],]],l:[]}").unwrap();
+        assert_eq!((board.rows, board.cols), (2, 2));
+        assert_eq!(board.cells[0].given.as_deref(), Some("1"));
+        assert_eq!(board.cells[3].given.as_deref(), Some("2"));
+        assert_eq!(board.regions[0].as_array().unwrap().len(), 2);
+        let plain = load("{cells:[[{value:1},],[{},{}]]}").unwrap();
+        assert_eq!((plain.rows, plain.cols), (2, 2));
+    }
+    #[test]
+    fn compact_bulb_geometry_and_style_match_expanded_scl() {
+        let compact = r##"{ce:[[{}, {}, {}],[{}, {}, {}]],
+            l:[{wp:[[0.5,2.5],[1.5,1.5]],c:'#888888',th:12,r:t}],
+            u:[{ct:[0.5,2.5],w:0.7,h:0.7,c1:'#555555',c2:'#888888',r:t}],
+            o:[{ct:[1.5,1.5],w:0.3,h:0.3,c2:'#ffffff',r:f,
+                backgroundColor:'#123456'}]}"##;
+        let packed = format!("scl{}", lz_str::compress_to_base64(compact));
+        let board = load(&packed).unwrap();
+        let line = &board.lines[0];
+        let bulb = &board.underlays[0];
+        assert_eq!(line["wayPoints"][0], bulb["center"]);
+        assert_eq!(bulb["center"], serde_json::json!([0.5, 2.5]));
+        assert_eq!(line["rounded"], true);
+        assert_eq!(bulb["rounded"], true);
+        assert_eq!(bulb["borderColor"], "#555555");
+        assert_eq!(bulb["backgroundColor"], line["color"]);
+        assert_eq!(board.overlays[0]["backgroundColor"], "#123456");
+        assert_eq!(board.overlays[0]["rounded"], false);
+    }
+    #[test]
     fn compact_color_atoms() {
         let src = "{id:'color',metadata:{title:'Color'},ce:[[{v:1},{}]],l:[{c:#0,wp:[[0,0],[0,1]]}],u:[{stroke:ffffff,fill:ffffff20,ct:[0,0]}]}";
         let board = load(src).unwrap();
-        assert_eq!(board.lines[0]["color"], "#0");
-        assert_eq!(board.underlays[0]["stroke"], "ffffff");
+        assert_eq!(board.lines[0]["color"], "#000000");
+        assert_eq!(board.underlays[0]["stroke"], "#ffffff");
     }
     #[test]
     fn notes_and_undo_redo() {
@@ -1110,6 +1215,164 @@ mod tests {
         assert_eq!(check.checked, 0);
         assert_eq!(check.unverifiable, 1);
         assert_eq!(check.mistakes, 0);
+    }
+
+    #[test]
+    fn world_01_source_trigger_regression() {
+        // Trigger graph and initial light from the user-provided 6qa9kj93b2
+        // SCL. No embedded browser scripts or unrevealed solution digits.
+        // Group by source for a readable fixture, preserving all 170 rules.
+        let groups = "
+r1c1:r1c1
+r1c2:r1c2,r1c2,r1c1,r1c3
+r1c3:r1c3
+r1c4:r1c4
+r1c8:r1c8
+r1c9:r1c9
+r2c1:r2c1,r2c1,r3c1
+r2c2:r2c2
+r2c3:r2c3
+r2c4:r2c4
+r2c5:r2c5
+r2c8:r2c8
+r2c9:r2c9,r2c9,r5c9,r5c8,r4c8,r3c8,r2c8,r1c8,r1c9,r3c9,r4c9,r8c9,r9c9,r9c8,r2c9,r2c8,r1c8,r1c9
+r3c1:r3c1
+r3c2:r3c2
+r3c3:r3c3
+r3c4:r3c4
+r3c5:r3c5
+r3c8:r3c8
+r3c9:r3c9
+r4c1:r4c1,r1c1,r1c2,r1c3,r1c4,r1c8,r1c9,r2c1,r2c2,r2c3,r2c4,r2c5,r2c8,r2c9,r3c1,r3c2,r3c3,r3c4,r3c5,r3c8,r3c9,r4c1,r4c2,r4c3,r4c4,r4c5,r4c8,r4c9,r5c1,r5c2,r5c3,r5c4,r5c5,r5c8,r5c9,r6c1,r6c2,r6c3,r6c4,r6c5,r6c6,r6c7,r7c1,r7c2,r7c3,r7c4,r8c1,r8c2,r8c3,r8c4,r8c9,r9c1,r9c2,r9c3,r9c4,r9c5,r9c6,r9c7,r9c8,r9c9
+r4c2:r4c2
+r4c3:r4c3
+r4c4:r4c4
+r4c5:r4c5
+r4c8:r4c8
+r4c9:r4c9
+r5c1:r5c1
+r5c2:r5c2
+r5c3:r5c3
+r5c4:r5c4
+r5c5:r5c5
+r5c8:r5c8
+r5c9:r5c9
+r6c1:r6c1
+r6c2:r6c2
+r6c3:r6c3
+r6c4:r6c4
+r6c5:r6c5
+r6c6:r6c6
+r6c7:r6c7
+r7c1:r7c1,r7c1,r7c2,r8c2,r8c3,r8c1,r9c1,r9c2
+r7c2:r7c2
+r7c3:r7c3
+r7c4:r7c4
+r8c1:r8c1
+r8c2:r8c2
+r8c3:r8c3
+r8c4:r8c4
+r8c9:r8c9
+r9c1:r9c1
+r9c2:r9c2
+r9c3:r9c3
+r9c4:r9c4
+r9c5:r9c5
+r9c6:r9c6
+r9c7:r9c7
+r9c8:r9c8
+r9c9:r9c9
+r4c6:r4c6,r1c4,r2c4,r3c4,r4c4,r5c4,r6c4,r7c4,r8c4,r9c4,r9c3,r2c3
+r3c7:r3c7,r6c6,r9c6,r2c2,r6c7,r7c7
+r2c7:r2c7,r2c5,r9c5,r3c5,r4c5";
+        let mut triggers=Vec::new();
+        for group in groups.trim().lines() {
+            let (source,targets)=group.split_once(':').unwrap();
+            for target in targets.split(',') {
+                triggers.push(format!("{{trigger:{{type:'cellvalue',cell:'{source}'}},effect:{{type:'foglight',ce:'{target}'}}}}"));
+            }
+        }
+        assert_eq!(triggers.len(),170);
+        let initial="[[0,4],[0,5],[1,5],[2,5],[3,5],[2,6],[1,6],[0,6],[3,6],[4,6],[4,5],[5,7],[5,8],[6,8],[6,7],[6,6],[6,5],[6,4],[7,4],[7,5],[7,6],[7,7]]";
+        let shown=[(4,'9'),(5,'8'),(6,'7'),(32,'1'),(41,'2'),(33,'3')];
+        let mut solution=vec!['.';81];
+        for (index,digit) in shown { solution[index]=digit; }
+        let solution:String=solution.into_iter().collect();
+        let cells=std::iter::repeat("[,,,,,,,,]").take(9).collect::<Vec<_>>().join(",");
+        let raw=format!("{{metadata:{{t:'World 01',solution:'{solution}',grids:[{{top:0,left:0,w:9,h:9,t:'Rules'}}]}},foglight:{initial},triggereffect:[{}],ce:[{cells}],l:[{{wp:[[3.5,5.5],[4.5,5.5],[3.5,6.5],[0.5,6.5],[0.5,4.5]],c:'#cccf',th:19.2}}],u:[{{ct:[3.5,5.5],w:0.8,h:0.8,r:t,c2:'#cccf'}}]}}",triggers.join(","));
+        let packed=format!("scl{}",lz_str::compress_to_base64(&raw));
+        let mut session=Session::new(load(&packed).unwrap());
+        assert_eq!((session.puzzle.rows,session.puzzle.cols),(9,9));
+        assert_eq!(session.puzzle.triggers.len(),170);
+        assert_eq!(session.puzzle.sectors[0].cells.len(),81);
+        assert_eq!(session.puzzle.lines[0]["wayPoints"][0],session.puzzle.underlays[0]["center"]);
+        assert_eq!(session.puzzle.underlays[0]["rounded"],true);
+        assert_eq!(session.puzzle.underlays[0]["backgroundColor"],"#cccf");
+        let initial=session.snapshot().visible;
+        assert_eq!(initial.iter().filter(|&&v|v).count(),22);
+        for (index,digit) in [(4,"9"),(5,"8"),(6,"7"),(41,"2"),(33,"3")] {
+            session.apply(index,"value",digit).unwrap();
+        }
+        assert_eq!(session.snapshot().visible,initial);
+        session.apply(32,"center","1").unwrap();
+        session.apply(32,"value","9").unwrap();
+        assert_eq!(session.snapshot().visible,initial);
+        session.apply(32,"value","1").unwrap();
+        let revealed=session.snapshot().visible;
+        assert_eq!(revealed.iter().filter(|&&v|v).count(),33);
+        for row in 0..9 { assert!(revealed[row*9+3]); }
+        assert!(revealed[74]); // R9C3
+        assert!(revealed[11]); // R2C3
+        assert!(!revealed[31]); // R4C5: adjacent but not an authored target
+        session.undo().unwrap();
+        assert_eq!(session.snapshot().visible,initial);
+        session.redo().unwrap();
+        assert_eq!(session.snapshot().visible,revealed);
+        let mut restored=Session::new(load(&packed).unwrap());
+        restored.restore(session.snapshot().cells).unwrap();
+        assert_eq!(restored.snapshot().visible,revealed);
+    }
+
+    #[test]
+    fn compact_nine_column_fog_uses_only_authored_trigger_targets() {
+        let row="[,,,,,,,,]";
+        let cells=std::iter::repeat(row).take(9).collect::<Vec<_>>().join(",");
+        let raw=format!("{{ce:[{cells}],md:{{solution:'{}'}},fl:[[3,6]],te:[{{trigger:{{type:'cellvalue',cell:'r4c7'}},effect:{{type:'foglight',cells:'r4c9r9c9'}}}}]}}", "123456789".repeat(9));
+        let packed=format!("scl{}",lz_str::compress_to_base64(&raw));
+        let mut session=Session::new(load(&packed).unwrap());
+        assert_eq!(session.puzzle.cols,9);
+        assert!(session.check_progress().has_solution);
+        session.apply(33,"center","7").unwrap();
+        assert!(!session.snapshot().visible[35]);
+        session.apply(33,"value","8").unwrap();
+        assert!(!session.snapshot().visible[35]);
+        session.apply(33,"value","7").unwrap();
+        let visible=session.snapshot().visible;
+        assert!(visible[35]);
+        assert!(visible[80]);
+        assert_eq!(visible.iter().filter(|&&v|v).count(),3);
+        session.undo().unwrap();
+        assert!(!session.snapshot().visible[35]);
+        session.redo().unwrap();
+        assert_eq!(session.snapshot().visible,visible);
+        let mut restored=Session::new(load(&packed).unwrap());
+        restored.restore(session.snapshot().cells).unwrap();
+        assert_eq!(restored.snapshot().visible,visible);
+    }
+
+    #[test]
+    fn missing_or_unsupported_script_does_not_reveal_default_neighbors() {
+        for raw in [
+            r#"{"metadata":{"solution":"1234"},"cells":[[{},{}],[{},{}]],"fl":[[0,0]]}"#,
+            r#"{"metadata":{"solution":"1234"},"cells":[[{},{}],[{},{}]],
+                "fl":[[0,0]],"te":[{"trigger":{"type":"unknown"},"effect":{"type":"foglight","cells":"r2c2"}}]}"#,
+            r#"{"cells":[[{},{}],[{},{}]],"fl":[[0,0]]}"#,
+            r#"{"metadata":{"solution":"1234","bossGates":[]},"cells":[[{},{}],[{},{}]],"fl":[[0,0]]}"#,
+        ] {
+            let mut session=Session::new(load(raw).unwrap());
+            session.apply(0,"value","1").unwrap();
+            assert_eq!(session.snapshot().visible,vec![true,false,false,false]);
+        }
     }
 
     #[test]
