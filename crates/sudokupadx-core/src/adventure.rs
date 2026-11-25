@@ -64,12 +64,12 @@ pub fn read_sectors(meta: &Value, rows: usize, cols: usize) -> Vec<Sector> {
         .filter_map(|grid| {
             let left = grid.get("left")?.as_u64()? as usize;
             let top = grid.get("top")?.as_u64()? as usize;
-            let width = grid.get("width")?.as_u64()? as usize;
-            let height = grid.get("height")?.as_u64()? as usize;
+            let width = grid.get("width").or_else(|| grid.get("w"))?.as_u64()? as usize;
+            let height = grid.get("height").or_else(|| grid.get("h"))?.as_u64()? as usize;
             if width == 0 || height == 0 || left >= cols || top >= rows { return None; }
             let cells = rectangle_cells(left, top, width, height, rows, cols);
             Some(Sector {
-                title: grid.get("title").and_then(Value::as_str).unwrap_or("Sector").to_owned(),
+                title: grid.get("title").or_else(|| grid.get("t")).and_then(Value::as_str).unwrap_or("Sector").to_owned(),
                 author: grid.get("author").and_then(Value::as_str).unwrap_or("").to_owned(),
                 rules: grid.get("rules").and_then(Value::as_str).unwrap_or("").to_owned(),
                 left, top, width, height, cells,
@@ -92,6 +92,39 @@ pub fn read_foglight(root: &Value, rows: usize, cols: usize) -> Option<Vec<usize
     Some(result)
 }
 
+// Strict references for executable rules: never drop an invalid member of
+// a multi-cell condition, as that would activate the effect too early.
+fn trigger_refs(value: &Value, rows: usize, cols: usize) -> Option<Vec<usize>> {
+    fn parse(text: &str, rows: usize, cols: usize, result: &mut Vec<usize>) -> Option<()> {
+        let mut rest = text.trim();
+        while !rest.is_empty() {
+            rest = rest.trim_start_matches(|c: char| c.is_ascii_whitespace() || c == ',' || c == ';');
+            if rest.is_empty() { break; }
+            rest = rest.strip_prefix('r').or_else(|| rest.strip_prefix('R'))?;
+            let n = rest.bytes().take_while(|b| b.is_ascii_digit()).count();
+            let row = rest[..n].parse::<usize>().ok()?;
+            rest = &rest[n..];
+            rest = rest.strip_prefix('c').or_else(|| rest.strip_prefix('C'))?;
+            let n = rest.bytes().take_while(|b| b.is_ascii_digit()).count();
+            let col = rest[..n].parse::<usize>().ok()?;
+            rest = &rest[n..];
+            if !(1..=rows).contains(&row) || !(1..=cols).contains(&col) { return None; }
+            let index = (row - 1) * cols + col - 1;
+            if !result.contains(&index) { result.push(index); }
+        }
+        Some(())
+    }
+    let mut result = Vec::new();
+    if let Some(text) = value.as_str() {
+        parse(text, rows, cols, &mut result)?;
+    } else {
+        for entry in value.as_array()? {
+            parse(entry.as_str()?, rows, cols, &mut result)?;
+        }
+    }
+    if result.is_empty() { None } else { Some(result) }
+}
+
 pub fn read_triggers(root: &Value, rows: usize, cols: usize) -> Vec<FogTrigger> {
     root.get("triggereffect").or_else(|| root.get("te"))
         .and_then(Value::as_array).into_iter().flatten()
@@ -101,9 +134,11 @@ pub fn read_triggers(root: &Value, rows: usize, cols: usize) -> Vec<FogTrigger> 
             let effect = item.get("effect")?;
             if trigger.get("type")?.as_str()? != "cellvalue" ||
                effect.get("type")?.as_str()? != "foglight" { return None; }
-            let all_correct = cell_refs(trigger.get("cell")?.as_str()?, rows, cols);
-            let reveals = cell_refs(effect.get("cells")?.as_str()?, rows, cols);
-            if all_correct.is_empty() || reveals.is_empty() { return None; }
+            let all_correct = trigger_refs(trigger.get("cell")
+                .or_else(|| trigger.get("cells")).or_else(|| trigger.get("ce"))?, rows, cols)?;
+            // PuzzleZipper recursively maps cells -> ce, including effects.
+            let reveals = trigger_refs(effect.get("cells")
+                .or_else(|| effect.get("ce"))?, rows, cols)?;
             Some(FogTrigger { all_correct, reveals })
         }).collect()
 }
@@ -155,6 +190,52 @@ mod tests {
         let s=read_sectors(&v,5,5);
         assert_eq!(s[0].cells, vec![7,8,12,13]);
     }
+    #[test]
+    fn compact_and_expanded_trigger_targets_are_equivalent() {
+        let expanded = serde_json::json!({"triggereffect":[
+            {"trigger":{"type":"cellvalue","cell":"r7c7"},
+             "effect":{"type":"foglight","cells":"r1c9r2c9r3c9"}},
+            {"trigger":{"type":"cellvalue","cell":"r1c1r1c2"},
+             "effect":{"type":"foglight","cells":"r9c9"}}
+        ]});
+        let compact = serde_json::json!({"triggereffect":[
+            {"trigger":{"type":"cellvalue","cell":"r7c7"},
+             "effect":{"type":"foglight","ce":"r1c9r2c9r3c9"}},
+            {"trigger":{"type":"cellvalue","ce":["R1C1","R1C2"]},
+             "effect":{"type":"foglight","ce":["R9C9"]}}
+        ]});
+        for data in [expanded,compact] {
+            let rules=read_triggers(&data,9,9);
+            assert_eq!(rules.len(),2);
+            assert_eq!(rules[0].all_correct,vec![60]);
+            assert_eq!(rules[0].reveals,vec![8,17,26]);
+            assert_eq!(rules[1].all_correct,vec![0,1]);
+            assert_eq!(rules[1].reveals,vec![80]);
+        }
+    }
+
+    #[test]
+    fn invalid_trigger_members_do_not_weaken_conditions() {
+        let data=serde_json::json!({"triggereffect":[
+            {"trigger":{"type":"cellvalue","cell":"r1c1r10c1"},
+             "effect":{"type":"foglight","ce":"r2c2"}},
+            {"trigger":{"type":"cellvalue","cell":"r1c1"},
+             "effect":{"type":"foglight","ce":"r2c2r2c10"}},
+            {"trigger":{"type":"cellvalue","cell":"r1c1"},
+             "effect":{"type":"unknown","ce":"r2c2"}}
+        ]});
+        assert!(read_triggers(&data,9,9).is_empty());
+    }
+
+    #[test]
+    fn compact_sector_dimensions_and_title_are_preserved() {
+        let meta=serde_json::json!({"grids":[{"top":8,"left":6,"w":1,"h":1,"t":"Mirror"}]});
+        let sectors=read_sectors(&meta,9,9);
+        assert_eq!(sectors.len(),1);
+        assert_eq!(sectors[0].cells,vec![78]);
+        assert_eq!(sectors[0].title,"Mirror");
+    }
+
     #[test]
     fn solution_arrays_and_compact_solution_are_validated_by_dimensions() {
         let expected=Some(vec![Some("1".into()),Some("2".into()),None,Some("4".into())]);
