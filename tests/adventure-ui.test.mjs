@@ -346,3 +346,26 @@ test('adventure grid outlines are actually invoked beneath fog in the board rend
   assert.match(main,/if\(showGridLines && regionMap\.some\(v=>v>=0\)\)/,
     'ordinary imported region outlines must still obey the grid toggle');
 });
+
+test('bulb and diagonal stem share fractional source coordinates on old WebViews',()=>{
+  const events=[];
+  const ctx={
+    save(){},restore(){},beginPath(){},fill(){},
+    arc(...args){events.push(['arc',...args]);},
+    moveTo(...args){events.push(['move',...args]);},
+    lineTo(...args){events.push(['line',...args]);},
+    stroke(){events.push(['stroke',this.lineCap,this.lineJoin]);}
+  };
+  const clip={left:0,top:0,right:500,bottom:500};
+  drawDecorations(ctx,[{center:[0.5,2.5],width:0.5,height:0.5,
+    rounded:true,backgroundColor:'#888888'}],clip);
+  drawPuzzleLines(ctx,[{wayPoints:[[0.5,2.5],[1.5,1.5]],thickness:12,
+    rounded:false,color:'#888888'}],clip);
+  assert.deepEqual(events,[
+    ['arc',130,26,13,0,Math.PI*2],
+    ['move',130,26],['line',78,78],['stroke','butt','miter']
+  ]);
+  drawPuzzleLines(ctx,[{wayPoints:[[0.5,2.5],[1.5,1.5]],rounded:false,
+    'stroke-linecap':'round','stroke-linejoin':'bevel'}],clip);
+  assert.deepEqual(events.at(-1),['stroke','round','bevel']);
+});
