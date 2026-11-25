@@ -1218,6 +1218,122 @@ mod tests {
     }
 
     #[test]
+    fn world_01_source_trigger_regression() {
+        // Trigger graph and initial light from the user-provided 6qa9kj93b2
+        // SCL. No embedded browser scripts or unrevealed solution digits.
+        // Group by source for a readable fixture, preserving all 170 rules.
+        let groups = "
+r1c1:r1c1
+r1c2:r1c2,r1c2,r1c1,r1c3
+r1c3:r1c3
+r1c4:r1c4
+r1c8:r1c8
+r1c9:r1c9
+r2c1:r2c1,r2c1,r3c1
+r2c2:r2c2
+r2c3:r2c3
+r2c4:r2c4
+r2c5:r2c5
+r2c8:r2c8
+r2c9:r2c9,r2c9,r5c9,r5c8,r4c8,r3c8,r2c8,r1c8,r1c9,r3c9,r4c9,r8c9,r9c9,r9c8,r2c9,r2c8,r1c8,r1c9
+r3c1:r3c1
+r3c2:r3c2
+r3c3:r3c3
+r3c4:r3c4
+r3c5:r3c5
+r3c8:r3c8
+r3c9:r3c9
+r4c1:r4c1,r1c1,r1c2,r1c3,r1c4,r1c8,r1c9,r2c1,r2c2,r2c3,r2c4,r2c5,r2c8,r2c9,r3c1,r3c2,r3c3,r3c4,r3c5,r3c8,r3c9,r4c1,r4c2,r4c3,r4c4,r4c5,r4c8,r4c9,r5c1,r5c2,r5c3,r5c4,r5c5,r5c8,r5c9,r6c1,r6c2,r6c3,r6c4,r6c5,r6c6,r6c7,r7c1,r7c2,r7c3,r7c4,r8c1,r8c2,r8c3,r8c4,r8c9,r9c1,r9c2,r9c3,r9c4,r9c5,r9c6,r9c7,r9c8,r9c9
+r4c2:r4c2
+r4c3:r4c3
+r4c4:r4c4
+r4c5:r4c5
+r4c8:r4c8
+r4c9:r4c9
+r5c1:r5c1
+r5c2:r5c2
+r5c3:r5c3
+r5c4:r5c4
+r5c5:r5c5
+r5c8:r5c8
+r5c9:r5c9
+r6c1:r6c1
+r6c2:r6c2
+r6c3:r6c3
+r6c4:r6c4
+r6c5:r6c5
+r6c6:r6c6
+r6c7:r6c7
+r7c1:r7c1,r7c1,r7c2,r8c2,r8c3,r8c1,r9c1,r9c2
+r7c2:r7c2
+r7c3:r7c3
+r7c4:r7c4
+r8c1:r8c1
+r8c2:r8c2
+r8c3:r8c3
+r8c4:r8c4
+r8c9:r8c9
+r9c1:r9c1
+r9c2:r9c2
+r9c3:r9c3
+r9c4:r9c4
+r9c5:r9c5
+r9c6:r9c6
+r9c7:r9c7
+r9c8:r9c8
+r9c9:r9c9
+r4c6:r4c6,r1c4,r2c4,r3c4,r4c4,r5c4,r6c4,r7c4,r8c4,r9c4,r9c3,r2c3
+r3c7:r3c7,r6c6,r9c6,r2c2,r6c7,r7c7
+r2c7:r2c7,r2c5,r9c5,r3c5,r4c5";
+        let mut triggers=Vec::new();
+        for group in groups.trim().lines() {
+            let (source,targets)=group.split_once(':').unwrap();
+            for target in targets.split(',') {
+                triggers.push(format!("{{trigger:{{type:'cellvalue',cell:'{source}'}},effect:{{type:'foglight',ce:'{target}'}}}}"));
+            }
+        }
+        assert_eq!(triggers.len(),170);
+        let initial="[[0,4],[0,5],[1,5],[2,5],[3,5],[2,6],[1,6],[0,6],[3,6],[4,6],[4,5],[5,7],[5,8],[6,8],[6,7],[6,6],[6,5],[6,4],[7,4],[7,5],[7,6],[7,7]]";
+        let shown=[(4,'9'),(5,'8'),(6,'7'),(32,'1'),(41,'2'),(33,'3')];
+        let mut solution=vec!['.';81];
+        for (index,digit) in shown { solution[index]=digit; }
+        let solution:String=solution.into_iter().collect();
+        let cells=std::iter::repeat("[,,,,,,,,]").take(9).collect::<Vec<_>>().join(",");
+        let raw=format!("{{metadata:{{t:'World 01',solution:'{solution}',grids:[{{top:0,left:0,w:9,h:9,t:'Rules'}}]}},foglight:{initial},triggereffect:[{}],ce:[{cells}],l:[{{wp:[[3.5,5.5],[4.5,5.5],[3.5,6.5],[0.5,6.5],[0.5,4.5]],c:'#cccf',th:19.2}}],u:[{{ct:[3.5,5.5],w:0.8,h:0.8,r:t,c2:'#cccf'}}]}}",triggers.join(","));
+        let packed=format!("scl{}",lz_str::compress_to_base64(&raw));
+        let mut session=Session::new(load(&packed).unwrap());
+        assert_eq!((session.puzzle.rows,session.puzzle.cols),(9,9));
+        assert_eq!(session.puzzle.triggers.len(),170);
+        assert_eq!(session.puzzle.sectors[0].cells.len(),81);
+        assert_eq!(session.puzzle.lines[0]["wayPoints"][0],session.puzzle.underlays[0]["center"]);
+        assert_eq!(session.puzzle.underlays[0]["rounded"],true);
+        assert_eq!(session.puzzle.underlays[0]["backgroundColor"],"#cccf");
+        let initial=session.snapshot().visible;
+        assert_eq!(initial.iter().filter(|&&v|v).count(),22);
+        for (index,digit) in [(4,"9"),(5,"8"),(6,"7"),(41,"2"),(33,"3")] {
+            session.apply(index,"value",digit).unwrap();
+        }
+        assert_eq!(session.snapshot().visible,initial);
+        session.apply(32,"center","1").unwrap();
+        session.apply(32,"value","9").unwrap();
+        assert_eq!(session.snapshot().visible,initial);
+        session.apply(32,"value","1").unwrap();
+        let revealed=session.snapshot().visible;
+        assert_eq!(revealed.iter().filter(|&&v|v).count(),33);
+        for row in 0..9 { assert!(revealed[row*9+3]); }
+        assert!(revealed[74]); // R9C3
+        assert!(revealed[11]); // R2C3
+        assert!(!revealed[31]); // R4C5: adjacent but not an authored target
+        session.undo().unwrap();
+        assert_eq!(session.snapshot().visible,initial);
+        session.redo().unwrap();
+        assert_eq!(session.snapshot().visible,revealed);
+        let mut restored=Session::new(load(&packed).unwrap());
+        restored.restore(session.snapshot().cells).unwrap();
+        assert_eq!(restored.snapshot().visible,revealed);
+    }
+
+    #[test]
     fn compact_nine_column_fog_uses_only_authored_trigger_targets() {
         let row="[,,,,,,,,]";
         let cells=std::iter::repeat(row).take(9).collect::<Vec<_>>().join(",");
