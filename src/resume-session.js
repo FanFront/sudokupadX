@@ -62,6 +62,11 @@ export function cachedSource(key, entry = null) {
     }
   };
 }
+function validatedSource(source) {
+  return source?.type==='bundled' ? bundledSource(source.id) :
+    source?.type==='imported' ? cachedSource(source.key) :
+    source?.type==='online' ? cachedSource(source.key,source.entry) : null;
+}
 export function parseResume(text) {
   try {
     const stored=typeof text === 'string' ? JSON.parse(text) : text;
@@ -73,10 +78,14 @@ export function parseResume(text) {
         stored.source.type === 'online' ?
           cachedSource(stored.source.key,stored.source.entry) : null;
     if (!source || !restoreView(stored.view,1,1,Number.MAX_SAFE_INTEGER)) return null;
-    const stack=Array.isArray(stored.stack) ? stored.stack.slice(0,MAX_STACK)
-      .filter(item => bundledSource(item?.id) &&
-        restoreView(item?.view,1,1,Number.MAX_SAFE_INTEGER))
-      .map(item => ({id:item.id,view:item.view})) : [];
+    const stack=Array.isArray(stored.stack) ? stored.stack.slice(-MAX_STACK)
+      .flatMap(item=>{
+        if(!restoreView(item?.view,1,1,Number.MAX_SAFE_INTEGER))return [];
+        const cached=validatedSource(item.source);
+        if(cached && cached.type!=='bundled')return [{source:cached,view:item.view}];
+        const local=bundledSource(item.id);
+        return local?[{id:local.id,view:item.view}]:[];
+      }) : [];
     return {source,view:stored.view,stack};
   } catch {
     return null;

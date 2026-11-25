@@ -10,7 +10,7 @@ import {cellInk} from './cell-ink.js';
 import {SELECTION_MODE_KEY,readSelectionMode,switchSelectionMode,selectionAfterModeChange,tapSelection,dragSelection} from './selection-mode.js';
 import {TAP_MOVE_TOLERANCE,cellLargeValue,isHighlightedNumber,advanceNumberHighlight} from './number-highlight.js';
 import {PEN_COLORS,normalizePenLines,normalizePenMarks,penNodeAt,penMarkAt,tapPenMark,tracePenNodes,straightDiagonalPenNodes,createPenStroke,applyPenStep,penStrokeLines,drawPenLines,drawPenMarks} from './pen-lines.js';
-import {linksAtCell,returnDestination} from './linked-navigation.js';
+import {linksAtCell,returnDestination,rulePuzzleEntry} from './linked-navigation.js';
 import {markBossCleared,lockedBossGate,bossGateAt,applyBossReveals} from './boss-gates.js';
 import {editableCellIndices} from './fog-editing.js';
 import {variantKeypadSymbols} from './variant-keypad.js';
@@ -30,7 +30,7 @@ import {startGeneration} from './creator/runner.js';
 import {buildHintPlusUpdates,buildClearRedPlusUpdates} from './hints/apply.js';
 import {listCreated,readCreated,createdCatalogEntries} from './creator/storage.js';
 import {createLessonPractice,checkLessonMove} from './lesson-puzzles.js';
-import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle,readOfflinePuzzle,cacheRemoteLinkedPuzzle} from './online-library.js';
+import {readResumePuzzle,saveResumePuzzle,deleteResumePuzzle,fetchOnlinePuzzle,readOfflinePuzzle,cacheRemoteLinkedPuzzle,cacheRulePuzzle} from './online-library.js';
 import {parsePenpaUrl,directPenpaEntry} from './penpa-import.js';
 import {RESUME_KEY,captureView,restoreView,bundledSource,cachedSource,parseResume,serializeResume} from './resume-session.js';
 import {bilingualTitle,displayBilingual,renderLinkedRules} from './bilingual.js';
@@ -499,8 +499,9 @@ function updateSector() {
   // Links may be held by a larger underlying grid rather than the currently
   // displayed (smallest) overlapping story sector. Do not expose fogged links.
   activeLinkedPuzzles=eligible?linksAtCell(puzzle,progress,selected,catalog,currentEntry?.id):[];
-  // Markdown puzzle links should open the bundled puzzle, not the external
-  // website (which would lose the active Android board/WebView state).
+  // Prefer a bundled destination. Unindexed links in displayed rules also
+  // open in-app, but generated boss gates and hidden catalog links retain
+  // their original eligibility checks.
   const localAction=url=>{
     let path;
     try{path=new URL(url).pathname;}catch{return null;}
@@ -508,7 +509,15 @@ function updateSector() {
       try{return new URL(item.url).pathname===path;}
       catch{return false;}
     });
-    return entry?()=>openBundled(entry.id,true).catch(notify):null;
+    if(entry)return ()=>openBundled(entry.id,true).catch(notify);
+    if(puzzle.bossGates?.length || lessonPractice)return null;
+    if(catalog.some(item=>{
+      try{return new URL(item.url).pathname===path;}catch{return false;}
+    }))return null;
+    const remote=rulePuzzleEntry(url);
+    if(!remote)return null;
+    try{if(currentEntry?.url && new URL(currentEntry.url).pathname===path)return null;}catch{}
+    return ()=>openRulePuzzle(remote).catch(notify);
   };
   renderLinkedRules($('rulesPreview'),rules,localAction);
   displayBilingual($('fullRules'),rules,sector?null:local?.rulesOriginal,
@@ -582,6 +591,22 @@ async function loadCatalog(){
   try{await syncCreatedCatalog(await listCreated());}
   catch(error){console.warn('Personal Sudoku database unavailable:',error);renderLibrary();}
 }
+function captureNavigationParent(){
+  const view=captureView(camera,frame.clientWidth,frame.clientHeight,selectedCells,showGridLines);
+  if(!view||!activeSource)throw Error('当前谜题尚未完成本机保存，无法安全跳转');
+  return activeSource.type==='bundled'?{id:activeSource.id,view}:{source:activeSource,view};
+}
+async function openRulePuzzle(entry){
+  if(pending)return;
+  // Fetch before changing the Rust session. A network failure keeps the
+  // original board, its dialog and its return stack unchanged.
+  let input=await readOfflinePuzzle(entry.id).catch(()=>null);
+  const offline=Boolean(input);
+  if(!input)input=await fetchOnlinePuzzle(entry);
+  await openIndexedPuzzle(entry,input,offline,null,false,true);
+  if($('rulesDialog').open)$('rulesDialog').close();
+  if(!offline)try{await cacheRulePuzzle(entry.id,input);}catch(error){console.warn('关联题缓存失败',error);}
+}
 async function openBundled(id,push=false,backState=null){
   if(pending)return;
   const entry=catalog.find(e=>e.id===id);
@@ -594,9 +619,8 @@ async function openBundled(id,push=false,backState=null){
     return;
   }
   const fromHome=$('gameScreen').hidden;
-  if(currentEntry && push){
-    save();navigationStack.push({id:currentEntry.id,
-      view:captureView(camera,frame.clientWidth,frame.clientHeight,selectedCells,showGridLines)});
+  if(puzzle && push){
+    save();navigationStack.push(captureNavigationParent());
   }else if(!backState && !push) {
     if(puzzle)save();navigationStack=[];
   }
@@ -663,8 +687,15 @@ async function goBack(){
   save();
   // Keep the return state until the parent has loaded successfully. A missing
   // puzzle asset or failed restore must not destroy the route back.
-  await openBundled(destination.id,false,destination.backState);
-  if(destination.fromStack)navigationStack.pop();
+  const previousStack=navigationStack.slice();
+  if(destination.source){
+    const input=await readResumePuzzle(destination.source.key);
+    if(!input)throw Error('上一谜题的本机缓存不存在');
+    if(destination.source.type==='online')
+      await openIndexedPuzzle(destination.source.entry,input,true,destination.backState.view,true);
+    else await openInput(input,destination.backState.view,true);
+  }else await openBundled(destination.id,false,destination.backState);
+  navigationStack=destination.fromStack?previousStack.slice(0,-1):previousStack;
   updateBack();
   save();
 }
@@ -761,9 +792,11 @@ async function openInput(input, restoredView = null, resuming = false) {
   finally {pending=false;}
 }
 
-async function openIndexedPuzzle(entry,input,offline,restoredView = null,resuming = false) {
+async function openIndexedPuzzle(entry,input,offline,restoredView = null,resuming = false,push = false) {
   if (pending) throw Error('请先等待当前谜题加载结束');
   if (puzzle) save();
+  const parent=push?captureNavigationParent():null;
+  const previousStack=navigationStack.slice();
   const fromHome=$('gameScreen').hidden;
   if(fromHome)showGame();
   pending=true;
@@ -772,7 +805,7 @@ async function openIndexedPuzzle(entry,input,offline,restoredView = null,resumin
     const result=await call('open_puzzle',{input,localization:null});
     currentEntry={id:'online:'+entry.id,kind:'online',title:entry.title,
       group:entry.sourceName,url:entry.puzzleUrl,sourceUrl:entry.sourceUrl || null};
-    navigationStack=[];mainDictionary={};
+    navigationStack=parent?[...previousStack,parent]:[];mainDictionary={};
     await openResult(result);
     activeRawInput=input;
     await cacheActivePuzzle(input,entry);
@@ -782,7 +815,7 @@ async function openIndexedPuzzle(entry,input,offline,restoredView = null,resumin
     resumeRecord=null;
     updateHomeCard();
     if(!resuming)toast(offline?'已打开离线下载的谜题':'已打开在线谜题');
-  } catch(error) {if(fromHome)showHome();throw error;}
+  } catch(error) {navigationStack=previousStack;if(fromHome)showHome();throw error;}
   finally {pending=false;}
 }
 
@@ -1620,7 +1653,7 @@ $('continueButton').addEventListener('click',async()=>{
         await openIndexedPuzzle(record.source.entry,input,true,record.view,true);
       else await openInput(input,record.view,true);
     }
-    navigationStack=record.stack.filter(item=>catalog.some(entry=>entry.id===item.id));
+    navigationStack=record.stack.filter(item=>item.source||catalog.some(entry=>entry.id===item.id));
     resumeRecord=null;
     updateBack();save();updateHomeCard();
   }catch(error){

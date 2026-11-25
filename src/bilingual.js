@@ -51,23 +51,24 @@ export function displayBilingual(container, translation, original, glossary = []
   }
 }
 
-// Only locally bundled SudokuPad links become active controls. All remaining
-// source markup stays literal text; no untrusted puzzle HTML is injected.
+// Resolve authored SudokuPad links through the app's navigation policy.
+// All other source markup stays literal; no puzzle HTML is injected.
 export function renderLinkedRules(container, text, localAction = null) {
   const value=String(text||'');
   if(typeof localAction!=='function') {container.textContent=value;return;}
-  const pattern=/\[([^\]\n]{1,160})\]\((https:\/\/sudokupad\.app\/[A-Za-z0-9_/-]+(?:\?[^\s)]*)?)\)/g;
+  const pattern=/\[([^\]\n]{1,160})\]\((https:\/\/sudokupad\.app\/[A-Za-z0-9_/-]+(?:\?[^\s)]*)?)\)|(https:\/\/sudokupad\.app\/[A-Za-z0-9_/-]+(?:\?[^\s<>"'，。；！）)\]]*)?)/g;
   let cursor=0,found=false;
   container.replaceChildren();
   for(const match of value.matchAll(pattern)) {
-    const action=localAction(match[2]);
+    const url=match[2]||match[3];
+    const action=localAction(url);
     if(typeof action!=='function')continue;
     if(match.index>cursor)
       container.append(document.createTextNode(value.slice(cursor,match.index)));
     const button=document.createElement('button');
     button.type='button';
     button.className='rule-local-link';
-    button.textContent=match[1];
+    button.textContent=match[1]||url;
     button.addEventListener('click',action);
     container.append(button);
     cursor=match.index+match[0].length;

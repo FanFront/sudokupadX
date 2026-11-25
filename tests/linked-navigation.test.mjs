@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {linksAtCell,parentMain,returnDestination} from '../src/linked-navigation.js';
+import {linksAtCell,parentMain,returnDestination,rulePuzzleEntry} from '../src/linked-navigation.js';
 import {getLinkedPuzzles} from '../src/adventure-ui.js';
 import {readFileSync} from 'node:fs';
 import LZString from 'lz-string';
@@ -166,4 +166,14 @@ test('every optional Sudokuvania 2 enemy tile resolves to an in-app playable cat
       .map(e=>e.id),[found[0].id]);
     progress.visible[at]=false;
   }
+});
+
+test('unindexed rule link keeps its URL settings and has a cached return destination',()=>{
+  const url='https://sudokupad.app/kuyotm8s2w?layout=project9x9-8';
+  assert.equal(rulePuzzleEntry(url).id,'rule:kuyotm8s2w');
+  assert.equal(rulePuzzleEntry(url).puzzleUrl,url);
+  assert.equal(rulePuzzleEntry('https://sudokupad.app.evil.example/abc'),null);
+  const previous={source:{type:'imported',key:'world-one'},view:{}};
+  assert.deepEqual(returnDestination(null,catalog,[previous]),
+    {source:previous.source,backState:previous,fromStack:true});
 });

@@ -169,6 +169,15 @@ export function cacheRemoteLinkedPuzzle(id, input) {
   });
 }
 
+// Rule links are cached separately from the user's explicit downloads.
+export function cacheRulePuzzle(id,input) {
+  if(typeof id!=='string'||!/^rule:[A-Za-z0-9_/-]{1,200}$/.test(id)||
+    typeof input!=='string'||!input.length||input.length>MAX_ONLINE_PUZZLE)
+    throw Error('无法缓存关联谜题');
+  return transaction(['puzzles'],'readwrite',tx=>{
+    tx.objectStore('puzzles').put({id,input});
+  });
+}
 export function saveOfflinePuzzle(entry, input) {
   if (typeof input !== 'string' || !input.length || input.length > MAX_ONLINE_PUZZLE)
     throw Error('无法保存不完整的谜题');
@@ -193,13 +202,18 @@ export function saveResumePuzzle(key, input) {
     throw Error('无法保存当前谜题的离线恢复数据');
   return transaction(['resume'], 'readwrite', tx => {
     tx.objectStore('resume').put({id:'current',key,input});
+    tx.objectStore('resume').put({id:'puzzle:'+key,key,input});
   });
 }
 export function readResumePuzzle(key) {
   if (typeof key !== 'string' || !key || key.length > 1024) return Promise.resolve(null);
   return transaction(['resume'], 'readonly', (tx, done) => {
-    tx.objectStore('resume').get('current').onsuccess = e =>
-      done(e.target.result?.key === key ? e.target.result.input : null);
+    const store=tx.objectStore('resume');
+    store.get('puzzle:'+key).onsuccess=e=>{
+      if(e.target.result?.key===key)done(e.target.result.input);
+      else store.get('current').onsuccess=e=>
+        done(e.target.result?.key===key?e.target.result.input:null);
+    };
   });
 }
 
@@ -210,6 +224,7 @@ export function deleteResumePuzzle(key) {
   if (typeof key !== 'string' || !key) return Promise.resolve();
   return transaction(['resume'], 'readwrite', tx => {
     const store=tx.objectStore('resume');
+    store.delete('puzzle:'+key);
     store.get('current').onsuccess=event=>{
       if (event.target.result?.key===key) store.delete('current');
     };

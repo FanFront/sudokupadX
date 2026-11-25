@@ -1,4 +1,14 @@
 import {getSectors,getLinkedPuzzles,isVisible} from './adventure-ui.js';
+import {puzzleIdFromUrl} from './online-library.js';
+
+// Use the same validated downloader as the online library; URL parameters
+// remain attached to the entry for source display and puzzle settings.
+export function rulePuzzleEntry(url) {
+  const id=puzzleIdFromUrl(url);
+  if(!id || id.length>200 || !/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(id))return null;
+  return {id:'rule:'+id,title:id,sourceId:'rule-link',
+    sourceName:'SudokuPad 关联谜题',puzzleUrl:url};
+}
 
 /** Only the puzzle catalog can turn a source link into an offline destination.
  * Resolve links from every sector covering the tapped cell: a small story tile
@@ -44,6 +54,7 @@ export function parentMain(entry,catalog) {
 
 export function returnDestination(entry,catalog,navigationStack=[]) {
   const previous=navigationStack.at(-1);
+  if(previous?.source)return {source:previous.source,backState:previous,fromStack:true};
   if(previous?.id)return {id:previous.id,backState:previous,fromStack:true};
   const parent=parentMain(entry,catalog);
   return parent?{id:parent.id,backState:null,fromStack:false}:null;

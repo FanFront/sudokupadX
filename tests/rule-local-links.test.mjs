@@ -35,6 +35,13 @@ test('tutorial markdown link becomes an in-app button for a visible bundled dest
     renderLinkedRules(panel,original,()=>null);
     assert.equal(panel.textContent,original);
     assert.equal(panel.children.length,0);
+    const remote='https://sudokupad.app/kuyotm8s2w?layout=project9x9-8';
+    renderLinkedRules(panel,'[点击这里]('+remote+') 前往下一个世界',link=>link===remote?()=>{opened++;}:null);
+    panel.children.find(child=>child.tag==='button').listeners.click();
+    assert.equal(opened,2);
+    renderLinkedRules(panel,'Next: '+remote,link=>link===remote?()=>{opened++;}:null);
+    panel.children.find(child=>child.tag==='button').listeners.click();
+    assert.equal(opened,3);
     const injection='<img src=x onerror=alert(1)>';
     renderLinkedRules(panel,injection,()=>()=>{});
     assert.equal(panel.textContent,injection);
