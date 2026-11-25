@@ -600,9 +600,15 @@ async function openRulePuzzle(entry){
   if(pending)return;
   // Fetch before changing the Rust session. A network failure keeps the
   // original board, its dialog and its return stack unchanged.
-  let input=await readOfflinePuzzle(entry.id).catch(()=>null);
-  const offline=Boolean(input);
-  if(!input)input=await fetchOnlinePuzzle(entry);
+  let input,offline;
+  const parentPuzzle=puzzle;
+  pending=true;
+  try{
+    input=await readOfflinePuzzle(entry.id).catch(()=>null);
+    offline=Boolean(input);
+    if(!input)input=await fetchOnlinePuzzle(entry);
+  }finally{pending=false;}
+  if(puzzle!==parentPuzzle || $('gameScreen').hidden)return;
   await openIndexedPuzzle(entry,input,offline,null,false,true);
   if($('rulesDialog').open)$('rulesDialog').close();
   if(!offline)try{await cacheRulePuzzle(entry.id,input);}catch(error){console.warn('关联题缓存失败',error);}
