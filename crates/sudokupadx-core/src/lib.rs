@@ -195,7 +195,17 @@ fn marks(v: &Value, field: &str, alias: &str, warnings: &mut Vec<String>) -> Vec
         let mut item = item.clone();
         if let Some(map) = item.as_object_mut() {
             let field_aliases = if field == "lines" {
-                &[("wp", "wayPoints"), ("c", "color"), ("th", "thickness")][..]
+                &[("wp", "wayPoints"), ("c", "color"), ("th", "thickness"),
+                  ("r", "rounded")][..]
+            } else if matches!(field, "overlays" | "underlays") {
+                // PuzzleZipper uses c1/c2 for border/fill, and r for
+                // rounded shapes (including thermometer bulbs). Keep
+                // explicit long names ahead of compact and legacy aliases.
+                &[("ct", "center"), ("w", "width"), ("h", "height"),
+                  ("te", "text"), ("fs", "fontSize"), ("c1", "borderColor"),
+                  ("c2", "backgroundColor"), ("r", "rounded"),
+                  ("c", "backgroundColor"), ("bc", "borderColor"),
+                  ("bs", "borderSize")][..]
             } else {
                 &[("ct", "center"), ("w", "width"), ("h", "height"),
                   ("te", "text"), ("fs", "fontSize"), ("c", "backgroundColor"),
@@ -895,6 +905,26 @@ mod tests {
         assert_eq!(doc.cols, 3);
         assert_eq!(doc.lines[0]["wayPoints"], serde_json::json!([[0,0],[1,1]]));
         assert_eq!(doc.underlays[0]["text"], "t,f,n");
+    }
+    #[test]
+    fn compact_bulb_geometry_and_style_match_expanded_scl() {
+        let compact = r##"{ce:[[{}, {}, {}],[{}, {}, {}]],
+            l:[{wp:[[0.5,2.5],[1.5,1.5]],c:'#888888',th:12,r:t}],
+            u:[{ct:[0.5,2.5],w:0.7,h:0.7,c1:'#555555',c2:'#888888',r:t}],
+            o:[{ct:[1.5,1.5],w:0.3,h:0.3,c2:'#ffffff',r:f,
+                backgroundColor:'#123456'}]}"##;
+        let packed = format!("scl{}", lz_str::compress_to_base64(compact));
+        let board = load(&packed).unwrap();
+        let line = &board.lines[0];
+        let bulb = &board.underlays[0];
+        assert_eq!(line["wayPoints"][0], bulb["center"]);
+        assert_eq!(bulb["center"], serde_json::json!([0.5, 2.5]));
+        assert_eq!(line["rounded"], true);
+        assert_eq!(bulb["rounded"], true);
+        assert_eq!(bulb["borderColor"], "#555555");
+        assert_eq!(bulb["backgroundColor"], line["color"]);
+        assert_eq!(board.overlays[0]["backgroundColor"], "#123456");
+        assert_eq!(board.overlays[0]["rounded"], false);
     }
     #[test]
     fn compact_color_atoms() {
