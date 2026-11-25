@@ -511,9 +511,16 @@ function updateSector() {
     });
     if(entry)return ()=>openBundled(entry.id,true).catch(notify);
     if(puzzle.bossGates?.length || lessonPractice)return null;
-    if(catalog.some(item=>{
+    const known=catalog.find(item=>{
       try{return new URL(item.url).pathname===path;}catch{return false;}
-    }))return null;
+    });
+    if(known){
+      // An imported/online puzzle's displayed global rules do not require
+      // a selected grid cell. Bundled adventure links retain the old gate.
+      if(currentEntry && currentEntry.kind!=='online' || (!known.file && !known.remote) ||
+        known.id===currentEntry?.id)return null;
+      return ()=>openBundled(known.id,true).catch(notify);
+    }
     const remote=rulePuzzleEntry(url);
     if(!remote)return null;
     try{if(currentEntry?.url && new URL(currentEntry.url).pathname===path)return null;}catch{}
