@@ -109,11 +109,35 @@ pub fn read_triggers(root: &Value, rows: usize, cols: usize) -> Vec<FogTrigger> 
 }
 
 pub fn read_solution(meta: &Value, rows: usize, cols: usize) -> Option<Vec<Option<String>>> {
-    let solution = meta.get("solution")?.as_str()?;
-    let symbols = solution.chars().map(|c| {
+    let solution = meta.get("solution").or_else(|| meta.get("s"))?;
+    let parse_symbol = |c: char| {
         if c.is_ascii_alphanumeric() && c != '0' { Some(c.to_ascii_uppercase().to_string()) }
         else { None }
-    }).collect::<Vec<_>>();
+    };
+    let symbols = if let Some(text) = solution.as_str() {
+        text.chars().map(parse_symbol).collect::<Vec<_>>()
+    } else if let Some(items) = solution.as_array() {
+        let mut symbols = Vec::with_capacity(items.len());
+        for item in items {
+            let symbol = match item {
+                Value::Null => None,
+                Value::Number(n) => {
+                    let n = n.as_u64()?;
+                    if n > 9 { return None; }
+                    parse_symbol(char::from(b'0' + n as u8))
+                }
+                Value::String(text) => {
+                    let mut chars = text.chars();
+                    let first = chars.next();
+                    if chars.next().is_some() { return None; }
+                    first.and_then(parse_symbol)
+                }
+                _ => return None,
+            };
+            symbols.push(symbol);
+        }
+        symbols
+    } else { return None; };
     if symbols.len() == rows * cols { Some(symbols) } else { None }
 }
 
@@ -130,6 +154,14 @@ mod tests {
         let v=serde_json::json!({"grids":[{"top":1,"left":2,"height":2,"width":2,"title":"Area","rules":"Hello"}]});
         let s=read_sectors(&v,5,5);
         assert_eq!(s[0].cells, vec![7,8,12,13]);
+    }
+    #[test]
+    fn solution_arrays_and_compact_solution_are_validated_by_dimensions() {
+        let expected=Some(vec![Some("1".into()),Some("2".into()),None,Some("4".into())]);
+        assert_eq!(read_solution(&serde_json::json!({"solution":[1,"2",null,4]}),2,2),expected);
+        assert_eq!(read_solution(&serde_json::json!({"s":"1204"}),2,2),expected);
+        assert!(read_solution(&serde_json::json!({"solution":[1,2,3]}),2,2).is_none());
+        assert!(read_solution(&serde_json::json!({"solution":[1,2,10,4]}),2,2).is_none());
     }
     #[test]
     fn initial_light_is_zero_based() {
