@@ -360,7 +360,7 @@ try{
   // exposing an example puzzle in the app itself.
   const fixture={
     id:'sudokupadx-ui-smoke',
-    metadata:{title:'UI Smoke Fixture',rules:'Test imported-board editing.'},
+    metadata:{title:'UI Smoke Fixture',rules:'Test imported-board editing. [Next world](https://sudokupad.app/kuyotm8s2w?layout=project9x9-8)'},
     cells:Array.from({length:9},()=>Array.from({length:9},()=>({}))),
     regions:Array.from({length:9},(_,region)=>Array.from({length:9},(_,n)=>
       [Math.floor(region/3)*3+Math.floor(n/3), (region%3)*3+n%3]))
@@ -477,6 +477,35 @@ try{
   assert.equal(await page.locator('#zoomLabel').textContent(),zoomBefore,'Zoom should survive restart');
   assert.equal(await page.locator('#selectionLabel').textContent(),selectedBefore,'Selected cell should survive restart');
   console.log('Last imported puzzle, selection, and zoom restored after reload.');
+  // Mock only the remote HTTP response; opening, saving and returning use
+  // the real UI, Rust/WASM session and IndexedDB.
+  const linked={...fixture,id:'sudokupadx-ui-linked-smoke',
+    metadata:{title:'Linked World Smoke',rules:'Child puzzle'}};
+  await page.route('https://sudokupad.svencodes.com/ctclegacy/kuyotm8s2w',route=>
+    route.fulfill({status:200,contentType:'application/json',
+      headers:{'access-control-allow-origin':'*'},body:JSON.stringify(linked)}));
+  await page.locator('#rulesButton').click();
+  await page.locator('#fullRules .rule-local-link').click();
+  await page.waitForFunction(()=>document.querySelector('#puzzleTitle')?.textContent==='Linked World Smoke' &&
+    document.querySelector('#rulesDialog')?.open===false &&
+    !document.querySelector('#backButton')?.hidden);
+  await page.goto(root,{waitUntil:'domcontentloaded'});
+  await page.locator('#continueButton').waitFor({state:'visible',timeout:60000});
+  await page.locator('#continueButton').click();
+  await page.waitForFunction(()=>document.querySelector('#puzzleTitle')?.textContent==='Linked World Smoke' &&
+    !document.querySelector('#backButton')?.hidden);
+  await page.locator('#backButton').click();
+  await page.waitForFunction(({zoom,selection})=>
+    document.querySelector('#puzzleTitle')?.textContent==='UI Smoke Fixture' &&
+    document.querySelector('#zoomLabel')?.textContent===zoom &&
+    document.querySelector('#selectionLabel')?.textContent===selection,
+    {zoom:zoomBefore,selection:selectedBefore},{timeout:15000});
+  await page.locator('#homeButton').click();
+  await page.locator('#checkpointButton').click();
+  await page.locator('#exportCheckpoint').click();
+  assert.equal(JSON.parse(await page.locator('#checkpointText').inputValue()).cells[40].value,'1');
+  await page.locator('#closeCheckpoint').click();
+  console.log('Unindexed rule link opened in-app and returned to imported parent after reload.');
   assert.deepEqual(errors,[]);
   console.log('Rust WASM input, undo and redo passed; screenshots in artifacts/web/');
 }finally{

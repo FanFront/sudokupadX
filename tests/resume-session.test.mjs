@@ -80,3 +80,10 @@ test('UI automatically resumes the last puzzle and no longer exposes an example 
   assert.ok(store.includes("indexedDB.open(DB_NAME, 2)"));
   assert.ok(store.includes("tx.objectStore('resume').put({id:'current',key,input})"));
 });
+
+test('linked route persists imported and remote parents alongside bundled parents',()=>{
+  const view=captureView({x:0,y:0,scale:1},400,600,[40],true);
+  const remote=cachedSource('world-two',{id:'rule:abc',title:'World two',puzzleUrl:'https://sudokupad.app/abc'});
+  const stack=[{id:'main',view},{source:cachedSource('world-one'),view},{source:remote,view}];
+  assert.deepEqual(parseResume(serializeResume(remote,view,stack)).stack,stack);
+});
