@@ -86,6 +86,8 @@ fn normalize_compact(text: &str) -> String {
     let mut quote: Option<char> = None;
     let mut escaped = false;
     let mut nesting = Vec::new();
+    // Compact ce rows omit empty cell objects, including the last one.
+    let mut compact_cells_depth = None;
     for (idx, &ch) in chars.iter().enumerate() {
         if let Some(current) = quote {
             output.push(ch);
@@ -99,8 +101,31 @@ fn normalize_compact(text: &str) -> String {
             output.push(ch);
             continue;
         }
-        if ch == '[' || ch == '{' { nesting.push(ch); }
-        if ch == ']' || ch == '}' { nesting.pop(); }
+        if ch == '[' || ch == '{' {
+            if ch == '[' && nesting.as_slice() == ['{'] {
+                if let Some(key) = output.trim_end().strip_suffix(':') {
+                    let key = key.trim_end().rsplit(|c: char|
+                        c == '{' || c == ',').next().unwrap_or("").trim();
+                    if matches!(key, "ce" | "'ce'" | "\"ce\"") {
+                        compact_cells_depth = Some(nesting.len() + 1);
+                    }
+                }
+            }
+            nesting.push(ch);
+        }
+        if ch == ']' || ch == '}' {
+            if ch == ']' && nesting.last() == Some(&'[') {
+                if compact_cells_depth.is_some_and(|depth| nesting.len() == depth + 1)
+                    && output.trim_end().ends_with(',')
+                {
+                    output.push_str("null");
+                }
+                if compact_cells_depth == Some(nesting.len()) {
+                    compact_cells_depth = None;
+                }
+            }
+            nesting.pop();
+        }
         if ch == ',' && nesting.last() == Some(&'[') {
             let previous = output.chars().rev().find(|c| !c.is_whitespace());
             if matches!(previous, Some('[' | ',')) {
@@ -215,6 +240,24 @@ fn marks(v: &Value, field: &str, alias: &str, warnings: &mut Vec<String>) -> Vec
                 if !map.contains_key(long) {
                     if let Some(value) = map.get(short).cloned() {
                         map.insert(long.to_owned(), value);
+                    }
+                }
+            }
+            // Compact paint values can omit the CSS #, or use #0/#F.
+            for field in ["color", "borderColor", "backgroundColor", "textColor",
+                          "stroke", "fill", "outlineC", "fontC"] {
+                if let Some(value) = map.get_mut(field) {
+                    if let Some(raw) = as_text(value) {
+                        let css = if raw.eq_ignore_ascii_case("#f") {
+                            Some("#ffffff".to_owned())
+                        } else if raw == "#0" {
+                            Some("#000000".to_owned())
+                        } else if matches!(raw.len(), 6 | 8)
+                            && raw.bytes().all(|b| b.is_ascii_hexdigit())
+                        {
+                            Some(format!("#{raw}"))
+                        } else { None };
+                        if let Some(css) = css { *value = Value::String(css); }
                     }
                 }
             }
@@ -346,8 +389,8 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         }
     }
     let meta = root.get("metadata").unwrap_or(&Value::Null);
-    let title = meta.get("title").and_then(Value::as_str)
-        .or_else(|| root.get("title").and_then(Value::as_str))
+    let title = meta.get("title").or_else(|| meta.get("t")).and_then(Value::as_str)
+        .or_else(|| root.get("title").or_else(|| root.get("t")).and_then(Value::as_str))
         .unwrap_or("Imported puzzle").to_owned();
     let author = meta.get("author").and_then(Value::as_str).unwrap_or("").to_owned();
     let rules = meta.get("rules").and_then(Value::as_str).unwrap_or("").to_owned();
@@ -907,6 +950,31 @@ mod tests {
         assert_eq!(doc.underlays[0]["text"], "t,f,n");
     }
     #[test]
+    fn compact_empty_final_column_preserves_nine_by_nine_and_fog() {
+        let row = "[,,,,,,,,]";
+        let cells = std::iter::repeat(row).take(9).collect::<Vec<_>>().join(",");
+        let raw = format!("{{ce:[{cells}],metadata:{{t:'World 01',solution:'{}'}},fl:[[5,8]],l:[{{wp:[[5.5,8.5],[6.5,7.5]],c:cccccc,th:20}}],u:[{{ct:[5.5,8.5],w:0.8,h:0.8,c2:cccccc,r:t}}]}}", "1".repeat(81));
+        let packed = format!("scl{}", lz_str::compress_to_base64(&raw));
+        let board = load(&packed).unwrap();
+        assert_eq!((board.rows, board.cols, board.cells.len()), (9, 9, 81));
+        assert_eq!(board.foglight, Some(vec![53]));
+        assert_eq!(board.solution.as_ref().unwrap().len(), 81);
+        assert_eq!(board.title, "World 01");
+        assert_eq!(board.lines[0]["color"], "#cccccc");
+        assert_eq!(board.underlays[0]["backgroundColor"], "#cccccc");
+        assert_eq!(board.underlays[0]["center"], board.lines[0]["wayPoints"][0]);
+    }
+    #[test]
+    fn compact_final_empty_cell_does_not_shift_givens_or_expand_other_arrays() {
+        let board = load("{ce:[[{v:1},],[,{v:2}]],re:[[[0,0],[0,1],]],l:[]}").unwrap();
+        assert_eq!((board.rows, board.cols), (2, 2));
+        assert_eq!(board.cells[0].given.as_deref(), Some("1"));
+        assert_eq!(board.cells[3].given.as_deref(), Some("2"));
+        assert_eq!(board.regions[0].as_array().unwrap().len(), 2);
+        let plain = load("{cells:[[{value:1},],[{},{}]]}").unwrap();
+        assert_eq!((plain.rows, plain.cols), (2, 2));
+    }
+    #[test]
     fn compact_bulb_geometry_and_style_match_expanded_scl() {
         let compact = r##"{ce:[[{}, {}, {}],[{}, {}, {}]],
             l:[{wp:[[0.5,2.5],[1.5,1.5]],c:'#888888',th:12,r:t}],
@@ -930,8 +998,8 @@ mod tests {
     fn compact_color_atoms() {
         let src = "{id:'color',metadata:{title:'Color'},ce:[[{v:1},{}]],l:[{c:#0,wp:[[0,0],[0,1]]}],u:[{stroke:ffffff,fill:ffffff20,ct:[0,0]}]}";
         let board = load(src).unwrap();
-        assert_eq!(board.lines[0]["color"], "#0");
-        assert_eq!(board.underlays[0]["stroke"], "ffffff");
+        assert_eq!(board.lines[0]["color"], "#000000");
+        assert_eq!(board.underlays[0]["stroke"], "#ffffff");
     }
     #[test]
     fn notes_and_undo_redo() {
