@@ -396,7 +396,7 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
     let rules = meta.get("rules").and_then(Value::as_str).unwrap_or("").to_owned();
     let mut warnings = Vec::new();
     let foglight = read_foglight(&root, rows, cols);
-    let mut triggers = read_triggers(&root, rows, cols);
+    let triggers = read_triggers(&root, rows, cols);
     let sectors = read_sectors(meta, rows, cols);
     let solution = read_solution(meta, rows, cols)
         .or_else(|| read_solution(&root, rows, cols));
@@ -409,29 +409,9 @@ pub fn load(input: &str) -> Result<Puzzle, String> {
         if solution.as_ref().map_or(true, |s| !s.iter().any(Option::is_some)) {
             warnings.push("Fog starts correctly, but automatic reveals need a valid solution.".into());
         }
-        // Ordinary SudokuPad fog clears the entered cell and its eight
-        // neighbors. A custom trigger script replaces this rule entirely;
-        // never fall back just because its entries failed to parse.
-        // Generated adventure gates have their own reveal engine.
-        if script.map_or(true, |v| v.as_array().is_some_and(Vec::is_empty))
-            && sectors.is_empty()
-            && meta.get("bossGates").is_none()
-            && meta.get("generatedFogRules").is_none()
-            && solution.is_some()
-        {
-            for index in 0..cells.len() {
-                if cells[index].given.is_some() { continue; }
-                let row = index / cols;
-                let col = index % cols;
-                let mut reveals = Vec::with_capacity(9);
-                for r in row.saturating_sub(1)..=(row+1).min(rows-1) {
-                    for c in col.saturating_sub(1)..=(col+1).min(cols-1) {
-                        reveals.push(r*cols+c);
-                    }
-                }
-                triggers.push(FogTrigger { all_correct: vec![index], reveals });
-            }
-        }
+        // Foglight alone does not identify a reveal policy. Do not synthesize
+        // neighborhood rules for an imported puzzle whose authored trigger
+        // encoding has not been recognized.
     }
     if root.get("fogofwar").is_some() && foglight.is_none() {
         warnings.push("Unsupported fog-of-war variant (not foglight).".into());
@@ -1238,53 +1218,36 @@ mod tests {
     }
 
     #[test]
-    fn ordinary_fog_reveals_neighborhood_only_for_correct_large_digits() {
-        let raw = r#"{"metadata":{"solution":"1234341221434321"},
-            "cells":[[{},{},{},{}],[{},{},{},{}],[{},{},{},{}],[{},{},{},{}]],
-            "foglight":[[0,0]]}"#;
-        let mut session = Session::new(load(raw).unwrap());
-        let initial = session.snapshot().visible;
-        assert_eq!(initial.iter().filter(|&&v|v).count(),1);
-        session.apply(0,"center","1").unwrap();
-        session.apply(0,"value","2").unwrap();
-        assert_eq!(session.snapshot().visible,initial);
-        session.apply(0,"value","1").unwrap();
-        let corner = session.snapshot().visible;
-        assert_eq!(corner.iter().enumerate().filter_map(|(i,&v)|v.then_some(i)).collect::<Vec<_>>(),vec![0,1,4,5]);
-        session.undo().unwrap();
-        assert_eq!(session.snapshot().visible,initial);
-        session.redo().unwrap();
-        assert_eq!(session.snapshot().visible,corner);
-        // A correct entry under fog may also reveal its neighborhood.
-        session.apply(15,"value","1").unwrap();
-        let both = session.snapshot().visible;
-        assert_eq!(both.iter().enumerate().filter_map(|(i,&v)|v.then_some(i)).collect::<Vec<_>>(),vec![0,1,4,5,10,11,14,15]);
-        let mut restored=Session::new(load(raw).unwrap());
-        restored.restore(session.snapshot().cells).unwrap();
-        assert_eq!(restored.snapshot().visible,both);
-        restored.apply(15,"erase","").unwrap();
-        assert_eq!(restored.snapshot().visible,corner);
-    }
-
-    #[test]
-    fn compact_nine_column_fog_can_reveal_previously_missing_column() {
+    fn compact_nine_column_fog_uses_only_authored_trigger_targets() {
         let row="[,,,,,,,,]";
         let cells=std::iter::repeat(row).take(9).collect::<Vec<_>>().join(",");
-        let raw=format!("{{ce:[{cells}],md:{{solution:'{}'}},fl:[[3,6]]}}", "123456789".repeat(9));
+        let raw=format!("{{ce:[{cells}],md:{{solution:'{}'}},fl:[[3,6]],te:[{{trigger:{{type:'cellvalue',cell:'r4c7'}},effect:{{type:'foglight',cells:'r4c9r9c9'}}}}]}}", "123456789".repeat(9));
         let packed=format!("scl{}",lz_str::compress_to_base64(&raw));
         let mut session=Session::new(load(&packed).unwrap());
         assert_eq!(session.puzzle.cols,9);
         assert!(session.check_progress().has_solution);
-        session.apply(3*9+7,"value","8").unwrap();
+        session.apply(33,"center","7").unwrap();
+        assert!(!session.snapshot().visible[35]);
+        session.apply(33,"value","8").unwrap();
+        assert!(!session.snapshot().visible[35]);
+        session.apply(33,"value","7").unwrap();
         let visible=session.snapshot().visible;
-        assert!(visible[3*9+8]);
-        assert!(visible[2*9+8]);
-        assert!(!visible[4*9+5]);
+        assert!(visible[35]);
+        assert!(visible[80]);
+        assert_eq!(visible.iter().filter(|&&v|v).count(),3);
+        session.undo().unwrap();
+        assert!(!session.snapshot().visible[35]);
+        session.redo().unwrap();
+        assert_eq!(session.snapshot().visible,visible);
+        let mut restored=Session::new(load(&packed).unwrap());
+        restored.restore(session.snapshot().cells).unwrap();
+        assert_eq!(restored.snapshot().visible,visible);
     }
 
     #[test]
-    fn unsupported_script_or_missing_solution_does_not_reveal_default_neighbors() {
+    fn missing_or_unsupported_script_does_not_reveal_default_neighbors() {
         for raw in [
+            r#"{"metadata":{"solution":"1234"},"cells":[[{},{}],[{},{}]],"fl":[[0,0]]}"#,
             r#"{"metadata":{"solution":"1234"},"cells":[[{},{}],[{},{}]],
                 "fl":[[0,0]],"te":[{"trigger":{"type":"unknown"},"effect":{"type":"foglight","cells":"r2c2"}}]}"#,
             r#"{"cells":[[{},{}],[{},{}]],"fl":[[0,0]]}"#,
